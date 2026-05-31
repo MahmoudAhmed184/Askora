@@ -35,6 +35,7 @@ export const questionTextModeValues = [
 ] as const;
 
 export const notificationTypeValues = ["question_answered"] as const;
+export const threadItemDeletedByValues = ["owner", "admin"] as const;
 
 export const threadStatusEnum = pgEnum("thread_status", threadStatusValues);
 export const threadItemStatusEnum = pgEnum(
@@ -48,6 +49,10 @@ export const questionTextModeEnum = pgEnum(
 export const notificationTypeEnum = pgEnum(
   "notification_type",
   notificationTypeValues,
+);
+export const threadItemDeletedByEnum = pgEnum(
+  "thread_item_deleted_by",
+  threadItemDeletedByValues,
 );
 
 export const threads = pgTable(
@@ -116,6 +121,7 @@ export const threadItems = pgTable(
       .notNull()
       .defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: threadItemDeletedByEnum("deleted_by"),
   },
   (table) => [
     uniqueIndex("thread_items_public_id_unique").on(table.publicId),
@@ -128,6 +134,32 @@ export const threadItems = pgTable(
     index("thread_items_published_idx")
       .on(table.status, table.publishedAt)
       .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
+export const pinnedAnswers = pgTable(
+  "pinned_answers",
+  {
+    profileId: text("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    threadItemId: text("thread_item_id")
+      .notNull()
+      .references(() => threadItems.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("pinned_answers_profile_position_unique").on(
+      table.profileId,
+      table.position,
+    ),
+    uniqueIndex("pinned_answers_profile_thread_item_unique").on(
+      table.profileId,
+      table.threadItemId,
+    ),
   ],
 );
 
@@ -197,6 +229,18 @@ export const threadItemsRelations = relations(threadItems, ({ many, one }) => ({
     references: [questions.id],
   }),
   notifications: many(notifications),
+  pins: many(pinnedAnswers),
+}));
+
+export const pinnedAnswersRelations = relations(pinnedAnswers, ({ one }) => ({
+  profile: one(profiles, {
+    fields: [pinnedAnswers.profileId],
+    references: [profiles.id],
+  }),
+  threadItem: one(threadItems, {
+    fields: [pinnedAnswers.threadItemId],
+    references: [threadItems.id],
+  }),
 }));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
