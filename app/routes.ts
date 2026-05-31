@@ -13,6 +13,7 @@ export default [
   route("dashboard/feed", "features/social/routes/feed.route.tsx"),
   route("dashboard/inbox", "features/inbox/routes/inbox.route.tsx"),
   route("dashboard/drafts", "features/answers/routes/drafts.route.tsx"),
+  route("dashboard/notifications", "features/notifications/routes/notifications.route.tsx"),
   route("dashboard/likes", "features/social/routes/like.action.route.ts"),
   route("dashboard/follows", "features/social/routes/follow.action.route.ts"),
   route("dashboard/answer/:questionId", "features/answers/routes/answer.route.tsx"),
