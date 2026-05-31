@@ -230,21 +230,23 @@ export function createDrizzleProfileSetupStore(
       return reservation;
     },
     async createProfileSetup(setup) {
-      await database.batch([
-        database.insert(profiles).values({
+      await database.transaction(async (transaction) => {
+        await transaction.insert(profiles).values({
           id: setup.profileId,
           userId: setup.userId,
           username: setup.username,
           displayName: setup.displayName,
           avatarUrl: setup.avatarUrl ?? null,
           bio: setup.bio ?? null,
-        }),
-        database.insert(usernameReservations).values({
+        });
+
+        await transaction.insert(usernameReservations).values({
           id: setup.reservationId,
           username: setup.username,
           profileId: setup.profileId,
-        }),
-        database.insert(events).values({
+        });
+
+        await transaction.insert(events).values({
           id: setup.eventId,
           userId: setup.userId,
           profileId: setup.profileId,
@@ -252,8 +254,8 @@ export function createDrizzleProfileSetupStore(
           metadata: {
             username: setup.username,
           },
-        }),
-      ]);
+        });
+      });
     },
   };
 }

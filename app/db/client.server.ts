@@ -1,11 +1,13 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { Pool } from "@neondatabase/serverless";
+import { drizzle, type NeonDatabase } from "drizzle-orm/neon-serverless";
 
 import * as schema from "~/db/schema";
 import { AppConfigurationError } from "~/lib/errors";
 import { serverEnv, type ServerEnv } from "~/lib/env.server";
 
-export type RuntimeDatabase = NeonHttpDatabase<typeof schema>;
+export type RuntimeDatabase = NeonDatabase<typeof schema> & {
+  $client: Pool;
+};
 
 let runtimeDatabase: RuntimeDatabase | undefined;
 
@@ -28,8 +30,8 @@ export function getMigrationDatabaseUrl(
 }
 
 export function createRuntimeDatabase(databaseUrl: string): RuntimeDatabase {
-  const sql = neon(databaseUrl);
-  return drizzle({ client: sql, schema });
+  const pool = new Pool({ connectionString: databaseUrl });
+  return drizzle({ client: pool, schema });
 }
 
 export function getRuntimeDatabase() {
