@@ -15,6 +15,7 @@ interface SettingsShellProps {
 const settingsLinks = [
   { to: "/dashboard/settings/profile", label: "Profile" },
   { to: "/dashboard/settings/privacy", label: "Privacy" },
+  { to: "/dashboard/settings/safety", label: "Safety" },
 ] as const;
 
 export function SettingsShell({

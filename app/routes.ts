@@ -24,6 +24,7 @@ export default [
   route("dashboard/filtered", "features/inbox/routes/filtered.route.tsx"),
   route("dashboard/settings/profile", "features/settings/routes/profile.route.tsx"),
   route("dashboard/settings/privacy", "features/settings/routes/privacy.route.tsx"),
+  route("dashboard/settings/safety", "features/settings/routes/safety.route.tsx"),
   route("terms", "features/legal/routes/terms.route.tsx"),
   route("privacy", "features/legal/routes/privacy.route.tsx"),
   route("api/auth/*", "features/auth/routes/auth.$.route.ts"),

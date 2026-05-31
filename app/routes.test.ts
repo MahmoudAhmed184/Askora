@@ -21,6 +21,9 @@ describe("route config", () => {
       paths.indexOf("dashboard/answers/:threadItemPublicId/actions"),
     ).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/filtered")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/settings/profile")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/settings/privacy")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/settings/safety")).toBeLessThan(usernameIndex);
   });
 
   it("registers public thread permalinks before the public username route", () => {
