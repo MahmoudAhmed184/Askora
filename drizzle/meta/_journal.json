@@ -15,6 +15,13 @@
       "when": 1780217841690,
       "tag": "0001_cute_dracula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780219906782,
+      "tag": "0002_fat_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }
