@@ -8,6 +8,10 @@ import {
 
 import type { Route } from "./+types/public-profile.questions.route";
 
+export function loader({ params }: Route.LoaderArgs) {
+  return redirect(`/${params.username}#ask`);
+}
+
 export async function action({ params, request }: Route.ActionArgs) {
   const username = params.username;
 
