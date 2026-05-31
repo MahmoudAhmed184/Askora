@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "auth:generate": "auth generate --config app/features/auth/auth.server.ts"
+    "auth:generate": "auth generate --config app/features/auth/auth.server.ts",
+    "admin:promote": "node scripts/promote-admin.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.12",

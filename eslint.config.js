@@ -34,6 +34,7 @@ export default defineConfig(
       "eslint.config.js",
       "node_modules/**",
       "playwright-report/**",
+      "scripts/**/*.mjs",
       "test-results/**",
     ],
   },
