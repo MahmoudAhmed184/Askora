@@ -164,6 +164,7 @@ export async function handleInboxAction({
   }
 
   const question = await findActionableQuestion({
+    intent: parsed.value.intent,
     publicId: parsed.value.questionPublicId,
     session,
     store,
@@ -360,10 +361,12 @@ async function executeInboxAction({
 }
 
 async function findActionableQuestion({
+  intent,
   publicId,
   session,
   store,
 }: {
+  intent: InboxActionIntent;
   publicId: string;
   session: CompletedProfileSessionSummary;
   store: InboxActionStore;
@@ -390,7 +393,7 @@ async function findActionableQuestion({
     return { status: "denied", reason: "already_deleted" };
   }
 
-  if (!isPrivateInboxQuestionStatus(question.status)) {
+  if (!isPrivateQuestionActionStatus({ intent, status: question.status })) {
     return { status: "denied", reason: "closed" };
   }
 
@@ -597,8 +600,18 @@ function getDeniedMessage(reason: InboxActionDeniedReason) {
   }
 }
 
-function isPrivateInboxQuestionStatus(status: InboxActionQuestionStatus) {
-  return status === "inbox" || status === "filtered";
+function isPrivateQuestionActionStatus({
+  intent,
+  status,
+}: {
+  intent: InboxActionIntent;
+  status: InboxActionQuestionStatus;
+}) {
+  if (status === "inbox" || status === "filtered") {
+    return true;
+  }
+
+  return status === "draft" && (intent === "report" || intent === "block");
 }
 
 function isInboxActionIntent(

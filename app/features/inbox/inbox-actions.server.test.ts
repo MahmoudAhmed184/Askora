@@ -263,6 +263,41 @@ describe("handleInboxAction", () => {
       reason: "not_found",
     });
   });
+
+  it("denies reports for questions owned by another profile", async () => {
+    const inbox = createInboxActionStore({
+      question: createQuestion({ recipientProfileId: "profile_other" }),
+    });
+
+    await expect(
+      submitInboxAction({
+        formData: createActionFormData({ intent: "report" }),
+        store: inbox.store,
+      }),
+    ).resolves.toMatchObject({
+      status: "denied",
+      reason: "not_found",
+    });
+    expect(inbox.reports).toEqual([]);
+    expect(inbox.blocks).toEqual([]);
+  });
+
+  it("denies anonymous block actions when no safety signal exists", async () => {
+    const inbox = createInboxActionStore({
+      question: createQuestion({ safetyFingerprintHash: "  " }),
+    });
+
+    await expect(
+      submitInboxAction({
+        formData: createActionFormData({ intent: "block" }),
+        store: inbox.store,
+      }),
+    ).resolves.toMatchObject({
+      status: "denied",
+      reason: "no_blockable_sender",
+    });
+    expect(inbox.blocks).toEqual([]);
+  });
 });
 
 async function submitInboxAction({
