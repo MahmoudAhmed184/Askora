@@ -17,6 +17,7 @@ import type {
   AnswerFormValues,
 } from "~/features/answers/answer.server";
 import type { QuestionTextMode } from "~/features/answers/answer.schema";
+import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
 import type { FollowUpPermission } from "~/features/settings/settings.schema";
 import { ThreadContextPreview } from "~/features/threads/components/thread-context-preview";
 import { cn } from "~/lib/utils";
@@ -94,6 +95,13 @@ export function AnswerEditor({
         <p className="whitespace-pre-wrap break-words text-base leading-7">
           {editor.question.text}
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <QuestionModerationControls
+            action="/dashboard/inbox"
+            disabled={disabled}
+            questionPublicId={editor.question.publicId}
+          />
+        </div>
       </section>
 
       <Form aria-label="Answer editor" className="border-y py-6" method="post">
