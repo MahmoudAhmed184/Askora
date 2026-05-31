@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
@@ -126,6 +126,49 @@ describe("public profile components", () => {
     expect(screen.getByText("Answer without the private prompt")).toBeInTheDocument();
     expect(screen.queryByText("What should I read next?")).not.toBeInTheDocument();
   });
+
+  it("renders owner controls only when management is allowed", () => {
+    const ownerRender = renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer()]}
+        controls={{ canManage: true, disabled: false }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Manage"));
+
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Pin" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Unpublish" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+
+    ownerRender.unmount();
+
+    renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer({ publicId: "titem_2" })]}
+        controls={{ canManage: false, disabled: false }}
+      />,
+    );
+
+    expect(screen.queryByText("Manage")).not.toBeInTheDocument();
+  });
+
+  it("disables owner controls for suspended owners", () => {
+    renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer()]}
+        controls={{ canManage: true, disabled: true }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Manage"));
+
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Pin" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Unpublish" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+  });
 });
 
 function renderWithRouter(element: React.ReactNode) {
@@ -172,6 +215,7 @@ function createPublishedAnswer(
     publicId: "titem_1",
     answerText: "Answer text",
     publishedAt: "2026-05-31T12:00:00.000Z",
+    pinPosition: null,
     questionTextMode: "original",
     questionText: "What should I read next?",
     asker: undefined,

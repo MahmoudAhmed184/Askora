@@ -11,7 +11,10 @@ import {
   createAskTimingToken,
   type PublicAskFlash,
 } from "~/features/profiles/ask-friction.server";
-import type { PublicSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CurrentSessionSummary,
+  PublicSessionSummary,
+} from "~/features/auth/auth.server";
 import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
 
 export interface PublicProfile {
@@ -56,6 +59,7 @@ export type PublicProfilePageData =
       askFlash: PublicAskFlash | undefined;
       timingToken: string | undefined;
       publishedAnswers: PublicPublishedAnswer[];
+      publishedAnswerControls: PublishedAnswerControlState;
     }
   | {
       status: "unavailable";
@@ -73,6 +77,11 @@ export interface PublicProfileView {
     following: number | undefined;
     reactions: number | undefined;
   };
+}
+
+export interface PublishedAnswerControlState {
+  canManage: boolean;
+  disabled: boolean;
 }
 
 export interface PublicProfileStore {
@@ -127,6 +136,7 @@ export async function resolvePublicProfile({
 export function createPublicProfilePageData({
   askFlash,
   profile,
+  publishedAnswerControls = hiddenPublishedAnswerControls,
   session,
   now = new Date(),
   publishedAnswers = [],
@@ -136,6 +146,7 @@ export function createPublicProfilePageData({
   session: PublicSessionSummary;
   now?: Date | undefined;
   publishedAnswers?: PublicPublishedAnswer[] | undefined;
+  publishedAnswerControls?: PublishedAnswerControlState | undefined;
 }): PublicProfilePageData {
   const ask = getPublicAskState({
     actor: session,
@@ -156,6 +167,29 @@ export function createPublicProfilePageData({
           })
         : undefined,
     publishedAnswers,
+    publishedAnswerControls,
+  };
+}
+
+export function getPublishedAnswerControlState({
+  profile,
+  session,
+}: {
+  profile: PublicProfile;
+  session: CurrentSessionSummary;
+}): PublishedAnswerControlState {
+  if (
+    session.status !== "authenticated" ||
+    session.profileStatus !== "complete" ||
+    session.profile.id !== profile.id ||
+    session.user.id !== profile.userId
+  ) {
+    return hiddenPublishedAnswerControls;
+  }
+
+  return {
+    canManage: true,
+    disabled: session.suspensionStatus === "active",
   };
 }
 
@@ -253,3 +287,8 @@ function getPublicProfileView(
     },
   };
 }
+
+const hiddenPublishedAnswerControls = {
+  canManage: false,
+  disabled: false,
+} satisfies PublishedAnswerControlState;

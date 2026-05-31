@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createPublicPublishedAnswers,
   handleAnswerSubmission,
   loadAnswerEditor,
   loadDraftAnswers,
   type AnswerMutationParams,
   type AnswerStore,
   type AnswerWorkflowQuestion,
+  type PublicPublishedAnswerRow,
   type StoredAnswerDraftItem,
   type StoredDraftAnswerQuestion,
 } from "~/features/answers/answer.server";
@@ -272,6 +274,106 @@ describe("loadDraftAnswers", () => {
   });
 });
 
+describe("createPublicPublishedAnswers", () => {
+  it("orders pinned answers first by position before newest unpinned answers", () => {
+    const answers = createPublicPublishedAnswers([
+      createPublicAnswerRow({
+        publicId: "new_unpinned",
+        publishedAt: new Date("2026-05-31T12:00:00.000Z"),
+      }),
+      createPublicAnswerRow({
+        publicId: "pinned_second",
+        pinPosition: 2,
+        publishedAt: new Date("2026-05-20T12:00:00.000Z"),
+      }),
+      createPublicAnswerRow({
+        publicId: "old_unpinned",
+        publishedAt: new Date("2026-05-01T12:00:00.000Z"),
+      }),
+      createPublicAnswerRow({
+        publicId: "pinned_first",
+        pinPosition: 1,
+        publishedAt: new Date("2026-05-10T12:00:00.000Z"),
+      }),
+    ]);
+
+    expect(answers.map((answer) => answer.publicId)).toEqual([
+      "pinned_first",
+      "pinned_second",
+      "new_unpinned",
+      "old_unpinned",
+    ]);
+  });
+
+  it("omits hidden/deleted/unpublished question and answer text from public data", () => {
+    const answers = createPublicPublishedAnswers([
+      createPublicAnswerRow({
+        publicId: "visible",
+        answerText: "Visible answer",
+        displayQuestionText: "Visible question",
+      }),
+      createPublicAnswerRow({
+        publicId: "hidden_question",
+        displayQuestionText: "Secret question",
+        questionTextMode: "hidden",
+      }),
+      createPublicAnswerRow({
+        publicId: "deleted_question",
+        displayQuestionText: "Deleted question",
+        questionDeletedAt: now,
+      }),
+      createPublicAnswerRow({
+        publicId: "draft_question",
+        displayQuestionText: "Draft question",
+        questionStatus: "draft",
+      }),
+      createPublicAnswerRow({
+        publicId: "deleted_answer",
+        answerText: "Deleted answer",
+        itemDeletedAt: now,
+        itemStatus: "deleted",
+      }),
+      createPublicAnswerRow({
+        publicId: "unpublished_answer",
+        answerText: "Unpublished answer",
+        itemStatus: "unpublished",
+      }),
+      createPublicAnswerRow({
+        publicId: "unpublished_thread",
+        answerText: "Thread hidden answer",
+        threadStatus: "unpublished",
+      }),
+    ]);
+    const serializedAnswers = JSON.stringify(answers);
+
+    expect(answers).toEqual([
+      expect.objectContaining({
+        publicId: "visible",
+        answerText: "Visible answer",
+        questionText: "Visible question",
+      }),
+      expect.objectContaining({
+        publicId: "hidden_question",
+        questionText: null,
+      }),
+      expect.objectContaining({
+        publicId: "deleted_question",
+        questionText: null,
+      }),
+      expect.objectContaining({
+        publicId: "draft_question",
+        questionText: null,
+      }),
+    ]);
+    expect(serializedAnswers).not.toContain("Secret question");
+    expect(serializedAnswers).not.toContain("Deleted question");
+    expect(serializedAnswers).not.toContain("Draft question");
+    expect(serializedAnswers).not.toContain("Deleted answer");
+    expect(serializedAnswers).not.toContain("Unpublished answer");
+    expect(serializedAnswers).not.toContain("Thread hidden answer");
+  });
+});
+
 async function submitAnswer({
   formData,
   session = completedSession,
@@ -319,6 +421,29 @@ function createAnswerFormData({
   formData.set("followUpPermissionOverride", followUpPermissionOverride);
 
   return formData;
+}
+
+function createPublicAnswerRow(
+  overrides: Partial<PublicPublishedAnswerRow> = {},
+): PublicPublishedAnswerRow {
+  return {
+    publicId: "titem_1",
+    answerText: "Published answer",
+    itemStatus: "published",
+    itemDeletedAt: null,
+    publishedAt: now,
+    createdAt: now,
+    pinPosition: null,
+    threadStatus: "published",
+    questionStatus: "answered",
+    questionDeletedAt: null,
+    questionTextMode: "original",
+    displayQuestionText: "What should I read next?",
+    identityMode: "guest_anonymous",
+    askerDisplayName: null,
+    askerUsername: null,
+    ...overrides,
+  };
 }
 
 interface TestThread {

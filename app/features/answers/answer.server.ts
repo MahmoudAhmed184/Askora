@@ -1,10 +1,11 @@
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import {
   notifications,
+  pinnedAnswers,
   profiles,
   questions,
   threadItems,
@@ -914,6 +915,7 @@ export interface PublicPublishedAnswer {
   publicId: string;
   answerText: string;
   publishedAt: string;
+  pinPosition: number | null;
   questionTextMode: PublicAnswerQuestionTextMode;
   questionText: string | null;
   asker:
@@ -921,7 +923,25 @@ export interface PublicPublishedAnswer {
         displayName: string;
         username: string;
       }
-    | undefined;
+      | undefined;
+}
+
+export interface PublicPublishedAnswerRow {
+  publicId: string;
+  answerText: string;
+  itemStatus: "draft" | "published" | "unpublished" | "deleted";
+  itemDeletedAt: Date | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  pinPosition: number | null;
+  threadStatus: "draft" | "published" | "unpublished" | "deleted";
+  questionStatus: "inbox" | "filtered" | "draft" | "answered";
+  questionDeletedAt: Date | null;
+  questionTextMode: PublicAnswerQuestionTextMode;
+  displayQuestionText: string | null;
+  identityMode: AnswerQuestionIdentity;
+  askerDisplayName: string | null;
+  askerUsername: string | null;
 }
 
 export async function findPublishedAnswersForProfile({
@@ -936,7 +956,14 @@ export async function findPublishedAnswersForProfile({
     .select({
       publicId: threadItems.publicId,
       answerText: threadItems.answerText,
+      itemStatus: threadItems.status,
+      itemDeletedAt: threadItems.deletedAt,
       publishedAt: threadItems.publishedAt,
+      createdAt: threadItems.createdAt,
+      pinPosition: pinnedAnswers.position,
+      threadStatus: threads.status,
+      questionStatus: questions.status,
+      questionDeletedAt: questions.deletedAt,
       questionTextMode: threadItems.questionTextMode,
       displayQuestionText: threadItems.displayQuestionText,
       identityMode: questions.identityMode,
@@ -947,6 +974,13 @@ export async function findPublishedAnswersForProfile({
     .innerJoin(threads, eq(threads.id, threadItems.threadId))
     .innerJoin(questions, eq(questions.id, threadItems.questionId))
     .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
+    .leftJoin(
+      pinnedAnswers,
+      and(
+        eq(pinnedAnswers.profileId, threads.ownerProfileId),
+        eq(pinnedAnswers.threadItemId, threadItems.id),
+      ),
+    )
     .where(
       and(
         eq(threads.ownerProfileId, profileId),
@@ -955,16 +989,38 @@ export async function findPublishedAnswersForProfile({
         isNull(threadItems.deletedAt),
       ),
     )
-    .orderBy(desc(threadItems.publishedAt), desc(threadItems.createdAt));
+    .orderBy(
+      sql`${pinnedAnswers.position} asc nulls last`,
+      desc(threadItems.publishedAt),
+      desc(threadItems.createdAt),
+    );
 
-  return rows.map((row) => ({
+  return createPublicPublishedAnswers(rows);
+}
+
+export function createPublicPublishedAnswers(
+  rows: PublicPublishedAnswerRow[],
+): PublicPublishedAnswer[] {
+  return rows
+    .filter(isVisiblePublishedAnswerRow)
+    .sort(comparePublicPublishedAnswerRows)
+    .map(toPublicPublishedAnswer);
+}
+
+function toPublicPublishedAnswer(
+  row: PublicPublishedAnswerRow,
+): PublicPublishedAnswer {
+  const questionText = getPublicQuestionText(row);
+
+  return {
     publicId: row.publicId,
     answerText: row.answerText,
     publishedAt: (row.publishedAt ?? new Date(0)).toISOString(),
+    pinPosition: row.pinPosition,
     questionTextMode: row.questionTextMode,
-    questionText:
-      row.questionTextMode === "hidden" ? null : row.displayQuestionText,
+    questionText,
     asker:
+      questionText !== null &&
       row.identityMode === "account_attributed" &&
       row.askerDisplayName !== null &&
       row.askerUsername !== null
@@ -973,5 +1029,61 @@ export async function findPublishedAnswersForProfile({
             username: row.askerUsername,
           }
         : undefined,
-  }));
+  };
+}
+
+function isVisiblePublishedAnswerRow(row: PublicPublishedAnswerRow) {
+  return (
+    row.threadStatus === "published" &&
+    row.itemStatus === "published" &&
+    row.itemDeletedAt === null
+  );
+}
+
+function comparePublicPublishedAnswerRows(
+  left: PublicPublishedAnswerRow,
+  right: PublicPublishedAnswerRow,
+) {
+  const pinOrder = comparePinPositions(left.pinPosition, right.pinPosition);
+
+  if (pinOrder !== 0) {
+    return pinOrder;
+  }
+
+  const publishedOrder =
+    (right.publishedAt?.getTime() ?? 0) - (left.publishedAt?.getTime() ?? 0);
+
+  if (publishedOrder !== 0) {
+    return publishedOrder;
+  }
+
+  return right.createdAt.getTime() - left.createdAt.getTime();
+}
+
+function comparePinPositions(left: number | null, right: number | null) {
+  if (left !== null && right !== null) {
+    return left - right;
+  }
+
+  if (left !== null) {
+    return -1;
+  }
+
+  if (right !== null) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function getPublicQuestionText(row: PublicPublishedAnswerRow) {
+  if (
+    row.questionTextMode === "hidden" ||
+    row.questionDeletedAt !== null ||
+    row.questionStatus !== "answered"
+  ) {
+    return null;
+  }
+
+  return row.displayQuestionText;
 }

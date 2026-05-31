@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import {
   createPublicProfilePageData,
+  getPublishedAnswerControlState,
   resolvePublicProfile,
   type PublicProfile,
   type PublicProfileStore,
   type PublicUsernameReservation,
 } from "~/features/profiles/profile.loader.server";
-import type { PublicSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary,
+  CurrentSessionSummary,
+  PublicSessionSummary,
+} from "~/features/auth/auth.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -129,6 +134,7 @@ describe("createPublicProfilePageData", () => {
           publicId: "titem_1",
           answerText: "Public answer",
           publishedAt: "2026-05-31T12:00:00.000Z",
+          pinPosition: null,
           questionTextMode: "hidden",
           questionText: null,
           asker: undefined,
@@ -167,6 +173,64 @@ describe("createPublicProfilePageData", () => {
     expect(page.status === "available" ? page.timingToken : undefined).toEqual(
       expect.any(String),
     );
+  });
+});
+
+describe("getPublishedAnswerControlState", () => {
+  it("allows only the completed-profile owner to manage published answers", () => {
+    const profile = createProfile();
+
+    expect(
+      getPublishedAnswerControlState({
+        profile,
+        session: completedOwnerSession,
+      }),
+    ).toEqual({
+      canManage: true,
+      disabled: false,
+    });
+    expect(
+      getPublishedAnswerControlState({
+        profile,
+        session: {
+          ...completedOwnerSession,
+          suspensionStatus: "active",
+        },
+      }),
+    ).toEqual({
+      canManage: true,
+      disabled: true,
+    });
+    expect(
+      getPublishedAnswerControlState({
+        profile,
+        session: anonymousCurrentSession,
+      }),
+    ).toEqual({
+      canManage: false,
+      disabled: false,
+    });
+    expect(
+      getPublishedAnswerControlState({
+        profile,
+        session: incompleteSession,
+      }),
+    ).toEqual({
+      canManage: false,
+      disabled: false,
+    });
+    expect(
+      getPublishedAnswerControlState({
+        profile,
+        session: {
+          ...completedOwnerSession,
+          profile: { ...completedOwnerSession.profile, id: "profile_other" },
+        },
+      }),
+    ).toEqual({
+      canManage: false,
+      disabled: false,
+    });
   });
 });
 
@@ -213,3 +277,37 @@ function createProfile(overrides: Partial<PublicProfile> = {}): PublicProfile {
 const anonymousSession = {
   status: "anonymous",
 } satisfies PublicSessionSummary;
+
+const anonymousCurrentSession = {
+  status: "anonymous",
+} satisfies CurrentSessionSummary;
+
+const incompleteSession = {
+  status: "authenticated",
+  profileStatus: "incomplete",
+  suspensionStatus: "none",
+  user: {
+    id: "user_1",
+    email: "person@example.com",
+    name: "Person",
+    image: undefined,
+  },
+} satisfies CurrentSessionSummary;
+
+const completedOwnerSession = {
+  status: "authenticated",
+  profileStatus: "complete",
+  suspensionStatus: "none",
+  user: {
+    id: "user_1",
+    email: "person@example.com",
+    name: "Person",
+    image: undefined,
+  },
+  profile: {
+    id: "profile_1",
+    username: "person",
+    displayName: "Person",
+    avatarUrl: null,
+  },
+} satisfies CompletedProfileSessionSummary;
