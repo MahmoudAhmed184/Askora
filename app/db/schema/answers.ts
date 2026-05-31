@@ -39,6 +39,7 @@ export const notificationTypeValues = [
   "follow_up_asked",
   "follow_up_answered",
   "answer_liked",
+  "profile_followed",
 ] as const;
 export const threadItemDeletedByValues = ["owner", "admin"] as const;
 
@@ -217,6 +218,11 @@ export const notifications = pgTable(
       .on(table.recipientUserId, table.type, table.threadItemId)
       .where(
         sql`${table.type} = 'follow_up_answered' and ${table.threadItemId} is not null`,
+      ),
+    uniqueIndex("notifications_profile_followed_unique")
+      .on(table.recipientUserId, table.type, table.actorUserId)
+      .where(
+        sql`${table.type} = 'profile_followed' and ${table.actorUserId} is not null`,
       ),
   ],
 );
