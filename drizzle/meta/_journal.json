@@ -57,6 +57,13 @@
       "when": 1780234742439,
       "tag": "0007_cute_alex_power",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780237476726,
+      "tag": "0008_thankful_jackal",
+      "breakpoints": true
     }
   ]
 }

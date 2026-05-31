@@ -38,6 +38,7 @@ export const notificationTypeValues = [
   "question_answered",
   "follow_up_asked",
   "follow_up_answered",
+  "answer_liked",
 ] as const;
 export const threadItemDeletedByValues = ["owner", "admin"] as const;
 
