@@ -73,7 +73,7 @@ describe("public profile components", () => {
             },
           }}
         />
-        <PublicAnswerList answers={[]} />
+        <PublicAnswerList answers={[]} profileUsername="person" />
       </>,
     );
 
@@ -99,6 +99,7 @@ describe("public profile components", () => {
             questionText: "How do I start?",
           }),
         ]}
+        profileUsername="person"
       />,
     );
 
@@ -107,6 +108,10 @@ describe("public profile components", () => {
       "break-words",
     );
     expect(screen.getByText(/<script>alert/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View thread" })).toHaveAttribute(
+      "href",
+      "/person/a/thr_1#item-titem_1",
+    );
     expect(container.querySelector("script")).toBeNull();
   });
 
@@ -120,6 +125,7 @@ describe("public profile components", () => {
             questionTextMode: "hidden",
           }),
         ]}
+        profileUsername="person"
       />,
     );
 
@@ -132,6 +138,7 @@ describe("public profile components", () => {
       <PublicAnswerList
         answers={[createPublishedAnswer()]}
         controls={{ canManage: true, disabled: false }}
+        profileUsername="person"
       />,
     );
 
@@ -148,6 +155,7 @@ describe("public profile components", () => {
       <PublicAnswerList
         answers={[createPublishedAnswer({ publicId: "titem_2" })]}
         controls={{ canManage: false, disabled: false }}
+        profileUsername="person"
       />,
     );
 
@@ -159,6 +167,7 @@ describe("public profile components", () => {
       <PublicAnswerList
         answers={[createPublishedAnswer()]}
         controls={{ canManage: true, disabled: true }}
+        profileUsername="person"
       />,
     );
 
@@ -213,6 +222,7 @@ function createPublishedAnswer(
 ): PublicPublishedAnswer {
   return {
     publicId: "titem_1",
+    threadPublicId: "thr_1",
     answerText: "Answer text",
     publishedAt: "2026-05-31T12:00:00.000Z",
     pinPosition: null,

@@ -913,6 +913,7 @@ export type PublicAnswerQuestionTextMode = QuestionTextMode;
 
 export interface PublicPublishedAnswer {
   publicId: string;
+  threadPublicId: string;
   answerText: string;
   publishedAt: string;
   pinPosition: number | null;
@@ -928,6 +929,7 @@ export interface PublicPublishedAnswer {
 
 export interface PublicPublishedAnswerRow {
   publicId: string;
+  threadPublicId: string;
   answerText: string;
   itemStatus: "draft" | "published" | "unpublished" | "deleted";
   itemDeletedAt: Date | null;
@@ -955,6 +957,7 @@ export async function findPublishedAnswersForProfile({
   const rows = await database
     .select({
       publicId: threadItems.publicId,
+      threadPublicId: threads.publicId,
       answerText: threadItems.answerText,
       itemStatus: threadItems.status,
       itemDeletedAt: threadItems.deletedAt,
@@ -1014,6 +1017,7 @@ function toPublicPublishedAnswer(
 
   return {
     publicId: row.publicId,
+    threadPublicId: row.threadPublicId,
     answerText: row.answerText,
     publishedAt: (row.publishedAt ?? new Date(0)).toISOString(),
     pinPosition: row.pinPosition,

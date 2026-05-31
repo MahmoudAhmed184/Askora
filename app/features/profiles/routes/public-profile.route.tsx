@@ -17,9 +17,9 @@ import {
 } from "~/features/profiles/ask-friction.server";
 import {
   createPublicProfilePageData,
-  getPublishedAnswerControlState,
   resolvePublicProfile,
 } from "~/features/profiles/profile.loader.server";
+import { getPublishedAnswerControlState } from "~/features/answers/published-answer-controls.server";
 import { getPublicAppConfig } from "~/lib/config.server";
 import { noindexHeaders } from "~/lib/response.server";
 
@@ -85,7 +85,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         askFlash: readPublicAskFlashFromRequest(request, username),
         profile: resolution.profile,
         publishedAnswerControls: getPublishedAnswerControlState({
-          profile: resolution.profile,
+          owner: resolution.profile,
           session,
         }),
         publishedAnswers,
@@ -163,6 +163,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
         <PublicAnswerList
           answers={page.publishedAnswers}
           controls={page.publishedAnswerControls}
+          profileUsername={page.profile.username}
         />
       </div>
     </PublicShell>

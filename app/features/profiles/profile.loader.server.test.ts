@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   createPublicProfilePageData,
-  getPublishedAnswerControlState,
   resolvePublicProfile,
   type PublicProfile,
   type PublicProfileStore,
   type PublicUsernameReservation,
 } from "~/features/profiles/profile.loader.server";
+import { getPublishedAnswerControlState } from "~/features/answers/published-answer-controls.server";
 import type {
   CompletedProfileSessionSummary,
   CurrentSessionSummary,
@@ -132,6 +132,7 @@ describe("createPublicProfilePageData", () => {
       publishedAnswers: [
         {
           publicId: "titem_1",
+          threadPublicId: "thr_1",
           answerText: "Public answer",
           publishedAt: "2026-05-31T12:00:00.000Z",
           pinPosition: null,
@@ -182,7 +183,7 @@ describe("getPublishedAnswerControlState", () => {
 
     expect(
       getPublishedAnswerControlState({
-        profile,
+        owner: profile,
         session: completedOwnerSession,
       }),
     ).toEqual({
@@ -191,7 +192,7 @@ describe("getPublishedAnswerControlState", () => {
     });
     expect(
       getPublishedAnswerControlState({
-        profile,
+        owner: profile,
         session: {
           ...completedOwnerSession,
           suspensionStatus: "active",
@@ -203,7 +204,7 @@ describe("getPublishedAnswerControlState", () => {
     });
     expect(
       getPublishedAnswerControlState({
-        profile,
+        owner: profile,
         session: anonymousCurrentSession,
       }),
     ).toEqual({
@@ -212,7 +213,7 @@ describe("getPublishedAnswerControlState", () => {
     });
     expect(
       getPublishedAnswerControlState({
-        profile,
+        owner: profile,
         session: incompleteSession,
       }),
     ).toEqual({
@@ -221,7 +222,7 @@ describe("getPublishedAnswerControlState", () => {
     });
     expect(
       getPublishedAnswerControlState({
-        profile,
+        owner: profile,
         session: {
           ...completedOwnerSession,
           profile: { ...completedOwnerSession.profile, id: "profile_other" },

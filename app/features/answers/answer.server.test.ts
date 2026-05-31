@@ -349,6 +349,7 @@ describe("createPublicPublishedAnswers", () => {
     expect(answers).toEqual([
       expect.objectContaining({
         publicId: "visible",
+        threadPublicId: "thr_1",
         answerText: "Visible answer",
         questionText: "Visible question",
       }),
@@ -428,6 +429,7 @@ function createPublicAnswerRow(
 ): PublicPublishedAnswerRow {
   return {
     publicId: "titem_1",
+    threadPublicId: "thr_1",
     answerText: "Published answer",
     itemStatus: "published",
     itemDeletedAt: null,

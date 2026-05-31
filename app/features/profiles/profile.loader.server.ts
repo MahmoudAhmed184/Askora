@@ -12,10 +12,13 @@ import {
   type PublicAskFlash,
 } from "~/features/profiles/ask-friction.server";
 import type {
-  CurrentSessionSummary,
   PublicSessionSummary,
 } from "~/features/auth/auth.server";
 import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
+import {
+  hiddenPublishedAnswerControls,
+  type PublishedAnswerControlState,
+} from "~/features/answers/published-answer-controls";
 
 export interface PublicProfile {
   id: string;
@@ -77,11 +80,6 @@ export interface PublicProfileView {
     following: number | undefined;
     reactions: number | undefined;
   };
-}
-
-export interface PublishedAnswerControlState {
-  canManage: boolean;
-  disabled: boolean;
 }
 
 export interface PublicProfileStore {
@@ -168,28 +166,6 @@ export function createPublicProfilePageData({
         : undefined,
     publishedAnswers,
     publishedAnswerControls,
-  };
-}
-
-export function getPublishedAnswerControlState({
-  profile,
-  session,
-}: {
-  profile: PublicProfile;
-  session: CurrentSessionSummary;
-}): PublishedAnswerControlState {
-  if (
-    session.status !== "authenticated" ||
-    session.profileStatus !== "complete" ||
-    session.profile.id !== profile.id ||
-    session.user.id !== profile.userId
-  ) {
-    return hiddenPublishedAnswerControls;
-  }
-
-  return {
-    canManage: true,
-    disabled: session.suspensionStatus === "active",
   };
 }
 
@@ -287,8 +263,3 @@ function getPublicProfileView(
     },
   };
 }
-
-const hiddenPublishedAnswerControls = {
-  canManage: false,
-  disabled: false,
-} satisfies PublishedAnswerControlState;
