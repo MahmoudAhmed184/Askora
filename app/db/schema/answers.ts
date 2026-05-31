@@ -34,7 +34,11 @@ export const questionTextModeValues = [
   "hidden",
 ] as const;
 
-export const notificationTypeValues = ["question_answered"] as const;
+export const notificationTypeValues = [
+  "question_answered",
+  "follow_up_asked",
+  "follow_up_answered",
+] as const;
 export const threadItemDeletedByValues = ["owner", "admin"] as const;
 
 export const threadStatusEnum = pgEnum("thread_status", threadStatusValues);
@@ -202,6 +206,16 @@ export const notifications = pgTable(
       .on(table.recipientUserId, table.type, table.questionId)
       .where(
         sql`${table.type} = 'question_answered' and ${table.questionId} is not null`,
+      ),
+    uniqueIndex("notifications_follow_up_asked_unique")
+      .on(table.recipientUserId, table.type, table.questionId)
+      .where(
+        sql`${table.type} = 'follow_up_asked' and ${table.questionId} is not null`,
+      ),
+    uniqueIndex("notifications_follow_up_answered_unique")
+      .on(table.recipientUserId, table.type, table.threadItemId)
+      .where(
+        sql`${table.type} = 'follow_up_answered' and ${table.threadItemId} is not null`,
       ),
   ],
 );
