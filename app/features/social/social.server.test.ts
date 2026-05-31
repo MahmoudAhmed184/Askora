@@ -100,7 +100,7 @@ describe("like actions", () => {
 });
 
 describe("follow actions", () => {
-  it("follows and unfollows idempotently", async () => {
+  it("follows and unfollows idempotently with one durable follow notification", async () => {
     const follows = createFollowStore();
 
     await expect(submitFollow({ store: follows.store })).resolves.toMatchObject({
@@ -118,6 +118,17 @@ describe("follow actions", () => {
       submitFollow({ intent: "unfollow", store: follows.store }),
     ).resolves.toMatchObject({ status: "unfollowed" });
     expect(follows.followKeys()).toEqual([]);
+    await expect(submitFollow({ store: follows.store })).resolves.toMatchObject({
+      status: "followed",
+    });
+    expect(follows.followKeys()).toEqual(["profile_actor:profile_target"]);
+    expect(follows.notifications).toEqual([
+      {
+        actorUserId: "user_actor",
+        id: "notification_1",
+        recipientUserId: "user_target",
+      },
+    ]);
   });
 
   it("denies self, suspended, blocked, inactive, and deleted targets", async () => {
@@ -354,6 +365,7 @@ async function submitFollow({
   formData.set("returnTo", "/target");
 
   return handleFollowAction({
+    createId: () => "notification_1",
     formData,
     now,
     session,
@@ -369,6 +381,12 @@ function createFollowStore({
   profiles?: FollowTargetProfile[];
 } = {}) {
   const followKeys = new Set<string>();
+  const notificationDedupeKeys = new Set<string>();
+  const notifications: {
+    actorUserId: string;
+    id: string;
+    recipientUserId: string;
+  }[] = [];
   const store: FollowActionStore = {
     findTargetProfileByUsername(username) {
       return Promise.resolve(
@@ -379,9 +397,28 @@ function createFollowStore({
       return Promise.resolve(blockedTargetProfileIds.includes(targetProfileId));
     },
     followProfile(params) {
-      followKeys.add(createFollowKey(params));
+      const followKey = createFollowKey(params);
 
-      return Promise.resolve();
+      if (followKeys.has(followKey)) {
+        return Promise.resolve({ notificationCreated: false });
+      }
+
+      followKeys.add(followKey);
+
+      const notificationKey = createFollowNotificationKey(params);
+
+      if (notificationDedupeKeys.has(notificationKey)) {
+        return Promise.resolve({ notificationCreated: false });
+      }
+
+      notificationDedupeKeys.add(notificationKey);
+      notifications.push({
+        actorUserId: params.session.user.id,
+        id: params.createId(),
+        recipientUserId: params.target.userId,
+      });
+
+      return Promise.resolve({ notificationCreated: true });
     },
     unfollowProfile(params) {
       followKeys.delete(createFollowKey(params));
@@ -391,6 +428,7 @@ function createFollowStore({
   };
 
   return {
+    notifications,
     store,
     followKeys: () => [...followKeys].sort(),
   };
@@ -398,6 +436,10 @@ function createFollowStore({
 
 function createFollowKey(params: FollowMutationParams) {
   return `${params.session.profile.id}:${params.target.id}`;
+}
+
+function createFollowNotificationKey(params: FollowMutationParams) {
+  return `${params.session.user.id}:${params.target.userId}`;
 }
 
 function createFollowTarget(

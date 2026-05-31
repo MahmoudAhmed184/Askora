@@ -13,6 +13,10 @@ import {
   threads,
 } from "~/db/schema";
 import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import {
+  createFollowUpAskedNotification,
+  type FollowUpAskedNotification,
+} from "~/features/notifications/notification.server";
 import type { QuestionIdentityMode } from "~/features/profiles/ask-permissions.server";
 import {
   ASK_MINIMUM_SUBMIT_MILLISECONDS,
@@ -192,18 +196,7 @@ export interface NewFollowUpQuestion {
   updatedAt: Date;
 }
 
-export interface NewFollowUpNotification {
-  id: string;
-  recipientUserId: string;
-  type: "follow_up_asked";
-  actorUserId: string | null;
-  threadId: string;
-  threadItemId: null;
-  questionId: string;
-  readAt: null;
-  createdAt: Date;
-  expiresAt: Date;
-}
+export type NewFollowUpNotification = FollowUpAskedNotification;
 
 export interface FollowUpStore {
   findThreadByPublicId(
@@ -439,11 +432,13 @@ export async function submitThreadFollowUp({
   await store.createFollowUpQuestion({
     question,
     notification: createFollowUpAskedNotification({
-      createNotificationId,
+      id: createNotificationId(),
+      recipientUserId: thread.ownerUserId,
+      actorUserId:
+        session.status === "authenticated" ? session.user.id : null,
+      threadId: thread.id,
+      questionId: question.id,
       now,
-      question,
-      session,
-      thread,
     }),
   });
 
@@ -867,39 +862,6 @@ function createNewFollowUpQuestion({
     safetyMetadataRetainUntil: addDays(now, 30),
     createdAt: now,
     updatedAt: now,
-  };
-}
-
-function createFollowUpAskedNotification({
-  createNotificationId,
-  now,
-  question,
-  session,
-  thread,
-}: {
-  question: NewFollowUpQuestion;
-  thread: FollowUpThreadRecord;
-  session: CurrentSessionSummary;
-  createNotificationId: () => string;
-  now: Date;
-}): NewFollowUpNotification | undefined {
-  const actorUserId = session.status === "authenticated" ? session.user.id : null;
-
-  if (actorUserId === thread.ownerUserId) {
-    return undefined;
-  }
-
-  return {
-    id: createNotificationId(),
-    recipientUserId: thread.ownerUserId,
-    type: "follow_up_asked",
-    actorUserId,
-    threadId: thread.id,
-    threadItemId: null,
-    questionId: question.id,
-    readAt: null,
-    createdAt: now,
-    expiresAt: addDays(now, 180),
   };
 }
 

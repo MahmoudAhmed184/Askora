@@ -20,6 +20,7 @@ import {
   type LikeActionSubmission,
   type LikeIntent,
 } from "~/features/social/social.schema";
+import { createAnswerLikedNotification } from "~/features/notifications/notification.server";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 
@@ -344,18 +345,16 @@ async function createFirstLikeNotification({
 
   await transaction
     .insert(notifications)
-    .values({
-      id: params.createId(),
-      recipientUserId: params.answer.ownerUserId,
-      type: "answer_liked",
-      actorUserId: params.session.user.id,
-      threadId: params.answer.threadId,
-      threadItemId: params.answer.id,
-      questionId: null,
-      readAt: null,
-      createdAt: params.now,
-      expiresAt: addDays(params.now, 180),
-    })
+    .values(
+      createAnswerLikedNotification({
+        id: params.createId(),
+        recipientUserId: params.answer.ownerUserId,
+        actorUserId: params.session.user.id,
+        threadId: params.answer.threadId,
+        threadItemId: params.answer.id,
+        now: params.now,
+      }),
+    )
     .onConflictDoNothing();
 
   return true;
@@ -477,8 +476,4 @@ function getFormText(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value.trim() : undefined;
-}
-
-function addDays(date: Date, days: number) {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }

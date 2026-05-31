@@ -1,8 +1,9 @@
 import { and, eq, or } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
-import { authUsers, blocks, follows, profiles } from "~/db/schema";
+import { authUsers, blocks, follows, notifications, profiles } from "~/db/schema";
 import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import { createProfileFollowedNotification } from "~/features/notifications/notification.server";
 import {
   followActionSchema,
   followIntentValues,
@@ -10,6 +11,7 @@ import {
   type FollowActionSubmission,
   type FollowIntent,
 } from "~/features/social/social.schema";
+import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 import type { ZodError } from "zod";
 
@@ -58,9 +60,14 @@ export type FollowActionResult =
     };
 
 export interface FollowMutationParams {
+  createId: () => string;
   now: Date;
   session: CompletedProfileSessionSummary;
   target: FollowTargetProfile;
+}
+
+export interface FollowMutationResult {
+  notificationCreated: boolean;
 }
 
 export interface FollowActionStore {
@@ -72,11 +79,16 @@ export interface FollowActionStore {
     actorUserId: string;
     targetProfileId: string;
   }): Promise<boolean>;
-  followProfile(params: FollowMutationParams): Promise<void>;
+  followProfile(params: FollowMutationParams): Promise<FollowMutationResult>;
   unfollowProfile(params: FollowMutationParams): Promise<void>;
 }
 
+type DatabaseTransaction = Parameters<
+  Parameters<RuntimeDatabase["transaction"]>[0]
+>[0];
+
 export async function handleFollowAction({
+  createId = createDatabaseId,
   formData,
   now = new Date(),
   session,
@@ -85,6 +97,7 @@ export async function handleFollowAction({
   formData: FormData;
   session: CompletedProfileSessionSummary;
   store?: FollowActionStore;
+  createId?: () => string;
   now?: Date;
 }): Promise<FollowActionResult> {
   const values = getFollowActionFormValues(formData);
@@ -110,6 +123,7 @@ export async function handleFollowAction({
   }
 
   return mutateFollow({
+    createId,
     form: parsed.value,
     now,
     session,
@@ -159,15 +173,29 @@ export function createDrizzleFollowActionStore(
 
       return block !== undefined;
     },
-    async followProfile({ now, session, target }) {
-      await database
-        .insert(follows)
-        .values({
-          followerProfileId: session.profile.id,
-          followedProfileId: target.id,
-          createdAt: now,
-        })
-        .onConflictDoNothing();
+    async followProfile(params) {
+      return database.transaction(async (transaction) => {
+        const followInserted = await insertFollowRow({ params, transaction });
+
+        if (!followInserted) {
+          return { notificationCreated: false };
+        }
+
+        const [notification] = await transaction
+          .insert(notifications)
+          .values(
+            createProfileFollowedNotification({
+              id: params.createId(),
+              recipientUserId: params.target.userId,
+              actorUserId: params.session.user.id,
+              now: params.now,
+            }),
+          )
+          .onConflictDoNothing()
+          .returning({ id: notifications.id });
+
+        return { notificationCreated: notification !== undefined };
+      });
     },
     async unfollowProfile({ session, target }) {
       await database
@@ -224,19 +252,21 @@ async function findAllowedFollowTarget({
 }
 
 async function mutateFollow({
+  createId,
   form,
   now,
   session,
   store,
   target,
 }: {
+  createId: () => string;
   form: FollowActionSubmission;
   now: Date;
   session: CompletedProfileSessionSummary;
   store: FollowActionStore;
   target: FollowTargetProfile;
 }): Promise<FollowActionResult> {
-  const params = { now, session, target };
+  const params = { createId, now, session, target };
 
   if (form.intent === "unfollow") {
     await store.unfollowProfile(params);
@@ -253,6 +283,26 @@ async function mutateFollow({
     form,
     status: "followed",
   });
+}
+
+async function insertFollowRow({
+  params,
+  transaction,
+}: {
+  params: FollowMutationParams;
+  transaction: DatabaseTransaction;
+}) {
+  const [inserted] = await transaction
+    .insert(follows)
+    .values({
+      followerProfileId: params.session.profile.id,
+      followedProfileId: params.target.id,
+      createdAt: params.now,
+    })
+    .onConflictDoNothing()
+    .returning({ followedProfileId: follows.followedProfileId });
+
+  return inserted !== undefined;
 }
 
 function successResult({

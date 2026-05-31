@@ -23,6 +23,10 @@ import type {
   CompletedProfileSessionSummary,
   CurrentSessionSummary,
 } from "~/features/auth/auth.server";
+import {
+  createFollowUpAnsweredNotification,
+  createQuestionAnsweredNotificationForQuestion,
+} from "~/features/notifications/notification.server";
 import { findThreadItemLikeSummaries } from "~/features/social/social-data.server";
 import {
   getLikeControlState,
@@ -603,22 +607,22 @@ export function createDrizzleAnswerStore(
           })
           .where(eq(questions.id, params.question.id));
 
-        if (firstPublish && params.question.askerUserId !== null) {
-          await transaction
-            .insert(notifications)
-            .values({
-              id: params.createDatabaseId(),
-              recipientUserId: params.question.askerUserId,
-              type: "question_answered",
-              actorUserId: params.actorUserId,
-              threadId: thread.id,
-              threadItemId: item.id,
-              questionId: params.question.id,
-              readAt: null,
-              createdAt: params.now,
-              expiresAt: addDays(params.now, 180),
-            })
-            .onConflictDoNothing();
+        if (firstPublish) {
+          const notification = createQuestionAnsweredNotificationForQuestion({
+            actorUserId: params.actorUserId,
+            createId: params.createDatabaseId,
+            now: params.now,
+            question: params.question,
+            threadId: thread.id,
+            threadItemId: item.id,
+          });
+
+          if (notification !== undefined) {
+            await transaction
+              .insert(notifications)
+              .values(notification)
+              .onConflictDoNothing();
+          }
         }
 
         if (firstPublish && isFollowUpQuestion(params.question)) {
@@ -960,18 +964,17 @@ async function createFollowUpAnsweredNotifications({
   for (const recipientUserId of participantUserIds) {
     await transaction
       .insert(notifications)
-      .values({
-        id: params.createDatabaseId(),
-        recipientUserId,
-        type: "follow_up_answered",
-        actorUserId: params.actorUserId,
-        threadId: thread.id,
-        threadItemId: item.id,
-        questionId: params.question.id,
-        readAt: null,
-        createdAt: now,
-        expiresAt: addDays(now, 180),
-      })
+      .values(
+        createFollowUpAnsweredNotification({
+          id: params.createDatabaseId(),
+          recipientUserId,
+          actorUserId: params.actorUserId,
+          threadId: thread.id,
+          threadItemId: item.id,
+          questionId: params.question.id,
+          now,
+        }),
+      )
       .onConflictDoNothing();
   }
 }
@@ -1258,10 +1261,6 @@ function getFormText(formData: FormData, key: string) {
   const value = formData.get(key);
 
   return typeof value === "string" ? value : undefined;
-}
-
-function addDays(date: Date, days: number) {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 export type PublicAnswerQuestionTextMode = QuestionTextMode;
