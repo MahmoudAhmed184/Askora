@@ -15,6 +15,12 @@ export const followUpPermissionValues = [
   "original_asker",
   "off",
 ] as const;
+export const accountActionValues = [
+  "deactivate",
+  "reactivate",
+  "request_deletion",
+  "cancel_deletion",
+] as const;
 
 const trimmedRequiredString = z.string().transform((value) => value.trim());
 
@@ -65,6 +71,32 @@ export const privacySettingsSubmissionSchema = z.object({
   showLikeCounts: checkboxBooleanSchema,
 });
 
+export const accountSettingsSubmissionSchema = z.discriminatedUnion("intent", [
+  z.object({
+    intent: z.literal("deactivate"),
+    confirmation: z.literal("DEACTIVATE", {
+      error: "Type DEACTIVATE to deactivate your profile.",
+    }),
+  }),
+  z.object({
+    intent: z.literal("reactivate"),
+    confirmation: z.string().optional(),
+  }),
+  z.object({
+    intent: z.literal("request_deletion"),
+    confirmation: z.literal("DELETE", {
+      error: "Type DELETE to request account deletion.",
+    }),
+  }),
+  z.object({
+    intent: z.literal("cancel_deletion"),
+    confirmation: z.string().optional(),
+  }),
+]);
+
+export type AccountAction = z.infer<
+  typeof accountSettingsSubmissionSchema
+>["intent"];
 export type AvatarSource = z.infer<
   typeof profileSettingsSubmissionSchema
 >["avatarSource"];
@@ -79,4 +111,7 @@ export type ProfileSettingsSubmission = z.infer<
 >;
 export type PrivacySettingsSubmission = z.infer<
   typeof privacySettingsSubmissionSchema
+>;
+export type AccountSettingsSubmission = z.infer<
+  typeof accountSettingsSubmissionSchema
 >;
