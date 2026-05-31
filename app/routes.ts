@@ -10,8 +10,11 @@ export default [
   route("setup", "features/profile-setup/routes/setup.route.tsx"),
   route("setup/share", "features/profile-setup/routes/setup.share.route.tsx"),
   route("dashboard", "features/inbox/routes/dashboard.route.tsx"),
+  route("dashboard/feed", "features/social/routes/feed.route.tsx"),
   route("dashboard/inbox", "features/inbox/routes/inbox.route.tsx"),
   route("dashboard/drafts", "features/answers/routes/drafts.route.tsx"),
+  route("dashboard/likes", "features/social/routes/like.action.route.ts"),
+  route("dashboard/follows", "features/social/routes/follow.action.route.ts"),
   route("dashboard/answer/:questionId", "features/answers/routes/answer.route.tsx"),
   route(
     "dashboard/answers/:threadItemPublicId/actions",

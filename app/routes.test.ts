@@ -8,8 +8,11 @@ describe("route config", () => {
     const usernameIndex = paths.indexOf(":username");
 
     expect(paths.indexOf("dashboard")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/feed")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/inbox")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/drafts")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/likes")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/follows")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/answer/:questionId")).toBeLessThan(
       usernameIndex,
     );
