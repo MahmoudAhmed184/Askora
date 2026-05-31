@@ -9,6 +9,10 @@ describe("route config", () => {
 
     expect(paths.indexOf("dashboard")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/inbox")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/drafts")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/answer/:questionId")).toBeLessThan(
+      usernameIndex,
+    );
     expect(paths.indexOf("dashboard/filtered")).toBeLessThan(usernameIndex);
   });
 });

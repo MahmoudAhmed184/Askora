@@ -60,6 +60,7 @@ interface DashboardLink {
 const dashboardLinks: readonly DashboardLink[] = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/dashboard/inbox", label: "Inbox" },
+  { to: "/dashboard/drafts", label: "Drafts" },
   { to: "/dashboard/filtered", label: "Filtered" },
   {
     to: "/dashboard/settings/profile",

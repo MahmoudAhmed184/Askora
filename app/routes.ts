@@ -11,6 +11,8 @@ export default [
   route("setup/share", "features/profile-setup/routes/setup.share.route.tsx"),
   route("dashboard", "features/inbox/routes/dashboard.route.tsx"),
   route("dashboard/inbox", "features/inbox/routes/inbox.route.tsx"),
+  route("dashboard/drafts", "features/answers/routes/drafts.route.tsx"),
+  route("dashboard/answer/:questionId", "features/answers/routes/answer.route.tsx"),
   route("dashboard/filtered", "features/inbox/routes/filtered.route.tsx"),
   route("dashboard/settings/profile", "features/settings/routes/profile.route.tsx"),
   route("dashboard/settings/privacy", "features/settings/routes/privacy.route.tsx"),
