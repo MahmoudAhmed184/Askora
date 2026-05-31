@@ -14,4 +14,9 @@ export default [
   route("terms", "features/legal/routes/terms.route.tsx"),
   route("privacy", "features/legal/routes/privacy.route.tsx"),
   route("api/auth/*", "features/auth/routes/auth.$.route.ts"),
+  route(":username", "features/profiles/routes/public-profile.route.tsx"),
+  route(
+    ":username/questions",
+    "features/profiles/routes/public-profile.questions.route.ts",
+  ),
 ] satisfies RouteConfig;
