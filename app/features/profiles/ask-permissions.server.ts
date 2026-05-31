@@ -25,6 +25,7 @@ export interface AskPermissionTarget {
   acceptingQuestions: boolean;
   anonymousQuestionsEnabled: boolean;
   askPermission: AskPermission;
+  isFollowedByActor?: boolean;
 }
 
 export type AskPermissionDecision =
@@ -78,7 +79,7 @@ export function evaluateAskPermission({
   }
 
   if (target.askPermission === "followers") {
-    return denyFollowersOnly();
+    return evaluateFollowersOnlyAskPermission({ actor, identity, target });
   }
 
   if (actor.status === "anonymous") {
@@ -92,11 +93,58 @@ export function evaluateAskPermission({
   return denyQuestionsOff();
 }
 
+function evaluateFollowersOnlyAskPermission({
+  actor,
+  identity,
+  target,
+}: {
+  actor: CurrentSessionSummary | PublicSessionSummary;
+  identity: PublicQuestionIdentity;
+  target: AskPermissionTarget;
+}): AskPermissionDecision {
+  if (actor.status === "anonymous") {
+    return {
+      status: "denied",
+      reason: "login_required",
+      message: "Log in and follow this profile to ask a question.",
+      action: {
+        label: "Log in",
+        href: "/login",
+      },
+    };
+  }
+
+  if (actor.profileStatus === "incomplete") {
+    return {
+      status: "denied",
+      reason: "profile_required",
+      message: "Complete your profile to follow and ask this profile.",
+      action: {
+        label: "Complete profile",
+        href: "/setup",
+      },
+    };
+  }
+
+  if (target.isFollowedByActor !== true) {
+    return denyFollowersOnly();
+  }
+
+  if (identity === "anonymous") {
+    return evaluateAuthenticatedAnonymousPermission({ target });
+  }
+
+  return {
+    status: "allowed",
+    identityMode: "account_attributed",
+  };
+}
+
 export function getPublicAskState({
   actor,
   target,
 }: {
-  actor: PublicSessionSummary;
+  actor: CurrentSessionSummary | PublicSessionSummary;
   target: AskPermissionTarget;
 }): PublicAskState {
   const anonymous = evaluateAskPermission({
@@ -276,7 +324,7 @@ function denyFollowersOnly(): AskPermissionDecision {
   return {
     status: "denied",
     reason: "followers_only",
-    message: "Followers-only questions are not available yet.",
+    message: "Only followers can ask this profile a question.",
   };
 }
 
@@ -295,7 +343,7 @@ function getAllowedAskDescription({
 }: {
   anonymousAllowed: boolean;
   attributedAllowed: boolean;
-  actor: PublicSessionSummary;
+  actor: CurrentSessionSummary | PublicSessionSummary;
 }) {
   if (anonymousAllowed && attributedAllowed) {
     return "Choose whether to ask anonymously or with your profile attached.";

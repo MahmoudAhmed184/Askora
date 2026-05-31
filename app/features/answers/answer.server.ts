@@ -19,7 +19,15 @@ import {
   type AnswerSubmission,
   type QuestionTextMode,
 } from "~/features/answers/answer.schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary,
+  CurrentSessionSummary,
+} from "~/features/auth/auth.server";
+import { findThreadItemLikeSummaries } from "~/features/social/social-data.server";
+import {
+  getLikeControlState,
+  type LikeControlState,
+} from "~/features/social/social-controls";
 import type { FollowUpPermission } from "~/features/settings/settings.schema";
 import {
   createCompactThreadContextPreview,
@@ -1266,6 +1274,7 @@ export interface PublicPublishedAnswer {
   pinPosition: number | null;
   questionTextMode: PublicAnswerQuestionTextMode;
   questionText: string | null;
+  like: LikeControlState;
   asker:
     | {
         displayName: string;
@@ -1275,6 +1284,7 @@ export interface PublicPublishedAnswer {
 }
 
 export interface PublicPublishedAnswerRow {
+  threadItemId: string;
   publicId: string;
   threadPublicId: string;
   answerText: string;
@@ -1291,18 +1301,26 @@ export interface PublicPublishedAnswerRow {
   identityMode: AnswerQuestionIdentity;
   askerDisplayName: string | null;
   askerUsername: string | null;
+  ownerProfileId: string;
+  ownerUserId: string;
+  ownerShowLikeCounts: boolean;
+  likeCount: number;
+  viewerLiked: boolean;
 }
 
 export async function findPublishedAnswersForProfile({
   database = getRuntimeDatabase(),
   profileId,
+  session = anonymousSession,
 }: {
   profileId: string;
   database?: RuntimeDatabase;
+  session?: CurrentSessionSummary | undefined;
 }): Promise<PublicPublishedAnswer[]> {
   const askerProfiles = alias(profiles, "answer_asker_profiles");
   const rows = await database
     .select({
+      threadItemId: threadItems.id,
       publicId: threadItems.publicId,
       threadPublicId: threads.publicId,
       answerText: threadItems.answerText,
@@ -1319,9 +1337,13 @@ export async function findPublishedAnswersForProfile({
       identityMode: questions.identityMode,
       askerDisplayName: askerProfiles.displayName,
       askerUsername: askerProfiles.username,
+      ownerProfileId: profiles.id,
+      ownerUserId: profiles.userId,
+      ownerShowLikeCounts: profiles.showLikeCounts,
     })
     .from(threadItems)
     .innerJoin(threads, eq(threads.id, threadItems.threadId))
+    .innerJoin(profiles, eq(profiles.id, threads.ownerProfileId))
     .innerJoin(questions, eq(questions.id, threadItems.questionId))
     .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
     .leftJoin(
@@ -1345,20 +1367,43 @@ export async function findPublishedAnswersForProfile({
       desc(threadItems.createdAt),
     );
 
-  return createPublicPublishedAnswers(rows);
+  const summaries = await findThreadItemLikeSummaries({
+    database,
+    threadItemIds: rows.map((row) => row.threadItemId),
+    viewerProfileId: getViewerProfileId(session),
+  });
+
+  return createPublicPublishedAnswers(
+    rows.map((row) => {
+      const summary = summaries.get(row.threadItemId);
+
+      return {
+        ...row,
+        likeCount: summary?.count ?? 0,
+        viewerLiked: summary?.isLikedByViewer ?? false,
+      };
+    }),
+    { session },
+  );
 }
 
 export function createPublicPublishedAnswers(
   rows: PublicPublishedAnswerRow[],
+  {
+    session = anonymousSession,
+  }: {
+    session?: CurrentSessionSummary | undefined;
+  } = {},
 ): PublicPublishedAnswer[] {
   return rows
     .filter(isVisiblePublishedAnswerRow)
     .sort(comparePublicPublishedAnswerRows)
-    .map(toPublicPublishedAnswer);
+    .map((row) => toPublicPublishedAnswer(row, session));
 }
 
 function toPublicPublishedAnswer(
   row: PublicPublishedAnswerRow,
+  session: CurrentSessionSummary,
 ): PublicPublishedAnswer {
   const questionText = getPublicQuestionText(row);
 
@@ -1370,6 +1415,16 @@ function toPublicPublishedAnswer(
     pinPosition: row.pinPosition,
     questionTextMode: row.questionTextMode,
     questionText,
+    like: getLikeControlState({
+      count: row.ownerShowLikeCounts ? row.likeCount : undefined,
+      isLiked: row.viewerLiked,
+      session,
+      target: {
+        ownerProfileId: row.ownerProfileId,
+        ownerUserId: row.ownerUserId,
+        threadItemPublicId: row.publicId,
+      },
+    }),
     asker:
       questionText !== null &&
       row.identityMode === "account_attributed" &&
@@ -1438,3 +1493,13 @@ function getPublicQuestionText(row: PublicPublishedAnswerRow) {
 
   return row.displayQuestionText;
 }
+
+function getViewerProfileId(session: CurrentSessionSummary) {
+  return session.status === "authenticated" && session.profileStatus === "complete"
+    ? session.profile.id
+    : undefined;
+}
+
+const anonymousSession = {
+  status: "anonymous",
+} satisfies CurrentSessionSummary;

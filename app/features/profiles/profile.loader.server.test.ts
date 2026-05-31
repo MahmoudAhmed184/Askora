@@ -7,6 +7,7 @@ import {
   type PublicProfileStore,
   type PublicUsernameReservation,
 } from "~/features/profiles/profile.loader.server";
+import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
 import { getPublishedAnswerControlState } from "~/features/answers/published-answer-controls.server";
 import type {
   CompletedProfileSessionSummary,
@@ -138,6 +139,12 @@ describe("createPublicProfilePageData", () => {
           pinPosition: null,
           questionTextMode: "hidden",
           questionText: null,
+          like: {
+            threadItemPublicId: "titem_1",
+            isLiked: false,
+            count: undefined,
+            disabled: true,
+          },
           asker: undefined,
         },
       ],
@@ -174,6 +181,52 @@ describe("createPublicProfilePageData", () => {
     expect(page.status === "available" ? page.timingToken : undefined).toEqual(
       expect.any(String),
     );
+  });
+
+  it("uses aggregate social counts and follow state", () => {
+    const page = createPublicProfilePageData({
+      askFlash: undefined,
+      profile: createProfile(),
+      publishedAnswers: [
+        createPublishedAnswer({ likeCount: 2, publicId: "titem_1" }),
+        createPublishedAnswer({ likeCount: 3, publicId: "titem_2" }),
+      ],
+      session: {
+        ...completedOwnerSession,
+        user: {
+          ...completedOwnerSession.user,
+          id: "user_2",
+          email: "follower@example.com",
+        },
+        profile: {
+          ...completedOwnerSession.profile,
+          id: "profile_2",
+          username: "follower",
+        },
+      },
+      social: {
+        followerCount: 7,
+        followingCount: 4,
+        isFollowedByViewer: true,
+      },
+    });
+
+    expect(page).toMatchObject({
+      status: "available",
+      profile: {
+        counts: {
+          answers: 2,
+          followers: 7,
+          following: 4,
+          reactions: 5,
+        },
+      },
+      follow: {
+        visible: true,
+        isFollowing: true,
+        disabled: false,
+      },
+    });
   });
 });
 
@@ -273,6 +326,31 @@ function createProfile(overrides: Partial<PublicProfile> = {}): PublicProfile {
     userDeletedAt: null,
     ...overrides,
   };
+}
+
+function createPublishedAnswer({
+  likeCount,
+  publicId,
+}: {
+  likeCount: number;
+  publicId: string;
+}) {
+  return {
+    publicId,
+    threadPublicId: "thr_1",
+    answerText: "Public answer",
+    publishedAt: "2026-05-31T12:00:00.000Z",
+    pinPosition: null,
+    questionTextMode: "original",
+    questionText: "What should I read next?",
+    like: {
+      threadItemPublicId: publicId,
+      isLiked: false,
+      count: likeCount,
+      disabled: false,
+    },
+    asker: undefined,
+  } satisfies PublicPublishedAnswer;
 }
 
 const anonymousSession = {

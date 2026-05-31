@@ -601,6 +601,7 @@ function createPublicAnswerRow(
   overrides: Partial<PublicPublishedAnswerRow> = {},
 ): PublicPublishedAnswerRow {
   return {
+    threadItemId: "item_1",
     publicId: "titem_1",
     threadPublicId: "thr_1",
     answerText: "Published answer",
@@ -617,6 +618,11 @@ function createPublicAnswerRow(
     identityMode: "guest_anonymous",
     askerDisplayName: null,
     askerUsername: null,
+    ownerProfileId: "profile_1",
+    ownerUserId: "user_1",
+    ownerShowLikeCounts: true,
+    likeCount: 0,
+    viewerLiked: false,
     ...overrides,
   };
 }

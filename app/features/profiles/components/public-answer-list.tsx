@@ -8,6 +8,7 @@ import {
   hiddenPublishedAnswerControls,
   type PublishedAnswerControlState,
 } from "~/features/answers/published-answer-controls";
+import { LikeButton } from "~/features/social/components/like-button";
 
 interface PublicAnswerListProps {
   answers: PublicPublishedAnswer[];
@@ -91,9 +92,12 @@ function PublicAnswerArticle({
           </Link>
         </div>
 
-        {controls.canManage ? (
-          <PublishedAnswerOwnerControls answer={answer} controls={controls} />
-        ) : undefined}
+        <div className="flex flex-wrap items-center gap-2">
+          <LikeButton like={answer.like} />
+          {controls.canManage ? (
+            <PublishedAnswerOwnerControls answer={answer} controls={controls} />
+          ) : undefined}
+        </div>
       </header>
 
       {answer.questionTextMode === "hidden" ||

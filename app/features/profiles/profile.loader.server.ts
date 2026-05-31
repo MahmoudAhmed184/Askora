@@ -12,13 +12,18 @@ import {
   type PublicAskFlash,
 } from "~/features/profiles/ask-friction.server";
 import type {
-  PublicSessionSummary,
+  CurrentSessionSummary,
 } from "~/features/auth/auth.server";
 import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
 import {
   hiddenPublishedAnswerControls,
   type PublishedAnswerControlState,
 } from "~/features/answers/published-answer-controls";
+import {
+  getFollowControlState,
+  type FollowControlState,
+} from "~/features/social/social-controls";
+import type { PublicProfileSocialStats } from "~/features/social/social-data.server";
 
 export interface PublicProfile {
   id: string;
@@ -63,6 +68,7 @@ export type PublicProfilePageData =
       timingToken: string | undefined;
       publishedAnswers: PublicPublishedAnswer[];
       publishedAnswerControls: PublishedAnswerControlState;
+      follow: FollowControlState;
     }
   | {
       status: "unavailable";
@@ -136,24 +142,33 @@ export function createPublicProfilePageData({
   profile,
   publishedAnswerControls = hiddenPublishedAnswerControls,
   session,
+  social = emptyPublicProfileSocialStats,
   now = new Date(),
   publishedAnswers = [],
 }: {
   askFlash: PublicAskFlash | undefined;
   profile: PublicProfile;
-  session: PublicSessionSummary;
+  session: CurrentSessionSummary;
+  social?: PublicProfileSocialStats | undefined;
   now?: Date | undefined;
   publishedAnswers?: PublicPublishedAnswer[] | undefined;
   publishedAnswerControls?: PublishedAnswerControlState | undefined;
 }): PublicProfilePageData {
   const ask = getPublicAskState({
     actor: session,
-    target: profile,
+    target: {
+      ...profile,
+      isFollowedByActor: social.isFollowedByViewer,
+    },
   });
 
   return {
     status: "available",
-    profile: getPublicProfileView(profile, publishedAnswers.length),
+    profile: getPublicProfileView({
+      profile,
+      publishedAnswers,
+      social,
+    }),
     ask,
     askFlash,
     timingToken:
@@ -166,6 +181,11 @@ export function createPublicProfilePageData({
         : undefined,
     publishedAnswers,
     publishedAnswerControls,
+    follow: getFollowControlState({
+      isFollowing: social.isFollowedByViewer,
+      session,
+      target: profile,
+    }),
   };
 }
 
@@ -246,20 +266,40 @@ function isStillReserved(reservation: PublicUsernameReservation, now: Date) {
   );
 }
 
-function getPublicProfileView(
-  profile: PublicProfile,
-  answerCount: number,
-): PublicProfileView {
+function getPublicProfileView({
+  profile,
+  publishedAnswers,
+  social,
+}: {
+  profile: PublicProfile;
+  publishedAnswers: PublicPublishedAnswer[];
+  social: PublicProfileSocialStats;
+}): PublicProfileView {
   return {
     username: profile.username,
     displayName: profile.displayName,
     avatarUrl: profile.avatarUrl,
     bio: profile.bio,
     counts: {
-      answers: answerCount,
-      followers: profile.showFollowerCounts ? 0 : undefined,
-      following: profile.showFollowerCounts ? 0 : undefined,
-      reactions: profile.showLikeCounts ? 0 : undefined,
+      answers: publishedAnswers.length,
+      followers: profile.showFollowerCounts ? social.followerCount : undefined,
+      following: profile.showFollowerCounts ? social.followingCount : undefined,
+      reactions: profile.showLikeCounts
+        ? sumVisibleLikeCounts(publishedAnswers)
+        : undefined,
     },
   };
 }
+
+function sumVisibleLikeCounts(publishedAnswers: PublicPublishedAnswer[]) {
+  return publishedAnswers.reduce(
+    (total, answer) => total + (answer.like.count ?? 0),
+    0,
+  );
+}
+
+const emptyPublicProfileSocialStats = {
+  followerCount: 0,
+  followingCount: 0,
+  isFollowedByViewer: false,
+} satisfies PublicProfileSocialStats;

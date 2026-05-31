@@ -84,7 +84,35 @@ describe("evaluateAskPermission", () => {
     });
   });
 
-  it("conservatively denies followers-only asks until follows exist", () => {
+  it("allows followers-only asks for followed profiles", () => {
+    expect(
+      evaluateAskPermission({
+        actor: completedSession,
+        identity: "attributed",
+        target: createTarget({
+          askPermission: "followers",
+          isFollowedByActor: true,
+        }),
+      }),
+    ).toEqual({
+      status: "allowed",
+      identityMode: "account_attributed",
+    });
+
+    expect(
+      evaluateAskPermission({
+        actor: completedSession,
+        identity: "anonymous",
+        target: createTarget({
+          askPermission: "followers",
+          isFollowedByActor: true,
+        }),
+      }),
+    ).toEqual({
+      status: "allowed",
+      identityMode: "account_anonymous",
+    });
+
     expect(
       evaluateAskPermission({
         actor: completedSession,

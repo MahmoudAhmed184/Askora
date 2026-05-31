@@ -1,11 +1,14 @@
 import { Badge } from "~/components/ui/badge";
 import type { PublicProfileView } from "~/features/profiles/profile.loader.server";
+import { FollowButton } from "~/features/social/components/follow-button";
+import type { FollowControlState } from "~/features/social/social-controls";
 
 interface ProfileHeaderProps {
   profile: PublicProfileView;
+  follow?: FollowControlState | undefined;
 }
 
-export function ProfileHeader({ profile }: ProfileHeaderProps) {
+export function ProfileHeader({ follow, profile }: ProfileHeaderProps) {
   return (
     <section className="flex flex-col gap-5 border-b pb-6 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 gap-4">
@@ -26,7 +29,10 @@ export function ProfileHeader({ profile }: ProfileHeaderProps) {
           )}
         </div>
       </div>
-      <ProfileCounts profile={profile} />
+      <div className="flex flex-col items-start gap-3 sm:items-end">
+        {follow === undefined ? null : <FollowButton follow={follow} />}
+        <ProfileCounts profile={profile} />
+      </div>
     </section>
   );
 }

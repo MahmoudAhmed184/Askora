@@ -1,6 +1,7 @@
 import { data, redirect } from "react-router";
 
 import { PublicShell } from "~/components/app/public-shell";
+import type { CurrentSessionSummary } from "~/features/auth/auth.server";
 import { AskComposer } from "~/features/profiles/components/ask-composer";
 import { PermissionState } from "~/features/profiles/components/permission-state";
 import {
@@ -20,6 +21,7 @@ import {
   resolvePublicProfile,
 } from "~/features/profiles/profile.loader.server";
 import { getPublishedAnswerControlState } from "~/features/answers/published-answer-controls.server";
+import { findPublicProfileSocialStats } from "~/features/social/social-data.server";
 import { getPublicAppConfig } from "~/lib/config.server";
 import { noindexHeaders } from "~/lib/response.server";
 
@@ -28,7 +30,7 @@ import type { Route } from "./+types/public-profile.route";
 export async function loader({ params, request }: Route.LoaderArgs) {
   const username = params.username;
 
-  const { getCurrentSessionSummary, toPublicSessionSummary } = await import(
+  const { getCurrentSessionSummary } = await import(
     "~/features/auth/auth.server"
   );
   const [resolution, session] = await Promise.all([
@@ -74,9 +76,16 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     );
   }
 
-  const publishedAnswers = await findPublishedAnswersForProfile({
-    profileId: resolution.profile.id,
-  });
+  const [publishedAnswers, social] = await Promise.all([
+    findPublishedAnswersForProfile({
+      profileId: resolution.profile.id,
+      session,
+    }),
+    findPublicProfileSocialStats({
+      profileId: resolution.profile.id,
+      viewerProfileId: getViewerProfileId(session),
+    }),
+  ]);
 
   return data(
     {
@@ -89,11 +98,18 @@ export async function loader({ params, request }: Route.LoaderArgs) {
           session,
         }),
         publishedAnswers,
-        session: toPublicSessionSummary(session),
+        session,
+        social,
       }),
     },
     { headers },
   );
+}
+
+function getViewerProfileId(session: CurrentSessionSummary) {
+  return session.status === "authenticated" && session.profileStatus === "complete"
+    ? session.profile.id
+    : undefined;
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
@@ -149,7 +165,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
         <div className="flex justify-end">
           {loaderData.app.betaNoindex ? <BetaNoindexBadge /> : null}
         </div>
-        <ProfileHeader profile={page.profile} />
+        <ProfileHeader follow={page.follow} profile={page.profile} />
         {page.ask.status === "allowed" ? (
           <AskComposer
             ask={page.ask}

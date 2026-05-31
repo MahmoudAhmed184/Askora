@@ -112,6 +112,9 @@ describe("public profile components", () => {
       "href",
       "/person/a/thr_1#item-titem_1",
     );
+    expect(
+      screen.getByRole("button", { name: /like answer \(0\)/i }),
+    ).toBeDisabled();
     expect(container.querySelector("script")).toBeNull();
   });
 
@@ -228,6 +231,12 @@ function createPublishedAnswer(
     pinPosition: null,
     questionTextMode: "original",
     questionText: "What should I read next?",
+    like: {
+      threadItemPublicId: "titem_1",
+      isLiked: false,
+      count: 0,
+      disabled: true,
+    },
     asker: undefined,
     ...overrides,
   };
