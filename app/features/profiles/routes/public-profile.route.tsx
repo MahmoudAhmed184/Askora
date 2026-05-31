@@ -22,8 +22,11 @@ import {
 } from "~/features/profiles/profile.loader.server";
 import { getPublishedAnswerControlState } from "~/features/answers/published-answer-controls.server";
 import { findPublicProfileSocialStats } from "~/features/social/social-data.server";
+import {
+  createPublicNoindexHeaders,
+  createRobotsMetaTag,
+} from "~/features/threads/public-thread-meta";
 import { getPublicAppConfig } from "~/lib/config.server";
-import { noindexHeaders } from "~/lib/response.server";
 
 import type { Route } from "./+types/public-profile.route";
 
@@ -57,7 +60,10 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         },
       },
       {
-        headers,
+        headers: createPublicNoindexHeaders({
+          loaderHeaders: headers,
+          noindex: true,
+        }),
         status: 404,
       },
     );
@@ -72,7 +78,12 @@ export async function loader({ params, request }: Route.LoaderArgs) {
           username: resolution.username,
         },
       },
-      { headers },
+      {
+        headers: createPublicNoindexHeaders({
+          loaderHeaders: headers,
+          noindex: true,
+        }),
+      },
     );
   }
 
@@ -113,25 +124,26 @@ function getViewerProfileId(session: CurrentSessionSummary) {
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  const headers = new Headers(loaderHeaders);
-
-  if (getPublicAppConfig().betaNoindex) {
-    for (const [name, value] of Object.entries(noindexHeaders())) {
-      headers.set(name, value);
-    }
-  }
-
-  return headers;
+  return createPublicNoindexHeaders({
+    loaderHeaders,
+    noindex: getPublicAppConfig().betaNoindex,
+  });
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
   const appName = loaderData.app.appName;
 
   if (loaderData.page.status !== "available") {
-    return [
+    const tags: ({ title: string } | { name: string; content: string })[] = [
       { title: `Profile unavailable | ${appName}` },
-      { name: "robots", content: "noindex,nofollow" },
     ];
+    const robotsMeta = createRobotsMetaTag(true);
+
+    if (robotsMeta !== undefined) {
+      tags.push(robotsMeta);
+    }
+
+    return tags;
   }
 
   const { profile } = loaderData.page;
@@ -145,8 +157,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
     },
   ];
 
-  if (loaderData.app.betaNoindex) {
-    tags.push({ name: "robots", content: "noindex,nofollow" });
+  const robotsMeta = createRobotsMetaTag(loaderData.app.betaNoindex);
+
+  if (robotsMeta !== undefined) {
+    tags.push(robotsMeta);
   }
 
   return tags;

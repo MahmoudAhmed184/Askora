@@ -5,6 +5,32 @@ import type {
   PublicThreadPageData,
 } from "~/features/threads/public-thread.loader.server";
 
+const publicNoindexHeaders = {
+  "X-Robots-Tag": "noindex, nofollow",
+} as const;
+
+export function createPublicNoindexHeaders({
+  loaderHeaders,
+  noindex,
+}: {
+  loaderHeaders: Headers;
+  noindex: boolean;
+}) {
+  const headers = new Headers(loaderHeaders);
+
+  if (noindex) {
+    for (const [name, value] of Object.entries(publicNoindexHeaders)) {
+      headers.set(name, value);
+    }
+  }
+
+  return headers;
+}
+
+export function createRobotsMetaTag(noindex: boolean) {
+  return noindex ? { name: "robots", content: "noindex,nofollow" } : undefined;
+}
+
 export function createPublicThreadHeaders({
   app,
   loaderHeaders,
@@ -12,13 +38,10 @@ export function createPublicThreadHeaders({
   app: PublicAppConfig;
   loaderHeaders: Headers;
 }) {
-  const headers = new Headers(loaderHeaders);
-
-  if (app.betaNoindex) {
-    headers.set("X-Robots-Tag", "noindex, nofollow");
-  }
-
-  return headers;
+  return createPublicNoindexHeaders({
+    loaderHeaders,
+    noindex: app.betaNoindex,
+  });
 }
 
 export function createPublicThreadMeta({
@@ -38,8 +61,10 @@ export function createPublicThreadMeta({
     { property: "og:url", content: meta.url },
   ];
 
-  if (meta.robots !== undefined) {
-    tags.push({ name: "robots", content: meta.robots });
+  const robotsMeta = createRobotsMetaTag(meta.noindex);
+
+  if (robotsMeta !== undefined) {
+    tags.push(robotsMeta);
   }
 
   if (meta.image !== undefined) {
@@ -60,7 +85,7 @@ function getPublicThreadMetaContent({
     return {
       title: `Thread unavailable | ${app.appName}`,
       description: "This answer thread is unavailable.",
-      robots: "noindex,nofollow",
+      noindex: true,
       url: buildPublicThreadUrl({
         app,
         threadPublicId: page.threadPublicId,
@@ -79,7 +104,7 @@ function getPublicThreadMetaContent({
       firstAnswer === undefined
         ? `Read this answer thread by ${page.profile.displayName} on ${app.appName}.`
         : createMetaDescription(firstAnswer.answerText),
-    robots: app.betaNoindex ? "noindex,nofollow" : undefined,
+    noindex: app.betaNoindex,
     url: buildPublicThreadUrl({
       app,
       threadPublicId: page.thread.publicId,

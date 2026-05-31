@@ -59,6 +59,17 @@ describe("public thread route metadata", () => {
     expect(JSON.stringify(meta)).not.toContain("Secret hidden question");
   });
 
+  it("preserves loader noindex headers for unavailable responses", () => {
+    const headers = createPublicThreadHeaders({
+      app: createAppConfig(),
+      loaderHeaders: new Headers({
+        "X-Robots-Tag": "noindex, nofollow",
+      }),
+    });
+
+    expect(headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+  });
+
   it("emits beta robots meta and noindex headers", () => {
     const betaApp = createAppConfig({ betaNoindex: true });
     const meta = createPublicThreadMeta({
