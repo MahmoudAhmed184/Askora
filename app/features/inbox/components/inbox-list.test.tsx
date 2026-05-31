@@ -44,6 +44,10 @@ describe("InboxList", () => {
     expect(
       screen.getByRole("button", { name: /block sender/i }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /answer/i })).toHaveAttribute(
+      "href",
+      "/dashboard/answer/qst_1",
+    );
     expect(screen.getByText("Report")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /restore/i }),

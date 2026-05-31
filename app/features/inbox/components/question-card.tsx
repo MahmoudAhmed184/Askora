@@ -1,12 +1,13 @@
 import {
   Ban,
   Flag,
+  PencilLine,
   RotateCcw,
   Send,
   Trash2,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useFetcher } from "react-router";
+import { Link, useFetcher } from "react-router";
 
 import { Button } from "~/components/ui/button";
 import { buttonVariants } from "~/components/ui/button-variants";
@@ -94,6 +95,20 @@ function QuestionCardFrame({
       {result === undefined ? undefined : <ActionResultMessage result={result} />}
 
       <div className="flex flex-wrap items-center gap-2">
+        {!restoreAction && !disabled && !isPending ? (
+          <Button asChild size="sm">
+            <Link to={`/dashboard/answer/${question.publicId}`}>
+              <PencilLine data-icon="inline-start" />
+              Answer
+            </Link>
+          </Button>
+        ) : !restoreAction ? (
+          <Button disabled size="sm">
+            <PencilLine data-icon="inline-start" />
+            Answer
+          </Button>
+        ) : undefined}
+
         {restoreAction ? (
           <InlineActionForm
             disabled={disabled || isPending}
