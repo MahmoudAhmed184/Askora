@@ -16,6 +16,7 @@ const settingsLinks = [
   { to: "/dashboard/settings/profile", label: "Profile" },
   { to: "/dashboard/settings/privacy", label: "Privacy" },
   { to: "/dashboard/settings/safety", label: "Safety" },
+  { to: "/dashboard/settings/account", label: "Account" },
 ] as const;
 
 export function SettingsShell({

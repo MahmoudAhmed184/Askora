@@ -24,6 +24,7 @@ describe("route config", () => {
     expect(paths.indexOf("dashboard/settings/profile")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/settings/privacy")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/settings/safety")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/settings/account")).toBeLessThan(usernameIndex);
   });
 
   it("registers admin routes before the public username route", () => {
@@ -52,5 +53,11 @@ describe("route config", () => {
     expect(paths.indexOf(":username/a/:threadPublicId/follow-ups")).toBeLessThan(
       paths.indexOf(":username/a/:threadPublicId"),
     );
+  });
+
+  it("does not register a sitemap route during beta", () => {
+    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+
+    expect(paths).not.toContain("sitemap.xml");
   });
 });
