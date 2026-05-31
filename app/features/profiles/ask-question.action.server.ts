@@ -1,8 +1,10 @@
 import type { ZodError } from "zod";
+import { and, eq, or, type SQL } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
-import { questions } from "~/db/schema";
+import { blocks, mutedPhrases, questions } from "~/db/schema";
 import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import { normalizeMutedPhrase } from "~/features/inbox/inbox.schema";
 import {
   evaluateAskPermission,
   type QuestionIdentityMode,
@@ -93,7 +95,19 @@ export interface PublicQuestionSafetyInput {
   text: string;
   identityMode: QuestionIdentityMode;
   targetProfileId: string;
+  askerUserId: string | null;
+  askerProfileId: string | null;
   safetyFingerprintHash: string;
+  ipHash: string | null;
+}
+
+export interface PublicQuestionSafetyStore {
+  findMatchingBlocks(
+    input: Omit<PublicQuestionSafetyInput, "text" | "identityMode">,
+  ): Promise<{ id: string }[]>;
+  findMutedPhrasesForProfile(
+    profileId: string,
+  ): Promise<{ normalizedPhrase: string }[]>;
 }
 
 type RateLimitCheck = typeof checkRateLimit;
@@ -199,11 +213,17 @@ export async function submitPublicQuestion({
     };
   }
 
+  const askerIdentity = getAskerIdentityFields({
+    identityMode: permission.identityMode,
+    session,
+  });
   const safetyDecision = await safetyDecider({
     text: parsed.value.question,
     identityMode: permission.identityMode,
     targetProfileId: resolution.profile.id,
+    ...askerIdentity,
     safetyFingerprintHash: requestInfo.fingerprintHash,
+    ipHash: requestInfo.ipHash,
   });
 
   if (safetyDecision === "drop") {
@@ -287,11 +307,75 @@ export function createDrizzlePublicQuestionStore(
   };
 }
 
-export function decideQuestionSafety(
-  _input: PublicQuestionSafetyInput,
-): QuestionSafetyDecision {
-  // TODO: wire muted phrases, account blocks, and moderation scoring in the safety slice.
-  return "allow";
+export async function decideQuestionSafety(
+  input: PublicQuestionSafetyInput,
+  store: PublicQuestionSafetyStore = createDrizzlePublicQuestionSafetyStore(),
+): Promise<QuestionSafetyDecision> {
+  const matchingBlocks = await store.findMatchingBlocks({
+    targetProfileId: input.targetProfileId,
+    askerUserId: input.askerUserId,
+    askerProfileId: input.askerProfileId,
+    safetyFingerprintHash: input.safetyFingerprintHash,
+    ipHash: input.ipHash,
+  });
+
+  if (matchingBlocks.length > 0) {
+    return "drop";
+  }
+
+  const muted = await store.findMutedPhrasesForProfile(input.targetProfileId);
+  const normalizedText = normalizeMutedPhrase(input.text);
+
+  return muted.some(
+    (phrase) =>
+      phrase.normalizedPhrase.length > 0 &&
+      normalizedText.includes(phrase.normalizedPhrase),
+  )
+    ? "filter"
+    : "allow";
+}
+
+export function createDrizzlePublicQuestionSafetyStore(
+  database: RuntimeDatabase = getRuntimeDatabase(),
+): PublicQuestionSafetyStore {
+  return {
+    async findMatchingBlocks(input) {
+      const conditions: SQL[] = [
+        eq(blocks.safetyFingerprintHash, input.safetyFingerprintHash),
+      ];
+
+      if (input.askerUserId !== null) {
+        conditions.push(eq(blocks.blockedUserId, input.askerUserId));
+      }
+
+      if (input.askerProfileId !== null) {
+        conditions.push(eq(blocks.blockedProfileId, input.askerProfileId));
+      }
+
+      if (input.ipHash !== null) {
+        conditions.push(eq(blocks.ipHash, input.ipHash));
+      }
+
+      const rows = await database
+        .select({ id: blocks.id })
+        .from(blocks)
+        .where(
+          and(
+            eq(blocks.ownerProfileId, input.targetProfileId),
+            or(...conditions),
+          ),
+        )
+        .limit(1);
+
+      return rows;
+    },
+    async findMutedPhrasesForProfile(profileId) {
+      return database
+        .select({ normalizedPhrase: mutedPhrases.normalizedPhrase })
+        .from(mutedPhrases)
+        .where(eq(mutedPhrases.profileId, profileId));
+    },
+  };
 }
 
 async function checkPublicAskRateLimits({

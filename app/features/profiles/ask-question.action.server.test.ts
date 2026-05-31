@@ -5,8 +5,11 @@ import {
   createAskTimingToken,
 } from "~/features/profiles/ask-friction.server";
 import {
+  decideQuestionSafety,
   submitPublicQuestion,
   type NewPublicQuestion,
+  type PublicQuestionSafetyInput,
+  type PublicQuestionSafetyStore,
   type PublicQuestionStore,
 } from "~/features/profiles/ask-question.action.server";
 import type { PublicQuestionIdentity } from "~/features/profiles/profile.schema";
@@ -218,6 +221,84 @@ describe("submitPublicQuestion", () => {
     });
     expect(droppedQuestions.created).toEqual([]);
   });
+
+  it("passes account sender ids to the safety hook when available", async () => {
+    let safetyInput: PublicQuestionSafetyInput | undefined;
+
+    await submitQuestion({
+      formData: createQuestionFormData({ identityMode: "attributed" }),
+      safetyDecider: (input) => {
+        safetyInput = input;
+        return "allow";
+      },
+      session: completedSession,
+    });
+
+    expect(safetyInput).toBeDefined();
+
+    if (safetyInput === undefined) {
+      throw new Error("expected safety input");
+    }
+
+    expect(safetyInput).toMatchObject({
+      askerUserId: "user_2",
+      askerProfileId: "profile_2",
+      identityMode: "account_attributed",
+      targetProfileId: "profile_1",
+    });
+    expect(safetyInput.ipHash).toEqual(expect.any(String));
+    expect(safetyInput.safetyFingerprintHash).toEqual(expect.any(String));
+  });
+
+  it("drops blocked senders with generic success semantics", async () => {
+    const questions = createQuestionStore();
+    const safetyStore = createSafetyStore({
+      matchingBlocks: [{ id: "block_1" }],
+    });
+
+    await expect(
+      submitQuestion({
+        questionStore: questions.store,
+        safetyDecider: (input) => decideQuestionSafety(input, safetyStore.store),
+      }),
+    ).resolves.toMatchObject({
+      status: "dropped",
+      reason: "safety",
+    });
+    expect(questions.created).toEqual([]);
+  });
+
+  it("filters muted phrase matches", async () => {
+    const questions = createQuestionStore();
+    const safetyStore = createSafetyStore({
+      mutedPhrases: [{ normalizedPhrase: "مزعج جدا" }],
+    });
+
+    await expect(
+      submitQuestion({
+        formData: createQuestionFormData({ question: "هذا سؤال مزعج   جدا" }),
+        questionStore: questions.store,
+        safetyDecider: (input) => decideQuestionSafety(input, safetyStore.store),
+      }),
+    ).resolves.toMatchObject({
+      status: "created",
+    });
+    expect(questions.created[0]?.status).toBe("filtered");
+  });
+});
+
+describe("decideQuestionSafety", () => {
+  it("checks owner blocks before muted phrases", async () => {
+    const safetyStore = createSafetyStore({
+      matchingBlocks: [{ id: "block_1" }],
+      mutedPhrases: [{ normalizedPhrase: "blocked text" }],
+    });
+
+    await expect(
+      decideQuestionSafety(createSafetyInput(), safetyStore.store),
+    ).resolves.toBe("drop");
+    expect(safetyStore.mutedPhraseLookups).toEqual([]);
+  });
 });
 
 async function submitQuestion({
@@ -243,7 +324,7 @@ async function submitQuestion({
     profileStore: createProfileStore({ profiles: [profile] }),
     rateLimiter,
     request: createRequest(),
-    safetyDecider,
+    safetyDecider: safetyDecider ?? (() => "allow"),
     session,
     store: questionStore,
     username: "person",
@@ -312,6 +393,49 @@ function createQuestionStore() {
   return {
     created,
     store,
+  };
+}
+
+function createSafetyStore({
+  matchingBlocks = [],
+  mutedPhrases = [],
+}: {
+  matchingBlocks?: { id: string }[];
+  mutedPhrases?: { normalizedPhrase: string }[];
+} = {}) {
+  const blockLookups: Omit<PublicQuestionSafetyInput, "text" | "identityMode">[] =
+    [];
+  const mutedPhraseLookups: string[] = [];
+  const store: PublicQuestionSafetyStore = {
+    findMatchingBlocks(input) {
+      blockLookups.push(input);
+      return Promise.resolve(matchingBlocks);
+    },
+    findMutedPhrasesForProfile(profileId) {
+      mutedPhraseLookups.push(profileId);
+      return Promise.resolve(mutedPhrases);
+    },
+  };
+
+  return {
+    blockLookups,
+    mutedPhraseLookups,
+    store,
+  };
+}
+
+function createSafetyInput(
+  overrides: Partial<PublicQuestionSafetyInput> = {},
+): PublicQuestionSafetyInput {
+  return {
+    text: "What should I read next?",
+    identityMode: "guest_anonymous",
+    targetProfileId: "profile_1",
+    askerUserId: null,
+    askerProfileId: null,
+    safetyFingerprintHash: "fingerprint_hash_1",
+    ipHash: "ip_hash_1",
+    ...overrides,
   };
 }
 
