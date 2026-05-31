@@ -18,4 +18,13 @@ describe("route config", () => {
     ).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/filtered")).toBeLessThan(usernameIndex);
   });
+
+  it("registers public thread permalinks before the public username route", () => {
+    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+    const usernameIndex = paths.indexOf(":username");
+
+    expect(paths.indexOf(":username/a/:threadPublicId")).toBeLessThan(
+      usernameIndex,
+    );
+  });
 });
