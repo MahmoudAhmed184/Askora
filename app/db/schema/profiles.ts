@@ -25,6 +25,11 @@ export const followUpPermissionEnum = pgEnum("follow_up_permission", [
   "off",
 ]);
 
+export const profileDeactivationReasonEnum = pgEnum(
+  "profile_deactivation_reason",
+  ["user", "account_deletion", "admin"],
+);
+
 export const profiles = pgTable(
   "profiles",
   {
@@ -57,6 +62,8 @@ export const profiles = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
+    deactivationReason: profileDeactivationReasonEnum("deactivation_reason"),
   },
   (table) => [
     uniqueIndex("profiles_user_id_unique").on(table.userId),
@@ -66,6 +73,7 @@ export const profiles = pgTable(
     index("profiles_user_id_idx").on(table.userId),
     index("profiles_username_idx").on(table.username),
     index("profiles_active_username_idx").on(table.isActive, table.username),
+    index("profiles_deactivation_reason_idx").on(table.deactivationReason),
   ],
 );
 

@@ -30,11 +30,22 @@ export const authUsers = pgTable(
       .notNull()
       .defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletionGraceEndsAt: timestamp("deletion_grace_ends_at", {
+      withTimezone: true,
+    }),
+    deletionAnonymizedAt: timestamp("deletion_anonymized_at", {
+      withTimezone: true,
+    }),
   },
   (table) => [
     uniqueIndex("users_email_unique").on(table.email),
     index("users_role_idx").on(table.role),
     index("users_suspension_status_idx").on(table.suspensionStatus),
+    index("users_deletion_cleanup_idx").on(
+      table.deletedAt,
+      table.deletionGraceEndsAt,
+      table.deletionAnonymizedAt,
+    ),
   ],
 );
 
