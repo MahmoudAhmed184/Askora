@@ -18,6 +18,7 @@ import type {
 } from "~/features/answers/answer.server";
 import type { QuestionTextMode } from "~/features/answers/answer.schema";
 import type { FollowUpPermission } from "~/features/settings/settings.schema";
+import { ThreadContextPreview } from "~/features/threads/components/thread-context-preview";
 import { cn } from "~/lib/utils";
 
 interface AnswerEditorProps {
@@ -71,6 +72,10 @@ export function AnswerEditor({
 
   return (
     <div className="flex flex-col gap-6">
+      {editor.threadContext === undefined ? null : (
+        <ThreadContextPreview context={editor.threadContext} />
+      )}
+
       <section
         aria-label="Question"
         className="rounded-lg border bg-card p-5 text-card-foreground shadow-sm"

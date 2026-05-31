@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { ZodError } from "zod";
 
@@ -21,6 +21,12 @@ import {
 } from "~/features/answers/answer.schema";
 import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
 import type { FollowUpPermission } from "~/features/settings/settings.schema";
+import {
+  createCompactThreadContextPreview,
+  type CompactThreadContextPreview,
+} from "~/features/threads/follow-up.server";
+import type { PublicThreadItemRow } from "~/features/threads/public-thread.loader.server";
+import { MAX_PUBLISHED_THREAD_ITEMS } from "~/features/threads/thread-permissions.server";
 import { createDatabaseId, createPublicId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 
@@ -48,6 +54,10 @@ export interface AnswerWorkflowQuestion {
   deletedAt: Date | null;
   createdAt: Date;
   threadId: string | null;
+  threadPublicId: string | null;
+  threadInitialQuestionId: string | null;
+  threadStatus: "draft" | "published" | "unpublished" | "deleted" | null;
+  threadFollowUpPermissionOverride: AnswerFollowUpPermissionOverride;
   followUpPermissionDefault: FollowUpPermission;
 }
 
@@ -84,7 +94,15 @@ export interface AnswerMutationParams {
 }
 
 export interface AnswerPublishResult {
+  status: "published";
   notified: boolean;
+  threadPublicId: string;
+  threadItemPublicId: string;
+}
+
+export interface AnswerPublishDeniedResult {
+  status: "denied";
+  reason: Extract<AnswerDeniedReason, "thread_full">;
 }
 
 export interface AnswerStore {
@@ -98,8 +116,11 @@ export interface AnswerStore {
     profileId: string;
     userId: string;
   }): Promise<StoredDraftAnswerQuestion[]>;
+  findThreadContextRows(threadId: string): Promise<PublicThreadItemRow[]>;
   saveDraftAnswer(params: AnswerMutationParams): Promise<void>;
-  publishAnswer(params: AnswerMutationParams): Promise<AnswerPublishResult>;
+  publishAnswer(
+    params: AnswerMutationParams,
+  ): Promise<AnswerPublishResult | AnswerPublishDeniedResult>;
 }
 
 export interface AnswerEditorViewData {
@@ -115,6 +136,7 @@ export interface AnswerEditorViewData {
   };
   values: AnswerFormValues;
   followUpPermissionDefault: FollowUpPermission;
+  threadContext: CompactThreadContextPreview | undefined;
 }
 
 export interface DraftAnswerView {
@@ -149,7 +171,11 @@ export interface AnswerFieldErrors {
   followUpPermissionOverride?: string;
 }
 
-export type AnswerDeniedReason = "not_found" | "closed" | "suspended";
+export type AnswerDeniedReason =
+  | "not_found"
+  | "closed"
+  | "suspended"
+  | "thread_full";
 
 export type AnswerEditorLoadResult =
   | {
@@ -218,6 +244,10 @@ export async function loadAnswerEditor({
   }
 
   const draft = await store.findDraftItemByQuestionId(question.question.id);
+  const threadContext = await loadAnswerThreadContext({
+    question: question.question,
+    store,
+  });
 
   return {
     status: "found",
@@ -235,8 +265,9 @@ export async function loadAnswerEditor({
             : "anonymous",
         createdAt: question.question.createdAt.toISOString(),
       },
-      values: toAnswerFormValues(draft),
+      values: toAnswerFormValues(draft, question.question),
       followUpPermissionDefault: question.question.followUpPermissionDefault,
+      threadContext,
     },
   };
 }
@@ -349,10 +380,18 @@ export async function handleAnswerSubmission({
 
   const publish = await store.publishAnswer(mutationParams);
 
+  if (publish.status === "denied") {
+    return deniedResult(values, publish.reason);
+  }
+
   return {
     status: "published",
     questionPublicId,
-    redirectTo: `/${session.profile.username}#published-answers`,
+    redirectTo: getPublishRedirect({
+      publish,
+      question: question.question,
+      username: session.profile.username,
+    }),
     notified: publish.notified,
   };
 }
@@ -362,6 +401,7 @@ export function createDrizzleAnswerStore(
 ): AnswerStore {
   return {
     async findQuestionForAnswer(publicId) {
+      const questionThreads = alias(threads, "answer_question_threads");
       const [question] = await database
         .select({
           id: questions.id,
@@ -376,10 +416,16 @@ export function createDrizzleAnswerStore(
           deletedAt: questions.deletedAt,
           createdAt: questions.createdAt,
           threadId: questions.threadId,
+          threadPublicId: questionThreads.publicId,
+          threadInitialQuestionId: questionThreads.initialQuestionId,
+          threadStatus: questionThreads.status,
+          threadFollowUpPermissionOverride:
+            questionThreads.followUpPermissionOverride,
           followUpPermissionDefault: profiles.followUpPermissionDefault,
         })
         .from(questions)
         .innerJoin(profiles, eq(profiles.id, questions.recipientProfileId))
+        .leftJoin(questionThreads, eq(questionThreads.id, questions.threadId))
         .where(eq(questions.publicId, publicId))
         .limit(1);
 
@@ -438,6 +484,42 @@ export function createDrizzleAnswerStore(
 
       return rows;
     },
+    async findThreadContextRows(threadId) {
+      const askerProfiles = alias(profiles, "answer_context_asker_profiles");
+
+      return database
+        .select({
+          publicId: threadItems.publicId,
+          questionId: threadItems.questionId,
+          answerText: threadItems.answerText,
+          itemStatus: threadItems.status,
+          itemDeletedAt: threadItems.deletedAt,
+          publishedAt: threadItems.publishedAt,
+          createdAt: threadItems.createdAt,
+          position: threadItems.position,
+          pinPosition: pinnedAnswers.position,
+          questionStatus: questions.status,
+          questionDeletedAt: questions.deletedAt,
+          questionTextMode: threadItems.questionTextMode,
+          displayQuestionText: threadItems.displayQuestionText,
+          identityMode: questions.identityMode,
+          askerDisplayName: askerProfiles.displayName,
+          askerUsername: askerProfiles.username,
+        })
+        .from(threadItems)
+        .innerJoin(threads, eq(threads.id, threadItems.threadId))
+        .innerJoin(questions, eq(questions.id, threadItems.questionId))
+        .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
+        .leftJoin(
+          pinnedAnswers,
+          and(
+            eq(pinnedAnswers.profileId, threads.ownerProfileId),
+            eq(pinnedAnswers.threadItemId, threadItems.id),
+          ),
+        )
+        .where(eq(threadItems.threadId, threadId))
+        .orderBy(asc(threadItems.position), asc(threadItems.createdAt));
+    },
     async saveDraftAnswer(params) {
       await database.transaction(async (transaction) => {
         const thread = await upsertThread({
@@ -465,6 +547,31 @@ export function createDrizzleAnswerStore(
     },
     async publishAnswer(params) {
       return database.transaction(async (transaction) => {
+        const existingItem = await findExistingThreadItem({
+          questionId: params.question.id,
+          transaction,
+        });
+        const firstPublish = existingItem?.status !== "published";
+        const existingThread = await findExistingThread({
+          question: params.question,
+          transaction,
+        });
+
+        if (
+          firstPublish &&
+          isFollowUpQuestion(params.question) &&
+          existingThread !== undefined &&
+          (await getVisiblePublishedThreadItemCount({
+            threadId: existingThread.id,
+            transaction,
+          })) >= MAX_PUBLISHED_THREAD_ITEMS
+        ) {
+          return {
+            status: "denied",
+            reason: "thread_full",
+          };
+        }
+
         const thread = await upsertThread({
           params,
           published: true,
@@ -472,12 +579,12 @@ export function createDrizzleAnswerStore(
         });
 
         const item = await upsertThreadItem({
+          existingItem,
           params,
           published: true,
           thread,
           transaction,
         });
-        const firstPublish = item.previousStatus !== "published";
 
         await transaction
           .update(questions)
@@ -506,8 +613,23 @@ export function createDrizzleAnswerStore(
             .onConflictDoNothing();
         }
 
+        if (firstPublish && isFollowUpQuestion(params.question)) {
+          await createFollowUpAnsweredNotifications({
+            currentAskerUserId: params.question.askerUserId,
+            item,
+            now: params.now,
+            ownerUserId: params.question.recipientUserId,
+            params,
+            thread,
+            transaction,
+          });
+        }
+
         return {
+          status: "published",
           notified: firstPublish && params.question.askerUserId !== null,
+          threadPublicId: thread.publicId,
+          threadItemPublicId: item.publicId,
         };
       });
     },
@@ -546,6 +668,10 @@ async function findEditableQuestion({
     return { status: "denied", reason: "closed" };
   }
 
+  if (isFollowUpQuestion(question) && question.threadStatus !== "published") {
+    return { status: "denied", reason: "closed" };
+  }
+
   return {
     status: "allowed",
     question,
@@ -565,7 +691,11 @@ async function upsertThread({
     question: params.question,
     transaction,
   });
-  const status = published ? "published" : "draft";
+  const status = getNextThreadStatus({
+    existingThread,
+    published,
+    question: params.question,
+  });
   const publishedAt = published
     ? (existingThread?.publishedAt ?? params.now)
     : existingThread?.publishedAt;
@@ -617,30 +747,34 @@ async function upsertThread({
 }
 
 async function upsertThreadItem({
+  existingItem,
   params,
   published,
   thread,
   transaction,
 }: {
+  existingItem?: ExistingThreadItem | undefined;
   params: AnswerMutationParams;
   published: boolean;
   thread: ExistingThread;
   transaction: Parameters<Parameters<RuntimeDatabase["transaction"]>[0]>[0];
 }): Promise<ExistingThreadItem & { previousStatus: ExistingThreadItem["status"] | undefined }> {
-  const existingItem = await findExistingThreadItem({
-    questionId: params.question.id,
-    transaction,
-  });
+  const currentItem =
+    existingItem ??
+    (await findExistingThreadItem({
+      questionId: params.question.id,
+      transaction,
+    }));
   const status = published ? "published" : "draft";
   const publishedAt = published
-    ? (existingItem?.publishedAt ?? params.now)
-    : existingItem?.publishedAt;
+    ? (currentItem?.publishedAt ?? params.now)
+    : currentItem?.publishedAt;
   const displayQuestionText = getDisplayQuestionText({
     question: params.question,
     submission: params.submission,
   });
 
-  if (existingItem === undefined) {
+  if (currentItem === undefined) {
     const item = {
       id: params.createDatabaseId(),
       publicId: params.createThreadItemPublicId(),
@@ -657,7 +791,11 @@ async function upsertThreadItem({
       displayQuestionText,
       questionTextMode: params.submission.questionTextMode,
       status,
-      position: 0,
+      position: await getNewThreadItemPosition({
+        params,
+        thread,
+        transaction,
+      }),
       publishedAt: item.publishedAt,
       createdAt: params.now,
       updatedAt: params.now,
@@ -680,13 +818,13 @@ async function upsertThreadItem({
       publishedAt: publishedAt ?? null,
       updatedAt: params.now,
     })
-    .where(eq(threadItems.id, existingItem.id));
+    .where(eq(threadItems.id, currentItem.id));
 
   return {
-    ...existingItem,
+    ...currentItem,
     status,
     publishedAt: publishedAt ?? null,
-    previousStatus: existingItem.status,
+    previousStatus: currentItem.status,
   };
 }
 
@@ -739,8 +877,182 @@ async function findExistingThreadItem({
   return item;
 }
 
+async function getNewThreadItemPosition({
+  params,
+  thread,
+  transaction,
+}: {
+  params: AnswerMutationParams;
+  thread: ExistingThread;
+  transaction: Parameters<Parameters<RuntimeDatabase["transaction"]>[0]>[0];
+}) {
+  if (!isFollowUpQuestion(params.question)) {
+    return 0;
+  }
+
+  const [row] = await transaction
+    .select({
+      position: sql<number>`coalesce(max(${threadItems.position}), -1) + 1`,
+    })
+    .from(threadItems)
+    .where(eq(threadItems.threadId, thread.id))
+    .limit(1);
+
+  return row?.position ?? 0;
+}
+
+async function getVisiblePublishedThreadItemCount({
+  threadId,
+  transaction,
+}: {
+  threadId: string;
+  transaction: Parameters<Parameters<RuntimeDatabase["transaction"]>[0]>[0];
+}) {
+  const [row] = await transaction
+    .select({
+      count: sql<number>`count(*)::int`,
+    })
+    .from(threadItems)
+    .where(
+      and(
+        eq(threadItems.threadId, threadId),
+        eq(threadItems.status, "published"),
+        isNull(threadItems.deletedAt),
+      ),
+    );
+
+  return row?.count ?? 0;
+}
+
+async function createFollowUpAnsweredNotifications({
+  currentAskerUserId,
+  item,
+  now,
+  ownerUserId,
+  params,
+  thread,
+  transaction,
+}: {
+  params: AnswerMutationParams;
+  thread: ExistingThread;
+  item: ExistingThreadItem;
+  ownerUserId: string;
+  currentAskerUserId: string | null;
+  now: Date;
+  transaction: Parameters<Parameters<RuntimeDatabase["transaction"]>[0]>[0];
+}) {
+  const participantUserIds = await findFollowUpAnsweredRecipientUserIds({
+    actorUserId: params.actorUserId,
+    currentAskerUserId,
+    ownerUserId,
+    threadId: thread.id,
+    transaction,
+  });
+
+  for (const recipientUserId of participantUserIds) {
+    await transaction
+      .insert(notifications)
+      .values({
+        id: params.createDatabaseId(),
+        recipientUserId,
+        type: "follow_up_answered",
+        actorUserId: params.actorUserId,
+        threadId: thread.id,
+        threadItemId: item.id,
+        questionId: params.question.id,
+        readAt: null,
+        createdAt: now,
+        expiresAt: addDays(now, 180),
+      })
+      .onConflictDoNothing();
+  }
+}
+
+async function findFollowUpAnsweredRecipientUserIds({
+  actorUserId,
+  currentAskerUserId,
+  ownerUserId,
+  threadId,
+  transaction,
+}: {
+  threadId: string;
+  ownerUserId: string;
+  actorUserId: string;
+  currentAskerUserId: string | null;
+  transaction: Parameters<Parameters<RuntimeDatabase["transaction"]>[0]>[0];
+}) {
+  const rows = await transaction
+    .select({
+      askerUserId: questions.askerUserId,
+    })
+    .from(threadItems)
+    .innerJoin(questions, eq(questions.id, threadItems.questionId))
+    .where(
+      and(
+        eq(threadItems.threadId, threadId),
+        eq(threadItems.status, "published"),
+        isNull(threadItems.deletedAt),
+      ),
+    );
+  const excludedUserIds = new Set([
+    ownerUserId,
+    actorUserId,
+    currentAskerUserId,
+    null,
+  ]);
+
+  return [
+    ...new Set(
+      rows
+        .map((row) => row.askerUserId)
+        .filter(
+          (userId): userId is string =>
+            userId !== null && !excludedUserIds.has(userId),
+        ),
+    ),
+  ];
+}
+
+function getNextThreadStatus({
+  existingThread,
+  published,
+  question,
+}: {
+  existingThread: ExistingThread | undefined;
+  question: AnswerWorkflowQuestion;
+  published: boolean;
+}): ExistingThread["status"] {
+  if (existingThread !== undefined && isFollowUpQuestion(question)) {
+    return existingThread.status;
+  }
+
+  return published ? "published" : "draft";
+}
+
+async function loadAnswerThreadContext({
+  question,
+  store,
+}: {
+  question: AnswerWorkflowQuestion;
+  store: AnswerStore;
+}) {
+  if (
+    !isFollowUpQuestion(question) ||
+    question.threadId === null ||
+    question.threadInitialQuestionId === null
+  ) {
+    return undefined;
+  }
+
+  return createCompactThreadContextPreview({
+    initialQuestionId: question.threadInitialQuestionId,
+    rows: await store.findThreadContextRows(question.threadId),
+  });
+}
+
 function toAnswerFormValues(
   draft: StoredAnswerDraftItem | undefined,
+  question: AnswerWorkflowQuestion,
 ): AnswerFormValues {
   return {
     intent: "save_draft",
@@ -750,7 +1062,9 @@ function toAnswerFormValues(
       draft?.questionTextMode === "edited"
         ? (draft.displayQuestionText ?? "")
         : "",
-    followUpPermissionOverride: draft?.followUpPermissionOverride ?? null,
+    followUpPermissionOverride:
+      draft?.followUpPermissionOverride ??
+      getInitialFollowUpPermissionOverride(question),
   };
 }
 
@@ -857,7 +1171,40 @@ function getDeniedMessage(reason: AnswerDeniedReason) {
       return "This question is no longer available for answering.";
     case "suspended":
       return "Answering is unavailable while this account is suspended.";
+    case "thread_full":
+      return "This thread already has the maximum number of published answers.";
   }
+}
+
+function getPublishRedirect({
+  publish,
+  question,
+  username,
+}: {
+  publish: AnswerPublishResult;
+  question: AnswerWorkflowQuestion;
+  username: string;
+}) {
+  if (isFollowUpQuestion(question)) {
+    return `/${username}/a/${publish.threadPublicId}#item-${publish.threadItemPublicId}`;
+  }
+
+  return `/${username}#published-answers`;
+}
+
+function getInitialFollowUpPermissionOverride(
+  question: AnswerWorkflowQuestion,
+): AnswerFollowUpPermissionOverride {
+  return isFollowUpQuestion(question)
+    ? question.threadFollowUpPermissionOverride
+    : null;
+}
+
+function isFollowUpQuestion(question: AnswerWorkflowQuestion) {
+  return (
+    question.threadId !== null &&
+    question.threadInitialQuestionId !== question.id
+  );
 }
 
 function createAnswerPreview(answerText: string) {

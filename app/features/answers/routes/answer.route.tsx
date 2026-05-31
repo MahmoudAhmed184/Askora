@@ -140,6 +140,10 @@ function getAnswerActionResponseStatus(result: AnswerActionResult) {
         return 409;
       }
 
+      if (result.reason === "thread_full") {
+        return 409;
+      }
+
       return 403;
   }
 }

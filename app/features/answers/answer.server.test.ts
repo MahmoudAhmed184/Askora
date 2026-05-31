@@ -15,6 +15,7 @@ import {
 import type { QuestionTextMode } from "~/features/answers/answer.schema";
 import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
 import type { FollowUpPermission } from "~/features/settings/settings.schema";
+import type { PublicThreadItemRow } from "~/features/threads/public-thread.loader.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -146,6 +147,176 @@ describe("answer workflows", () => {
     });
 
     expect(answers.notifications).toEqual([]);
+  });
+
+  it("loads follow-up thread context and preserves the current follow-up override", async () => {
+    const answers = createAnswerStore({
+      items: [createThreadItem()],
+      question: createFollowUpQuestion(),
+      thread: createThread({ followUpPermissionOverride: "logged_in" }),
+    });
+
+    await expect(
+      loadAnswerEditor({
+        questionPublicId: "qst_1",
+        session: completedSession,
+        store: answers.store,
+      }),
+    ).resolves.toMatchObject({
+      status: "found",
+      editor: {
+        values: {
+          followUpPermissionOverride: "logged_in",
+        },
+        threadContext: {
+          totalVisibleItems: 1,
+        },
+      },
+    });
+  });
+
+  it("saves follow-up drafts without hiding the published thread", async () => {
+    const answers = createAnswerStore({
+      items: [createThreadItem()],
+      question: createFollowUpQuestion(),
+      thread: createThread({ followUpPermissionOverride: "logged_in" }),
+    });
+
+    await expect(
+      submitAnswer({
+        formData: createAnswerFormData({
+          intent: "save_draft",
+          answerText: "Draft follow-up answer",
+          followUpPermissionOverride: "logged_in",
+        }),
+        ids: ["item_follow_up"],
+        store: answers.store,
+      }),
+    ).resolves.toEqual({
+      status: "draft_saved",
+      questionPublicId: "qst_1",
+    });
+
+    expect(answers.thread).toMatchObject({
+      status: "published",
+      followUpPermissionOverride: "logged_in",
+    });
+    expect(answers.item).toMatchObject({
+      id: "item_follow_up",
+      status: "draft",
+      position: 1,
+    });
+  });
+
+  it("publishes follow-ups at the next position and redirects to the thread anchor", async () => {
+    const answers = createAnswerStore({
+      items: [createThreadItem()],
+      question: createFollowUpQuestion(),
+      thread: createThread(),
+    });
+
+    const result = await submitAnswer({
+      formData: createAnswerFormData({
+        intent: "publish",
+        answerText: "Follow-up answer",
+      }),
+      ids: ["item_follow_up"],
+      store: answers.store,
+    });
+
+    expect(result).toMatchObject({
+      status: "published",
+      redirectTo: "/person/a/thr_1#item-titem_1",
+    });
+    expect(answers.item).toMatchObject({
+      id: "item_follow_up",
+      status: "published",
+      position: 1,
+    });
+    expect(answers.thread).toMatchObject({
+      status: "published",
+    });
+  });
+
+  it("blocks follow-up publishing when the public thread is full", async () => {
+    const answers = createAnswerStore({
+      items: Array.from({ length: 20 }, (_, index) =>
+        createThreadItem({
+          id: `item_${String(index)}`,
+          publicId: `titem_${String(index)}`,
+          questionId: `question_${String(index)}`,
+          position: index,
+        }),
+      ),
+      question: createFollowUpQuestion(),
+      thread: createThread(),
+    });
+
+    await expect(
+      submitAnswer({
+        formData: createAnswerFormData({
+          intent: "publish",
+          answerText: "One too many",
+        }),
+        ids: ["item_follow_up"],
+        store: answers.store,
+      }),
+    ).resolves.toMatchObject({
+      status: "denied",
+      reason: "thread_full",
+    });
+    expect(answers.item).toBeUndefined();
+  });
+
+  it("notifies the current asker and distinct logged-in thread participants when a follow-up is answered", async () => {
+    const answers = createAnswerStore({
+      items: [createThreadItem()],
+      participantUserIds: [
+        "user_initial",
+        "user_current",
+        "user_1",
+        "user_initial",
+        "user_other",
+      ],
+      question: createFollowUpQuestion({
+        askerUserId: "user_current",
+        askerProfileId: "profile_current",
+        identityMode: "account_anonymous",
+      }),
+      thread: createThread(),
+    });
+
+    await submitAnswer({
+      formData: createAnswerFormData({
+        intent: "publish",
+        answerText: "Follow-up answer",
+      }),
+      ids: [
+        "item_follow_up",
+        "notification_answered",
+        "notification_participant_1",
+        "notification_participant_2",
+      ],
+      store: answers.store,
+    });
+
+    expect(answers.notifications).toEqual([
+      expect.objectContaining({
+        id: "notification_answered",
+        recipientUserId: "user_current",
+        type: "question_answered",
+      }),
+      expect.objectContaining({
+        id: "notification_participant_1",
+        recipientUserId: "user_initial",
+        type: "follow_up_answered",
+      }),
+      expect.objectContaining({
+        id: "notification_participant_2",
+        recipientUserId: "user_other",
+        type: "follow_up_answered",
+      }),
+    ]);
   });
 
   it("rejects other-owner and deleted questions without leaking existence", async () => {
@@ -377,19 +548,21 @@ describe("createPublicPublishedAnswers", () => {
 
 async function submitAnswer({
   formData,
+  ids = ["thread_id_1", "item_id_1", "notification_id_1"],
   session = completedSession,
   store,
 }: {
   formData: FormData;
+  ids?: string[];
   session?: CompletedProfileSessionSummary;
   store: AnswerStore;
 }) {
-  const ids = ["thread_id_1", "item_id_1", "notification_id_1"];
+  const databaseIds = [...ids];
   const threadPublicIds = ["thr_1"];
   const itemPublicIds = ["titem_1"];
 
   return handleAnswerSubmission({
-    createId: () => ids.shift() ?? "extra_id",
+    createId: () => databaseIds.shift() ?? "extra_id",
     createThreadItemPublicId: () => itemPublicIds.shift() ?? "titem_extra",
     createThreadPublicId: () => threadPublicIds.shift() ?? "thr_extra",
     formData,
@@ -453,6 +626,7 @@ interface TestThread {
   publicId: string;
   status: "draft" | "published" | "unpublished" | "deleted";
   followUpPermissionOverride: FollowUpPermission | null;
+  initialQuestionId: string;
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -467,6 +641,7 @@ interface TestThreadItem {
   displayQuestionText: string | null;
   questionTextMode: QuestionTextMode;
   status: "draft" | "published" | "unpublished" | "deleted";
+  position: number;
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -475,7 +650,7 @@ interface TestThreadItem {
 interface TestNotification {
   id: string;
   recipientUserId: string;
-  type: "question_answered";
+  type: "question_answered" | "follow_up_answered";
   actorUserId: string;
   threadId: string;
   threadItemId: string;
@@ -486,19 +661,36 @@ interface TestNotification {
 }
 
 function createAnswerStore({
+  participantUserIds = [],
   question = createQuestion(),
+  thread: initialThread,
+  items: initialItems = [],
 }: {
+  participantUserIds?: string[];
   question?: AnswerWorkflowQuestion;
+  thread?: TestThread;
+  items?: TestThreadItem[];
 } = {}) {
-  let thread: TestThread | undefined;
-  let item: TestThreadItem | undefined;
+  let thread = initialThread;
+  const items = [...initialItems];
   const notifications: TestNotification[] = [];
+  const linkedThread = thread?.id === question.threadId ? thread : undefined;
+
+  if (linkedThread !== undefined) {
+    question.threadPublicId = linkedThread.publicId;
+    question.threadInitialQuestionId = linkedThread.initialQuestionId;
+    question.threadStatus = linkedThread.status;
+    question.threadFollowUpPermissionOverride =
+      linkedThread.followUpPermissionOverride;
+  }
 
   const store: AnswerStore = {
     findQuestionForAnswer(publicId) {
       return Promise.resolve(question.publicId === publicId ? question : undefined);
     },
     findDraftItemByQuestionId(questionId) {
+      const item = findQuestionItem(items, questionId);
+
       if (item?.questionId !== questionId || item.status !== "draft") {
         return Promise.resolve(undefined);
       }
@@ -513,6 +705,8 @@ function createAnswerStore({
       } satisfies StoredAnswerDraftItem);
     },
     findDraftAnswerQuestionsForOwner({ profileId, userId }) {
+      const item = findQuestionItem(items, question.id);
+
       if (
         item === undefined ||
         question.recipientProfileId !== profileId ||
@@ -538,33 +732,60 @@ function createAnswerStore({
         } satisfies StoredDraftAnswerQuestion,
       ]);
     },
+    findThreadContextRows(threadId) {
+      return Promise.resolve(
+        items
+          .filter((item) => item.threadId === threadId)
+          .map((item) => createContextRow(item)),
+      );
+    },
     saveDraftAnswer(params) {
       const draft = upsertAnswerState({
-        item,
+        items,
         params,
         publish: false,
         thread,
       });
       thread = draft.thread;
-      item = draft.item;
       question.status = "draft";
       question.threadId = thread.id;
+      question.threadPublicId = thread.publicId;
+      question.threadInitialQuestionId = thread.initialQuestionId;
+      question.threadStatus = thread.status;
+      question.threadFollowUpPermissionOverride =
+        thread.followUpPermissionOverride;
       return Promise.resolve();
     },
     publishAnswer(params) {
+      const item = findQuestionItem(items, question.id);
       const previousStatus = item?.status;
+      const firstPublish = previousStatus !== "published";
+
+      if (
+        firstPublish &&
+        isTestFollowUpQuestion(question) &&
+        countVisiblePublishedItems(items, question.threadId) >= 20
+      ) {
+        return Promise.resolve({
+          status: "denied",
+          reason: "thread_full",
+        });
+      }
+
       const published = upsertAnswerState({
-        item,
+        items,
         params,
         publish: true,
         thread,
       });
       thread = published.thread;
-      item = published.item;
       question.status = "answered";
       question.threadId = thread.id;
-
-      const firstPublish = previousStatus !== "published";
+      question.threadPublicId = thread.publicId;
+      question.threadInitialQuestionId = thread.initialQuestionId;
+      question.threadStatus = thread.status;
+      question.threadFollowUpPermissionOverride =
+        thread.followUpPermissionOverride;
 
       if (
         firstPublish &&
@@ -581,7 +802,7 @@ function createAnswerStore({
           type: "question_answered",
           actorUserId: params.actorUserId,
           threadId: thread.id,
-          threadItemId: item.id,
+          threadItemId: published.item.id,
           questionId: question.id,
           readAt: null,
           createdAt: params.now,
@@ -589,16 +810,42 @@ function createAnswerStore({
         });
       }
 
+      if (firstPublish && isTestFollowUpQuestion(question)) {
+        for (const recipientUserId of getParticipantNotificationRecipients({
+          actorUserId: params.actorUserId,
+          currentAskerUserId: question.askerUserId,
+          ownerUserId: question.recipientUserId,
+          participantUserIds,
+        })) {
+          notifications.push({
+            id: params.createDatabaseId(),
+            recipientUserId,
+            type: "follow_up_answered",
+            actorUserId: params.actorUserId,
+            threadId: thread.id,
+            threadItemId: published.item.id,
+            questionId: question.id,
+            readAt: null,
+            createdAt: params.now,
+            expiresAt: addDays(params.now, 180),
+          });
+        }
+      }
+
       return Promise.resolve({
+        status: "published",
         notified: firstPublish && question.askerUserId !== null,
+        threadPublicId: thread.publicId,
+        threadItemPublicId: published.item.publicId,
       });
     },
   };
 
   return {
     get item() {
-      return item;
+      return findQuestionItem(items, question.id);
     },
+    items,
     notifications,
     question,
     store,
@@ -609,16 +856,17 @@ function createAnswerStore({
 }
 
 function upsertAnswerState({
-  item,
+  items,
   params,
   publish,
   thread,
 }: {
-  item: TestThreadItem | undefined;
+  items: TestThreadItem[];
   params: AnswerMutationParams;
   publish: boolean;
   thread: TestThread | undefined;
 }) {
+  const item = findQuestionItem(items, params.question.id);
   const nextThread =
     thread ??
     ({
@@ -626,16 +874,23 @@ function upsertAnswerState({
       publicId: params.createThreadPublicId(),
       status: "draft",
       followUpPermissionOverride: null,
+      initialQuestionId: params.question.id,
       publishedAt: null,
       createdAt: params.now,
       updatedAt: params.now,
     } satisfies TestThread);
-  const status = publish ? "published" : "draft";
+  const threadStatus =
+    thread !== undefined && isTestFollowUpQuestion(params.question)
+      ? thread.status
+      : publish
+        ? "published"
+        : "draft";
+  const itemStatus = publish ? "published" : "draft";
   const publishedAt = publish
     ? (nextThread.publishedAt ?? params.now)
     : nextThread.publishedAt;
 
-  nextThread.status = status;
+  nextThread.status = threadStatus;
   nextThread.followUpPermissionOverride =
     params.submission.followUpPermissionOverride;
   nextThread.publishedAt = publishedAt;
@@ -652,15 +907,22 @@ function upsertAnswerState({
       displayQuestionText: null,
       questionTextMode: "original",
       status: "draft",
+      position: isTestFollowUpQuestion(params.question)
+        ? getNextItemPosition(items, nextThread.id)
+        : 0,
       publishedAt: null,
       createdAt: params.now,
       updatedAt: params.now,
     } satisfies TestThreadItem);
 
+  if (item === undefined) {
+    items.push(nextItem);
+  }
+
   nextItem.answerText = params.submission.answerText;
   nextItem.displayQuestionText = getDisplayQuestionText(params);
   nextItem.questionTextMode = params.submission.questionTextMode;
-  nextItem.status = status;
+  nextItem.status = itemStatus;
   nextItem.publishedAt = publish
     ? (nextItem.publishedAt ?? params.now)
     : nextItem.publishedAt;
@@ -684,6 +946,117 @@ function getDisplayQuestionText(params: AnswerMutationParams) {
   return params.question.originalText;
 }
 
+function findQuestionItem(items: TestThreadItem[], questionId: string) {
+  return items.find((item) => item.questionId === questionId);
+}
+
+function getNextItemPosition(items: TestThreadItem[], threadId: string) {
+  return Math.max(
+    -1,
+    ...items
+      .filter((item) => item.threadId === threadId)
+      .map((item) => item.position),
+  ) + 1;
+}
+
+function countVisiblePublishedItems(
+  items: TestThreadItem[],
+  threadId: string | null,
+) {
+  if (threadId === null) {
+    return 0;
+  }
+
+  return items.filter(
+    (item) => item.threadId === threadId && item.status === "published",
+  ).length;
+}
+
+function createContextRow(item: TestThreadItem): PublicThreadItemRow {
+  return {
+    publicId: item.publicId,
+    questionId: item.questionId,
+    answerText: item.answerText,
+    itemStatus: item.status,
+    itemDeletedAt: null,
+    publishedAt: item.publishedAt,
+    createdAt: item.createdAt,
+    position: item.position,
+    pinPosition: null,
+    questionStatus: "answered",
+    questionDeletedAt: null,
+    questionTextMode: item.questionTextMode,
+    displayQuestionText: item.displayQuestionText,
+    identityMode: "guest_anonymous",
+    askerDisplayName: null,
+    askerUsername: null,
+  };
+}
+
+function getParticipantNotificationRecipients({
+  actorUserId,
+  currentAskerUserId,
+  ownerUserId,
+  participantUserIds,
+}: {
+  participantUserIds: string[];
+  ownerUserId: string;
+  actorUserId: string;
+  currentAskerUserId: string | null;
+}) {
+  return [
+    ...new Set(
+      participantUserIds.filter(
+        (userId) =>
+          userId !== ownerUserId &&
+          userId !== actorUserId &&
+          userId !== currentAskerUserId,
+      ),
+    ),
+  ];
+}
+
+function isTestFollowUpQuestion(question: AnswerWorkflowQuestion) {
+  return (
+    question.threadId !== null &&
+    question.threadInitialQuestionId !== question.id
+  );
+}
+
+function createThread(overrides: Partial<TestThread> = {}): TestThread {
+  return {
+    id: "thread_id_1",
+    publicId: "thr_1",
+    status: "published",
+    followUpPermissionOverride: null,
+    initialQuestionId: "question_initial",
+    publishedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+function createThreadItem(
+  overrides: Partial<TestThreadItem> = {},
+): TestThreadItem {
+  return {
+    id: "item_initial",
+    publicId: "titem_initial",
+    threadId: "thread_id_1",
+    questionId: "question_initial",
+    answerText: "Initial answer",
+    displayQuestionText: "Initial question?",
+    questionTextMode: "original",
+    status: "published",
+    position: 0,
+    publishedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
 function createQuestion(
   overrides: Partial<AnswerWorkflowQuestion> = {},
 ): AnswerWorkflowQuestion {
@@ -700,9 +1073,27 @@ function createQuestion(
     deletedAt: null,
     createdAt: now,
     threadId: null,
+    threadPublicId: null,
+    threadInitialQuestionId: null,
+    threadStatus: null,
+    threadFollowUpPermissionOverride: null,
     followUpPermissionDefault: "anyone",
     ...overrides,
   };
+}
+
+function createFollowUpQuestion(
+  overrides: Partial<AnswerWorkflowQuestion> = {},
+): AnswerWorkflowQuestion {
+  return createQuestion({
+    id: "question_follow_up",
+    threadId: "thread_id_1",
+    threadPublicId: "thr_1",
+    threadInitialQuestionId: "question_initial",
+    threadStatus: "published",
+    threadFollowUpPermissionOverride: null,
+    ...overrides,
+  });
 }
 
 function addDays(date: Date, days: number) {
