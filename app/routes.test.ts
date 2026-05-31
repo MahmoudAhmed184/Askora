@@ -26,6 +26,14 @@ describe("route config", () => {
     expect(paths.indexOf("dashboard/settings/safety")).toBeLessThan(usernameIndex);
   });
 
+  it("registers admin routes before the public username route", () => {
+    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+    const usernameIndex = paths.indexOf(":username");
+
+    expect(paths.indexOf("admin")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("admin/reports/:reportId")).toBeLessThan(usernameIndex);
+  });
+
   it("registers public thread permalinks before the public username route", () => {
     const paths = routes.map((route) => ("path" in route ? route.path : "index"));
     const usernameIndex = paths.indexOf(":username");
