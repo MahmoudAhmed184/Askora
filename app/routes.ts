@@ -13,6 +13,10 @@ export default [
   route("dashboard/inbox", "features/inbox/routes/inbox.route.tsx"),
   route("dashboard/drafts", "features/answers/routes/drafts.route.tsx"),
   route("dashboard/answer/:questionId", "features/answers/routes/answer.route.tsx"),
+  route(
+    "dashboard/answers/:threadItemPublicId/actions",
+    "features/answers/routes/published-answer-actions.route.ts",
+  ),
   route("dashboard/filtered", "features/inbox/routes/filtered.route.tsx"),
   route("dashboard/settings/profile", "features/settings/routes/profile.route.tsx"),
   route("dashboard/settings/privacy", "features/settings/routes/privacy.route.tsx"),

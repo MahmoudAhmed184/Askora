@@ -13,6 +13,9 @@ describe("route config", () => {
     expect(paths.indexOf("dashboard/answer/:questionId")).toBeLessThan(
       usernameIndex,
     );
+    expect(
+      paths.indexOf("dashboard/answers/:threadItemPublicId/actions"),
+    ).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/filtered")).toBeLessThan(usernameIndex);
   });
 });
