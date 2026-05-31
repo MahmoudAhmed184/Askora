@@ -65,8 +65,8 @@ describe("LoginRoute", () => {
     expect(parsed.email).toBe("person@example.com");
   });
 
-  it("redirects authenticated users to the slice-two post-auth target", () => {
-    expect(getPostAuthRedirectPath()).toBe("/");
+  it("uses login as the auth callback target before the session exists", () => {
+    expect(getPostAuthRedirectPath()).toBe("/login");
   });
 });
 

@@ -17,13 +17,13 @@ import { getPublicAppConfig } from "~/lib/config.server";
 import { noindexHeaders } from "~/lib/response.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const { getCurrentSessionSummary } = await import(
+  const { getPublicSessionSummary } = await import(
     "~/features/auth/auth.server"
   );
 
   return {
     app: getPublicAppConfig(),
-    session: await getCurrentSessionSummary(request),
+    session: await getPublicSessionSummary(request),
   };
 }
 

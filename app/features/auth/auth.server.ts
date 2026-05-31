@@ -1,9 +1,12 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
 import { magicLink } from "better-auth/plugins/magic-link";
+import { eq } from "drizzle-orm";
+import { redirect } from "react-router";
 
 import { getRuntimeDatabase } from "~/db/client.server";
 import * as databaseSchema from "~/db/schema";
+import { authUsers, profiles } from "~/db/schema";
 import {
   completeInviteForCreatedUser,
   requireConsumedInviteForUserCreate,
@@ -13,18 +16,62 @@ import { AppConfigurationError } from "~/lib/errors";
 import { getServerAuthSecret } from "~/lib/crypto.server";
 import { serverEnv } from "~/lib/env.server";
 
+export type ActiveSuspensionStatus = "none" | "active";
+
+export interface CurrentSessionUser {
+  id: string;
+  email: string;
+  name: string;
+  image: string | undefined;
+}
+
+export interface IncompleteProfileSessionSummary {
+  status: "authenticated";
+  user: CurrentSessionUser;
+  profileStatus: "incomplete";
+  suspensionStatus: ActiveSuspensionStatus;
+}
+
+export interface CompletedProfileSessionSummary {
+  status: "authenticated";
+  user: CurrentSessionUser;
+  profileStatus: "complete";
+  suspensionStatus: ActiveSuspensionStatus;
+  profile: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  };
+}
+
+export type AuthenticatedSessionSummary =
+  | IncompleteProfileSessionSummary
+  | CompletedProfileSessionSummary;
+
 export type CurrentSessionSummary =
+  | {
+      status: "anonymous";
+    }
+  | AuthenticatedSessionSummary;
+
+export type PublicSessionSummary =
   | {
       status: "anonymous";
     }
   | {
       status: "authenticated";
-      user: {
-        id: string;
-        email: string;
-        name: string;
+      profileStatus: "incomplete";
+      suspensionStatus: ActiveSuspensionStatus;
+    }
+  | {
+      status: "authenticated";
+      profileStatus: "complete";
+      suspensionStatus: ActiveSuspensionStatus;
+      profile: {
+        username: string;
+        displayName: string;
       };
-      profileStatus: "not_loaded";
     };
 
 const authProviderStatus = getAuthProviderStatus();
@@ -102,15 +149,194 @@ export async function getCurrentSessionSummary(
     return { status: "anonymous" };
   }
 
+  const sessionUser = await getSessionUserSummary(session.user.id);
+
+  if (sessionUser === undefined) {
+    return { status: "anonymous" };
+  }
+
+  return sessionUser;
+}
+
+export async function getPublicSessionSummary(request: Request) {
+  return toPublicSessionSummary(await getCurrentSessionSummary(request));
+}
+
+export function toPublicSessionSummary(
+  session: CurrentSessionSummary,
+): PublicSessionSummary {
+  if (session.status === "anonymous") {
+    return session;
+  }
+
+  if (session.profileStatus === "incomplete") {
+    return {
+      status: "authenticated",
+      profileStatus: "incomplete",
+      suspensionStatus: session.suspensionStatus,
+    };
+  }
+
   return {
     status: "authenticated",
-    user: {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
+    profileStatus: "complete",
+    suspensionStatus: session.suspensionStatus,
+    profile: {
+      username: session.profile.username,
+      displayName: session.profile.displayName,
     },
-    profileStatus: "not_loaded",
   };
+}
+
+export async function requireAuthenticatedSession(
+  request: Request,
+): Promise<AuthenticatedSessionSummary | Response> {
+  const session = await getCurrentSessionSummary(request);
+  const redirectPath = getAuthenticatedGuardRedirectPath(session);
+
+  if (redirectPath !== undefined) {
+    return redirect(redirectPath);
+  }
+
+  return session as AuthenticatedSessionSummary;
+}
+
+export async function requireIncompleteProfileSession(
+  request: Request,
+): Promise<IncompleteProfileSessionSummary | Response> {
+  const session = await getCurrentSessionSummary(request);
+  const redirectPath = getIncompleteProfileGuardRedirectPath(session);
+
+  if (redirectPath !== undefined) {
+    return redirect(redirectPath);
+  }
+
+  return session as IncompleteProfileSessionSummary;
+}
+
+export async function requireCompletedProfileSession(
+  request: Request,
+): Promise<CompletedProfileSessionSummary | Response> {
+  const session = await getCurrentSessionSummary(request);
+  const redirectPath = getCompletedProfileGuardRedirectPath(session);
+
+  if (redirectPath !== undefined) {
+    return redirect(redirectPath);
+  }
+
+  return session as CompletedProfileSessionSummary;
+}
+
+export function getAuthenticatedGuardRedirectPath(
+  session: CurrentSessionSummary,
+) {
+  return session.status === "anonymous" ? "/login" : undefined;
+}
+
+export function getIncompleteProfileGuardRedirectPath(
+  session: CurrentSessionSummary,
+) {
+  if (session.status === "anonymous") {
+    return "/login";
+  }
+
+  return session.profileStatus === "complete" ? "/setup/share" : undefined;
+}
+
+export function getCompletedProfileGuardRedirectPath(
+  session: CurrentSessionSummary,
+) {
+  if (session.status === "anonymous") {
+    return "/login";
+  }
+
+  return session.profileStatus === "incomplete" ? "/setup" : undefined;
+}
+
+export function isSessionSuspended(session: AuthenticatedSessionSummary) {
+  return session.suspensionStatus === "active";
+}
+
+async function getSessionUserSummary(
+  userId: string,
+): Promise<AuthenticatedSessionSummary | undefined> {
+  const [user] = await getRuntimeDatabase()
+    .select({
+      id: authUsers.id,
+      email: authUsers.email,
+      name: authUsers.name,
+      image: authUsers.image,
+      suspensionStatus: authUsers.suspensionStatus,
+      suspendedUntil: authUsers.suspendedUntil,
+      profileId: profiles.id,
+      profileUsername: profiles.username,
+      profileDisplayName: profiles.displayName,
+      profileAvatarUrl: profiles.avatarUrl,
+    })
+    .from(authUsers)
+    .leftJoin(profiles, eq(profiles.userId, authUsers.id))
+    .where(eq(authUsers.id, userId))
+    .limit(1);
+
+  if (user === undefined) {
+    return undefined;
+  }
+
+  const baseSession = {
+    status: "authenticated" as const,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.image ?? undefined,
+    },
+    suspensionStatus: getActiveSuspensionStatus({
+      status: user.suspensionStatus,
+      suspendedUntil: user.suspendedUntil,
+    }),
+  };
+
+  if (
+    user.profileId === null ||
+    user.profileUsername === null ||
+    user.profileDisplayName === null
+  ) {
+    return {
+      ...baseSession,
+      profileStatus: "incomplete",
+    };
+  }
+
+  return {
+    ...baseSession,
+    profileStatus: "complete",
+    profile: {
+      id: user.profileId,
+      username: user.profileUsername,
+      displayName: user.profileDisplayName,
+      avatarUrl: user.profileAvatarUrl,
+    },
+  };
+}
+
+function getActiveSuspensionStatus({
+  status,
+  suspendedUntil,
+}: {
+  status: "warned" | "suspended" | "permanent" | null;
+  suspendedUntil: Date | null;
+}): ActiveSuspensionStatus {
+  if (status === "permanent") {
+    return "active";
+  }
+
+  if (status !== "suspended") {
+    return "none";
+  }
+
+  return suspendedUntil === null || suspendedUntil.getTime() > Date.now()
+    ? "active"
+    : "none";
 }
 
 function getGoogleProvider() {
