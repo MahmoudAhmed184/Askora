@@ -12,6 +12,7 @@ export default [
   route("dashboard", "features/inbox/routes/dashboard.route.tsx"),
   route("dashboard/feed", "features/social/routes/feed.route.tsx"),
   route("dashboard/inbox", "features/inbox/routes/inbox.route.tsx"),
+  route("dashboard/prompts", "features/prompts/routes/prompts.route.tsx"),
   route("dashboard/drafts", "features/answers/routes/drafts.route.tsx"),
   route("dashboard/notifications", "features/notifications/routes/notifications.route.tsx"),
   route("dashboard/likes", "features/social/routes/like.action.route.ts"),

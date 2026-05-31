@@ -10,6 +10,7 @@ describe("route config", () => {
     expect(paths.indexOf("dashboard")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/feed")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/inbox")).toBeLessThan(usernameIndex);
+    expect(paths.indexOf("dashboard/prompts")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/drafts")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/notifications")).toBeLessThan(usernameIndex);
     expect(paths.indexOf("dashboard/likes")).toBeLessThan(usernameIndex);
