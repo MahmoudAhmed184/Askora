@@ -85,6 +85,32 @@ describe("answer workflows", () => {
     });
   });
 
+  it("denies suspended sessions before saving or publishing content", async () => {
+    for (const intent of ["save_draft", "publish"] as const) {
+      const answers = createAnswerStore();
+
+      await expect(
+        submitAnswer({
+          formData: createAnswerFormData({
+            intent,
+            answerText: "Suspended account content",
+          }),
+          session: {
+            ...completedSession,
+            suspensionStatus: "active",
+          },
+          store: answers.store,
+        }),
+      ).resolves.toMatchObject({
+        status: "denied",
+        reason: "suspended",
+      });
+      expect(answers.question.status).toBe("inbox");
+      expect(answers.item).toBeUndefined();
+      expect(answers.thread).toBeUndefined();
+    }
+  });
+
   it("notifies an account-backed asker exactly once on first publish", async () => {
     const answers = createAnswerStore({
       question: createQuestion({
