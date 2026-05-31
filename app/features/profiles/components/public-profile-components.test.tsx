@@ -6,6 +6,7 @@ import { AskComposer } from "~/features/profiles/components/ask-composer";
 import { PermissionState } from "~/features/profiles/components/permission-state";
 import { PublicAnswerList } from "~/features/profiles/components/public-answer-list";
 import { UnavailableProfile } from "~/features/profiles/components/unavailable-profile";
+import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
 import type { PublicAskStateAllowed } from "~/features/profiles/ask-permissions.server";
 import type { PublicAskFlash } from "~/features/profiles/ask-friction.server";
 import type { PublicProfileView } from "~/features/profiles/profile.loader.server";
@@ -72,7 +73,7 @@ describe("public profile components", () => {
             },
           }}
         />
-        <PublicAnswerList />
+        <PublicAnswerList answers={[]} />
       </>,
     );
 
@@ -87,6 +88,43 @@ describe("public profile components", () => {
 
     expect(screen.getByText("@reserved")).toBeInTheDocument();
     expect(screen.getByText("This profile is unavailable")).toBeInTheDocument();
+  });
+
+  it("renders public answers as escaped plain text with preserved line breaks", () => {
+    const { container } = renderWithRouter(
+      <PublicAnswerList
+        answers={[
+          createPublishedAnswer({
+            answerText: "First line\n<script>alert('x')</script>",
+            questionText: "How do I start?",
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText(/First line/)).toHaveClass(
+      "whitespace-pre-wrap",
+      "break-words",
+    );
+    expect(screen.getByText(/<script>alert/)).toBeInTheDocument();
+    expect(container.querySelector("script")).toBeNull();
+  });
+
+  it("omits question text entirely for hidden public answers", () => {
+    renderWithRouter(
+      <PublicAnswerList
+        answers={[
+          createPublishedAnswer({
+            answerText: "Answer without the private prompt",
+            questionText: null,
+            questionTextMode: "hidden",
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Answer without the private prompt")).toBeInTheDocument();
+    expect(screen.queryByText("What should I read next?")).not.toBeInTheDocument();
   });
 });
 
@@ -103,7 +141,7 @@ function renderWithRouter(element: React.ReactNode) {
     },
   );
 
-  render(<RouterProvider router={router} />);
+  return render(<RouterProvider router={router} />);
 }
 
 const allowedAsk = {
@@ -126,3 +164,17 @@ const profile = {
     reactions: 0,
   },
 } satisfies PublicProfileView;
+
+function createPublishedAnswer(
+  overrides: Partial<PublicPublishedAnswer> = {},
+): PublicPublishedAnswer {
+  return {
+    publicId: "titem_1",
+    answerText: "Answer text",
+    publishedAt: "2026-05-31T12:00:00.000Z",
+    questionTextMode: "original",
+    questionText: "What should I read next?",
+    asker: undefined,
+    ...overrides,
+  };
+}

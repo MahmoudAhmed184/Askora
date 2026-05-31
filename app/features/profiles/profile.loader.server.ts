@@ -12,6 +12,7 @@ import {
   type PublicAskFlash,
 } from "~/features/profiles/ask-friction.server";
 import type { PublicSessionSummary } from "~/features/auth/auth.server";
+import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
 
 export interface PublicProfile {
   id: string;
@@ -54,7 +55,7 @@ export type PublicProfilePageData =
       ask: PublicAskState;
       askFlash: PublicAskFlash | undefined;
       timingToken: string | undefined;
-      publishedAnswers: [];
+      publishedAnswers: PublicPublishedAnswer[];
     }
   | {
       status: "unavailable";
@@ -128,11 +129,13 @@ export function createPublicProfilePageData({
   profile,
   session,
   now = new Date(),
+  publishedAnswers = [],
 }: {
   askFlash: PublicAskFlash | undefined;
   profile: PublicProfile;
   session: PublicSessionSummary;
   now?: Date | undefined;
+  publishedAnswers?: PublicPublishedAnswer[] | undefined;
 }): PublicProfilePageData {
   const ask = getPublicAskState({
     actor: session,
@@ -141,7 +144,7 @@ export function createPublicProfilePageData({
 
   return {
     status: "available",
-    profile: getPublicProfileView(profile),
+    profile: getPublicProfileView(profile, publishedAnswers.length),
     ask,
     askFlash,
     timingToken:
@@ -152,7 +155,7 @@ export function createPublicProfilePageData({
             now,
           })
         : undefined,
-    publishedAnswers: [],
+    publishedAnswers,
   };
 }
 
@@ -233,14 +236,17 @@ function isStillReserved(reservation: PublicUsernameReservation, now: Date) {
   );
 }
 
-function getPublicProfileView(profile: PublicProfile): PublicProfileView {
+function getPublicProfileView(
+  profile: PublicProfile,
+  answerCount: number,
+): PublicProfileView {
   return {
     username: profile.username,
     displayName: profile.displayName,
     avatarUrl: profile.avatarUrl,
     bio: profile.bio,
     counts: {
-      answers: 0,
+      answers: answerCount,
       followers: profile.showFollowerCounts ? 0 : undefined,
       following: profile.showFollowerCounts ? 0 : undefined,
       reactions: profile.showLikeCounts ? 0 : undefined,

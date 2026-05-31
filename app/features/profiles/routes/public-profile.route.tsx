@@ -9,6 +9,7 @@ import {
 } from "~/features/profiles/components/profile-header";
 import { PublicAnswerList } from "~/features/profiles/components/public-answer-list";
 import { UnavailableProfile } from "~/features/profiles/components/unavailable-profile";
+import { findPublishedAnswersForProfile } from "~/features/answers/answer.server";
 import {
   clearPublicAskFlashCookieHeader,
   hasPublicAskFlashCookie,
@@ -72,12 +73,17 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     );
   }
 
+  const publishedAnswers = await findPublishedAnswersForProfile({
+    profileId: resolution.profile.id,
+  });
+
   return data(
     {
       app: getPublicAppConfig(),
       page: createPublicProfilePageData({
         askFlash: readPublicAskFlashFromRequest(request, username),
         profile: resolution.profile,
+        publishedAnswers,
         session: toPublicSessionSummary(session),
       }),
     },
@@ -149,7 +155,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
         ) : (
           <PermissionState ask={page.ask} />
         )}
-        <PublicAnswerList />
+        <PublicAnswerList answers={page.publishedAnswers} />
       </div>
     </PublicShell>
   );

@@ -124,6 +124,16 @@ describe("createPublicProfilePageData", () => {
   it("creates an ask-enabled public profile view", () => {
     const page = createPublicProfilePageData({
       askFlash: undefined,
+      publishedAnswers: [
+        {
+          publicId: "titem_1",
+          answerText: "Public answer",
+          publishedAt: "2026-05-31T12:00:00.000Z",
+          questionTextMode: "hidden",
+          questionText: null,
+          asker: undefined,
+        },
+      ],
       profile: createProfile({
         showFollowerCounts: false,
         showLikeCounts: false,
@@ -137,7 +147,7 @@ describe("createPublicProfilePageData", () => {
       profile: {
         username: "person",
         counts: {
-          answers: 0,
+          answers: 1,
           followers: undefined,
           following: undefined,
           reactions: undefined,
@@ -147,7 +157,12 @@ describe("createPublicProfilePageData", () => {
         status: "allowed",
         defaultIdentity: "anonymous",
       },
-      publishedAnswers: [],
+      publishedAnswers: [
+        expect.objectContaining({
+          questionTextMode: "hidden",
+          questionText: null,
+        }),
+      ],
     });
     expect(page.status === "available" ? page.timingToken : undefined).toEqual(
       expect.any(String),
