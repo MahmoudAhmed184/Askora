@@ -1,0 +1,13 @@
+import {
+  index,
+  route,
+  type RouteConfig,
+} from "@react-router/dev/routes";
+
+export default [
+  index("features/home/routes/home.route.tsx"),
+  route("login", "features/auth/routes/login.route.tsx"),
+  route("terms", "features/legal/routes/terms.route.tsx"),
+  route("privacy", "features/legal/routes/privacy.route.tsx"),
+  route("api/auth/*", "features/auth/routes/auth.$.route.ts"),
+] satisfies RouteConfig;
