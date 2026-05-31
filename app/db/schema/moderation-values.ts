@@ -23,5 +23,17 @@ export const moderationReportStatusValues = [
   "dismissed",
 ] as const;
 
+export const adminActionTypeValues = [
+  "dismiss",
+  "warn",
+  "suspend_7_days",
+  "suspend_30_days",
+  "permanent_suspension",
+  "hide_profile",
+  "remove_public_content",
+] as const;
+
 export type ModerationReportReason =
   (typeof moderationReportReasonValues)[number];
+
+export type AdminActionType = (typeof adminActionTypeValues)[number];

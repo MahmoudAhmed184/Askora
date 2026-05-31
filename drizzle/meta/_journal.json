@@ -71,6 +71,13 @@
       "when": 1780239529108,
       "tag": "0009_cute_molten_man",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780244092746,
+      "tag": "0010_aspiring_glorian",
+      "breakpoints": true
     }
   ]
 }

@@ -8,8 +8,10 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import { threadItems } from "~/db/schema/answers";
 import { authUsers } from "~/db/schema/auth";
 import {
+  adminActionTypeValues,
   moderationReportReasonValues,
   moderationReportStatusValues,
   moderationReportTargetTypeValues,
@@ -18,6 +20,7 @@ import { profiles } from "~/db/schema/profiles";
 import { questions } from "~/db/schema/questions";
 
 export {
+  adminActionTypeValues,
   moderationReportReasonValues,
   moderationReportStatusValues,
   moderationReportTargetTypeValues,
@@ -36,6 +39,11 @@ export const moderationReportReasonEnum = pgEnum(
 export const moderationReportStatusEnum = pgEnum(
   "moderation_report_status",
   moderationReportStatusValues,
+);
+
+export const adminActionTypeEnum = pgEnum(
+  "admin_action_type",
+  adminActionTypeValues,
 );
 
 export const reports = pgTable(
@@ -66,6 +74,54 @@ export const reports = pgTable(
     index("reports_reporter_profile_id_idx").on(table.reporterProfileId),
     index("reports_target_idx").on(table.targetType, table.targetId),
     index("reports_status_created_idx").on(table.status, table.createdAt),
+  ],
+);
+
+export const adminActions = pgTable(
+  "admin_actions",
+  {
+    id: text("id").primaryKey(),
+    reportId: text("report_id")
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    adminUserId: text("admin_user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "restrict" }),
+    actionType: adminActionTypeEnum("action_type").notNull(),
+    reportTargetType: moderationReportTargetTypeEnum("report_target_type")
+      .notNull(),
+    reportTargetId: text("report_target_id").notNull(),
+    targetUserId: text("target_user_id").references(() => authUsers.id, {
+      onDelete: "set null",
+    }),
+    targetProfileId: text("target_profile_id").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+    targetQuestionId: text("target_question_id").references(() => questions.id, {
+      onDelete: "set null",
+    }),
+    targetThreadItemId: text("target_thread_item_id").references(
+      () => threadItems.id,
+      { onDelete: "set null" },
+    ),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("admin_actions_report_id_idx").on(table.reportId),
+    index("admin_actions_admin_user_id_idx").on(table.adminUserId),
+    index("admin_actions_action_type_idx").on(table.actionType),
+    index("admin_actions_target_idx").on(
+      table.reportTargetType,
+      table.reportTargetId,
+    ),
+    index("admin_actions_target_user_id_idx").on(table.targetUserId),
+    index("admin_actions_target_profile_id_idx").on(table.targetProfileId),
   ],
 );
 
@@ -147,6 +203,33 @@ export const reportsRelations = relations(reports, ({ one }) => ({
   reporterProfile: one(profiles, {
     fields: [reports.reporterProfileId],
     references: [profiles.id],
+  }),
+}));
+
+export const adminActionsRelations = relations(adminActions, ({ one }) => ({
+  report: one(reports, {
+    fields: [adminActions.reportId],
+    references: [reports.id],
+  }),
+  adminUser: one(authUsers, {
+    fields: [adminActions.adminUserId],
+    references: [authUsers.id],
+  }),
+  targetUser: one(authUsers, {
+    fields: [adminActions.targetUserId],
+    references: [authUsers.id],
+  }),
+  targetProfile: one(profiles, {
+    fields: [adminActions.targetProfileId],
+    references: [profiles.id],
+  }),
+  targetQuestion: one(questions, {
+    fields: [adminActions.targetQuestionId],
+    references: [questions.id],
+  }),
+  targetThreadItem: one(threadItems, {
+    fields: [adminActions.targetThreadItemId],
+    references: [threadItems.id],
   }),
 }));
 
