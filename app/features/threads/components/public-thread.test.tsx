@@ -35,6 +35,33 @@ describe("PublicThread", () => {
     expect(container.querySelector("#item-titem_anchor")).toBeInTheDocument();
   });
 
+  it("renders follow-up CTA and disabled states", () => {
+    const allowedRender = renderPublicThread(createAvailablePage());
+
+    expect(
+      screen.getByRole("link", { name: /ask a follow-up/i }),
+    ).toHaveAttribute("href", "/person/a/thr_1/follow-ups");
+
+    allowedRender.unmount();
+
+    renderPublicThread(
+      createAvailablePage({
+        followUp: {
+          status: "denied",
+          reason: "thread_full",
+          message: "This thread already has the maximum number of published answers.",
+        },
+      }),
+    );
+
+    expect(screen.getByText("Follow-ups unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This thread already has the maximum number of published answers.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("renders removed markers without removed answer text", () => {
     renderPublicThread(
       createAvailablePage({
@@ -140,6 +167,14 @@ function createAvailablePage(
       publishedAt: "2026-05-31T12:00:00.000Z",
     },
     items: [createAnswerItem()],
+    followUp: {
+      status: "allowed",
+      defaultIdentity: "anonymous",
+      anonymousAllowed: true,
+      attributedAllowed: false,
+      description: "Your follow-up is anonymous to the recipient and public viewers.",
+      effectivePermission: "anyone",
+    },
     publishedAnswerControls: {
       canManage: false,
       disabled: false,

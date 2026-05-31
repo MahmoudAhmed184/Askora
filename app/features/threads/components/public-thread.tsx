@@ -1,7 +1,8 @@
-import { Pin } from "lucide-react";
+import { LockKeyhole, Pin, Send } from "lucide-react";
 import { Link } from "react-router";
 
 import { PublicShell } from "~/components/app/public-shell";
+import { Button } from "~/components/ui/button";
 import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
 import { BetaNoindexBadge } from "~/features/profiles/components/profile-header";
 import type {
@@ -32,6 +33,11 @@ export function PublicThread({ betaNoindex, page }: PublicThreadProps) {
           profile={page.profile}
           publishedAt={page.thread.publishedAt}
         />
+        <PublicThreadFollowUpCallout
+          followUp={page.followUp}
+          profileUsername={page.profile.username}
+          threadPublicId={page.thread.publicId}
+        />
         <section
           aria-labelledby="thread-answers-title"
           className="flex flex-col gap-3"
@@ -51,6 +57,54 @@ export function PublicThread({ betaNoindex, page }: PublicThreadProps) {
         </section>
       </div>
     </PublicShell>
+  );
+}
+
+function PublicThreadFollowUpCallout({
+  followUp,
+  profileUsername,
+  threadPublicId,
+}: {
+  followUp: Extract<PublicThreadPageData, { status: "available" }>["followUp"];
+  profileUsername: string;
+  threadPublicId: string;
+}) {
+  if (followUp.status === "allowed") {
+    return (
+      <section className="flex flex-col items-start gap-3 rounded-lg border bg-card p-5 text-card-foreground">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold">Have a follow-up?</h2>
+          <p className="max-w-prose text-sm leading-6 text-muted-foreground">
+            {followUp.description}
+          </p>
+        </div>
+        <Button asChild>
+          <Link to={`/${profileUsername}/a/${threadPublicId}/follow-ups`}>
+            <Send data-icon="inline-start" />
+            Ask a follow-up
+          </Link>
+        </Button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="flex flex-col items-start gap-3 rounded-lg border border-dashed bg-background p-5">
+      <div className="flex flex-col gap-1">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <LockKeyhole aria-hidden="true" className="size-4" />
+          Follow-ups unavailable
+        </h2>
+        <p className="max-w-prose text-sm leading-6 text-muted-foreground">
+          {followUp.message}
+        </p>
+      </div>
+      {followUp.action === undefined ? null : (
+        <Button asChild variant="outline">
+          <Link to={followUp.action.href}>{followUp.action.label}</Link>
+        </Button>
+      )}
+    </section>
   );
 }
 

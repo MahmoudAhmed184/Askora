@@ -264,7 +264,12 @@ function createThread(
     ownerAvatarUrl: null,
     ownerIsActive: true,
     ownerUserDeletedAt: null,
+    anonymousQuestionsEnabled: true,
+    followUpPermissionDefault: "anyone",
+    followUpPermissionOverride: null,
+    followUpsEnabled: true,
     initialQuestionId: "question_1",
+    initialQuestionAskerUserId: null,
     publishedAt: now,
     ...overrides,
   };

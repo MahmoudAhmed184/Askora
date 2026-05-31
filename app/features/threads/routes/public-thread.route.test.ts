@@ -99,6 +99,14 @@ function createAvailablePage(): PublicThreadPageData {
         pinPosition: null,
       },
     ],
+    followUp: {
+      status: "allowed",
+      defaultIdentity: "anonymous",
+      anonymousAllowed: true,
+      attributedAllowed: false,
+      description: "Your follow-up is anonymous to the recipient and public viewers.",
+      effectivePermission: "anyone",
+    },
     publishedAnswerControls: {
       canManage: false,
       disabled: false,

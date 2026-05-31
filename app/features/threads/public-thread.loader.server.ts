@@ -17,6 +17,11 @@ import {
 } from "~/features/answers/published-answer-controls.server";
 import type { QuestionTextMode } from "~/features/answers/answer.schema";
 import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import {
+  getPublicThreadFollowUpState,
+  type PublicThreadFollowUpState,
+} from "~/features/threads/thread-permissions.server";
+import type { FollowUpPermission } from "~/features/settings/settings.schema";
 
 type ThreadStatus = "draft" | "published" | "unpublished" | "deleted";
 type ThreadItemStatus = "draft" | "published" | "unpublished" | "deleted";
@@ -33,7 +38,12 @@ export interface PublicThreadRecord {
   ownerAvatarUrl: string | null;
   ownerIsActive: boolean;
   ownerUserDeletedAt: Date | null;
+  anonymousQuestionsEnabled: boolean;
+  followUpPermissionDefault: FollowUpPermission;
+  followUpPermissionOverride: FollowUpPermission | null;
+  followUpsEnabled: boolean;
   initialQuestionId: string;
+  initialQuestionAskerUserId: string | null;
   publishedAt: Date | null;
 }
 
@@ -80,6 +90,7 @@ export type PublicThreadPageData =
       profile: PublicThreadProfileView;
       thread: PublicThreadView;
       items: PublicThreadItem[];
+      followUp: PublicThreadFollowUpState;
       publishedAnswerControls: PublishedAnswerControlState;
     }
   | {
@@ -179,6 +190,20 @@ export async function loadPublicThreadPage({
         initialQuestionId: thread.initialQuestionId,
         rows,
       }),
+      followUp: getPublicThreadFollowUpState({
+        actor: session,
+        target: {
+          status: thread.status,
+          ownerIsActive: thread.ownerIsActive,
+          ownerUserDeletedAt: thread.ownerUserDeletedAt,
+          anonymousQuestionsEnabled: thread.anonymousQuestionsEnabled,
+          followUpsEnabled: thread.followUpsEnabled,
+          followUpPermissionDefault: thread.followUpPermissionDefault,
+          followUpPermissionOverride: thread.followUpPermissionOverride,
+          initialQuestionAskerUserId: thread.initialQuestionAskerUserId,
+          publishedItemCount: rows.filter(isVisiblePublishedThreadItem).length,
+        },
+      }),
       publishedAnswerControls: getPublishedAnswerControlState({
         owner: {
           id: thread.ownerProfileId,
@@ -196,6 +221,7 @@ export function createDrizzlePublicThreadStore(
 ): PublicThreadStore {
   return {
     async findThreadByPublicId(threadPublicId) {
+      const initialQuestions = alias(questions, "public_thread_initial_questions");
       const [thread] = await database
         .select({
           id: threads.id,
@@ -208,11 +234,20 @@ export function createDrizzlePublicThreadStore(
           ownerAvatarUrl: profiles.avatarUrl,
           ownerIsActive: profiles.isActive,
           ownerUserDeletedAt: authUsers.deletedAt,
+          anonymousQuestionsEnabled: profiles.anonymousQuestionsEnabled,
+          followUpPermissionDefault: profiles.followUpPermissionDefault,
+          followUpPermissionOverride: threads.followUpPermissionOverride,
+          followUpsEnabled: threads.followUpsEnabled,
           initialQuestionId: threads.initialQuestionId,
+          initialQuestionAskerUserId: initialQuestions.askerUserId,
           publishedAt: threads.publishedAt,
         })
         .from(threads)
         .innerJoin(profiles, eq(profiles.id, threads.ownerProfileId))
+        .innerJoin(
+          initialQuestions,
+          eq(initialQuestions.id, threads.initialQuestionId),
+        )
         .leftJoin(authUsers, eq(authUsers.id, profiles.userId))
         .where(eq(threads.publicId, threadPublicId))
         .limit(1);
