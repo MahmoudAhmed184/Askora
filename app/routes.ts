@@ -24,6 +24,10 @@ export default [
   route("privacy", "features/legal/routes/privacy.route.tsx"),
   route("api/auth/*", "features/auth/routes/auth.$.route.ts"),
   route(
+    ":username/a/:threadPublicId/follow-ups",
+    "features/threads/routes/follow-up.route.tsx",
+  ),
+  route(
     ":username/a/:threadPublicId",
     "features/threads/routes/public-thread.route.tsx",
   ),

@@ -23,8 +23,19 @@ describe("route config", () => {
     const paths = routes.map((route) => ("path" in route ? route.path : "index"));
     const usernameIndex = paths.indexOf(":username");
 
+    expect(paths.indexOf(":username/a/:threadPublicId/follow-ups")).toBeLessThan(
+      usernameIndex,
+    );
     expect(paths.indexOf(":username/a/:threadPublicId")).toBeLessThan(
       usernameIndex,
+    );
+  });
+
+  it("registers follow-up routes before the public thread permalink", () => {
+    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+
+    expect(paths.indexOf(":username/a/:threadPublicId/follow-ups")).toBeLessThan(
+      paths.indexOf(":username/a/:threadPublicId"),
     );
   });
 });
