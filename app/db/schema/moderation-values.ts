@@ -1,0 +1,27 @@
+export const moderationReportTargetTypeValues = [
+  "question",
+  "thread_item",
+  "profile",
+] as const;
+
+export const moderationReportReasonValues = [
+  "harassment",
+  "hate",
+  "threats",
+  "sexual_content",
+  "self_harm",
+  "private_information",
+  "impersonation",
+  "spam_scam",
+  "other",
+] as const;
+
+export const moderationReportStatusValues = [
+  "open",
+  "reviewed",
+  "actioned",
+  "dismissed",
+] as const;
+
+export type ModerationReportReason =
+  (typeof moderationReportReasonValues)[number];

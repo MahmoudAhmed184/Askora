@@ -5,14 +5,9 @@ import {
   normalizeMutedPhrase,
 } from "~/features/inbox/inbox.schema";
 
-describe("muted phrase normalization", () => {
-  it("normalizes Unicode text and spacing", () => {
-    expect(normalizeMutedPhrase("  Ｈello　مرحبا  WORLD  ")).toBe(
-      "hello مرحبا world",
-    );
-  });
-
-  it("validates Unicode muted phrases", () => {
+describe("inbox moderation schema exports", () => {
+  it("re-exports muted phrase validation from moderation", () => {
+    expect(normalizeMutedPhrase("  Ｈello　WORLD  ")).toBe("hello world");
     expect(
       mutedPhraseSubmissionSchema.parse({
         phrase: "  إساءة  متكررة  ",

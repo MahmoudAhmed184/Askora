@@ -4,7 +4,7 @@ import { and, eq, or, type SQL } from "drizzle-orm";
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { blocks, mutedPhrases, questions } from "~/db/schema";
 import type { CurrentSessionSummary } from "~/features/auth/auth.server";
-import { normalizeMutedPhrase } from "~/features/inbox/inbox.schema";
+import { normalizeMutedPhrase } from "~/features/moderation/moderation.schema";
 import {
   evaluateAskPermission,
   type QuestionIdentityMode,

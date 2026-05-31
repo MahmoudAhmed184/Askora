@@ -9,33 +9,19 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { authUsers } from "~/db/schema/auth";
+import {
+  moderationReportReasonValues,
+  moderationReportStatusValues,
+  moderationReportTargetTypeValues,
+} from "~/db/schema/moderation-values";
 import { profiles } from "~/db/schema/profiles";
 import { questions } from "~/db/schema/questions";
 
-export const moderationReportTargetTypeValues = [
-  "question",
-  "thread_item",
-  "profile",
-] as const;
-
-export const moderationReportReasonValues = [
-  "harassment",
-  "hate",
-  "threats",
-  "sexual_content",
-  "self_harm",
-  "private_information",
-  "impersonation",
-  "spam_scam",
-  "other",
-] as const;
-
-export const moderationReportStatusValues = [
-  "open",
-  "reviewed",
-  "actioned",
-  "dismissed",
-] as const;
+export {
+  moderationReportReasonValues,
+  moderationReportStatusValues,
+  moderationReportTargetTypeValues,
+} from "~/db/schema/moderation-values";
 
 export const moderationReportTargetTypeEnum = pgEnum(
   "moderation_report_target_type",
