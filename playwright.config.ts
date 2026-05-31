@@ -1,4 +1,9 @@
+import "dotenv/config";
+
 import { defineConfig, devices } from "@playwright/test";
+
+const databaseBackedWorkerConfig =
+  process.env.DATABASE_URL === undefined ? {} : { workers: 1 };
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -14,6 +19,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
+  ...databaseBackedWorkerConfig,
   projects: [
     {
       name: "chromium",
