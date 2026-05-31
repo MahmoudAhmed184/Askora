@@ -225,6 +225,8 @@ async function applyTargetMutation({
       .update(profiles)
       .set({
         isActive: false,
+        deactivatedAt: params.now,
+        deactivationReason: "admin",
         updatedAt: params.now,
       })
       .where(eq(profiles.id, references.targetProfileId));

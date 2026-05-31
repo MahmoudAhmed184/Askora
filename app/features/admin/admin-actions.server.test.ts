@@ -10,6 +10,7 @@ import {
   getAdminActionTargetReferences,
   type StoredQuestionAdminTarget,
   type StoredAdminReport,
+  type StoredProfileAdminTarget,
   type StoredThreadItemAdminTarget,
 } from "~/features/admin/admin.loader.server";
 
@@ -163,6 +164,23 @@ describe("handleAdminReportAction", () => {
       }),
     ]);
   });
+
+  it("hides profiles with an admin deactivation reason", async () => {
+    const admin = createAdminActionStore({
+      report: createProfileReport(),
+    });
+
+    await submitAdminAction({
+      actionType: "hide_profile",
+      store: admin.store,
+    });
+
+    expect(admin.profiles.get("profile_1")).toMatchObject({
+      isActive: false,
+      deactivatedAt: now,
+      deactivationReason: "admin",
+    });
+  });
 });
 
 async function submitAdminAction({
@@ -213,10 +231,21 @@ function createAdminActionStore({ report }: { report: StoredAdminReport }) {
   >();
   const threadItems = new Map<string, Partial<StoredThreadItemAdminTarget>>();
   const threads = new Map<string, { status: string }>();
+  const profiles = new Map<
+    string,
+    Partial<StoredProfileAdminTarget> & {
+      deactivatedAt?: Date;
+      deactivationReason?: "admin";
+    }
+  >();
 
   if (report.target?.type === "thread_item") {
     threadItems.set(report.target.id, { ...report.target });
     threads.set(report.target.threadId, { status: report.target.threadStatus });
+  }
+
+  if (report.target?.type === "profile") {
+    profiles.set(report.target.id, { ...report.target });
   }
 
   const store: AdminReportActionStore = {
@@ -266,6 +295,18 @@ function createAdminActionStore({ report }: { report: StoredAdminReport }) {
         }
       }
 
+      if (
+        params.form.actionType === "hide_profile" &&
+        references.targetProfileId !== null
+      ) {
+        profiles.set(references.targetProfileId, {
+          ...profiles.get(references.targetProfileId),
+          isActive: false,
+          deactivatedAt: params.now,
+          deactivationReason: "admin",
+        });
+      }
+
       report.report.status =
         params.form.actionType === "dismiss" ? "dismissed" : "actioned";
       report.report.reviewedAt = params.now;
@@ -285,6 +326,7 @@ function createAdminActionStore({ report }: { report: StoredAdminReport }) {
   return {
     adminActions,
     applied,
+    profiles,
     report,
     store,
     threadItems,
@@ -375,6 +417,33 @@ function createThreadItemReport(): StoredAdminReport {
         displayName: "Person",
         isActive: true,
       },
+      createdAt: now,
+    },
+  };
+}
+
+function createProfileReport(): StoredAdminReport {
+  return {
+    report: {
+      id: "report_1",
+      targetType: "profile",
+      targetId: "profile_1",
+      reason: "harassment",
+      details: null,
+      status: "open",
+      reviewedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+    target: {
+      type: "profile",
+      id: "profile_1",
+      userId: "user_1",
+      username: "person",
+      displayName: "Person",
+      bio: "Hello",
+      isActive: true,
+      userDeletedAt: null,
       createdAt: now,
     },
   };
