@@ -17,14 +17,30 @@ import { getPublicAppConfig } from "~/lib/config.server";
 import { noindexHeaders } from "~/lib/response.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const { getPublicSessionSummary } = await import(
+  const { getCurrentSessionSummary, toPublicSessionSummary } = await import(
     "~/features/auth/auth.server"
   );
+  const session = await getCurrentSessionSummary(request);
+  const unreadNotificationCount =
+    session.status === "authenticated" && session.profileStatus === "complete"
+      ? await getUnreadNotificationCountForSession(session.user.id)
+      : 0;
 
   return {
     app: getPublicAppConfig(),
-    session: await getPublicSessionSummary(request),
+    session: toPublicSessionSummary(session),
+    notifications: {
+      unreadCount: unreadNotificationCount,
+    },
   };
+}
+
+async function getUnreadNotificationCountForSession(userId: string) {
+  const { getUnreadNotificationCount } = await import(
+    "~/features/notifications/notification.server"
+  );
+
+  return getUnreadNotificationCount({ recipientUserId: userId });
 }
 
 export function headers() {

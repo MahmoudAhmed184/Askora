@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useRouteLoaderData } from "react-router";
 
+import type { loader as rootLoader } from "~/root";
+import { NotificationBell } from "~/features/notifications/components/notification-bell";
 import { cn } from "~/lib/utils";
 
 interface DashboardShellProps {
@@ -9,6 +11,8 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   const location = useLocation();
+  const rootData = useRouteLoaderData<typeof rootLoader>("root");
+  const unreadNotificationCount = rootData?.notifications.unreadCount ?? 0;
 
   return (
     <div className="min-h-screen bg-surface text-foreground">
@@ -17,33 +21,36 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <Link className="text-sm font-semibold" to="/">
             qna-platform
           </Link>
-          <nav
-            aria-label="Dashboard navigation"
-            className="flex flex-wrap justify-end gap-1 text-sm"
-          >
-            {dashboardLinks.map((link) => {
-              const isActive =
-                link.activePrefix === undefined
-                  ? location.pathname === link.to
-                  : location.pathname.startsWith(link.activePrefix);
+          <div className="flex items-center justify-end gap-2">
+            <NotificationBell unreadCount={unreadNotificationCount} />
+            <nav
+              aria-label="Dashboard navigation"
+              className="flex flex-wrap justify-end gap-1 text-sm"
+            >
+              {dashboardLinks.map((link) => {
+                const isActive =
+                  link.activePrefix === undefined
+                    ? location.pathname === link.to
+                    : location.pathname.startsWith(link.activePrefix);
 
-              return (
-                <Link
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "rounded-md px-3 py-2 font-medium transition-colors",
-                    isActive
-                      ? "bg-surface text-foreground"
-                      : "text-muted-foreground hover:bg-surface hover:text-foreground",
-                  )}
-                  key={link.to}
-                  to={link.to}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
+                return (
+                  <Link
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "rounded-md px-3 py-2 font-medium transition-colors",
+                      isActive
+                        ? "bg-surface text-foreground"
+                        : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                    )}
+                    key={link.to}
+                    to={link.to}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl px-5 py-6">{children}</main>
