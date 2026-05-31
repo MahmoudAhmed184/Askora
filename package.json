@@ -16,6 +16,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "auth:generate": "auth generate --config app/features/auth/auth.server.ts",
+    "beta:seed": "node scripts/seed-beta.mjs",
     "admin:promote": "node scripts/promote-admin.mjs",
     "account:cleanup-deletions": "node scripts/cleanup-account-deletions.mjs"
   },
