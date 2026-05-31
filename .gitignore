@@ -1,0 +1,20 @@
+node_modules
+build
+dist
+.react-router
+.cache
+playwright-report
+test-results
+.env
+.env.local
+.env.*.local
+
+# Local planning docs and agent artifacts
+ARCHITECTURE.md
+DESIGN.md
+PRODUCT.md
+docs/agent-skills.md
+skills-lock.json
+.agents/
+.codex/
+screenshots/
