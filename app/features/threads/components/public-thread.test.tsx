@@ -22,6 +22,9 @@ describe("PublicThread", () => {
       "break-words",
     );
     expect(screen.getByText(/<script>alert/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /like answer \(0\)/i }),
+    ).toBeDisabled();
     expect(container.querySelector("script")).toBeNull();
   });
 
@@ -90,6 +93,7 @@ describe("PublicThread", () => {
             answerText: "Answer without the private prompt",
             publishedAt: "2026-05-31T12:00:00.000Z",
             pinPosition: null,
+            like: createLikeState("titem_hidden"),
           },
         ],
       }),
@@ -179,6 +183,12 @@ function createAvailablePage(
       canManage: false,
       disabled: false,
     },
+    follow: {
+      visible: false,
+      username: "person",
+      isFollowing: false,
+      disabled: false,
+    },
     ...overrides,
   };
 }
@@ -200,7 +210,17 @@ function createAnswerItem(
     answerText: "Published answer",
     publishedAt: "2026-05-31T12:00:00.000Z",
     pinPosition: null,
+    like: createLikeState(overrides.publicId ?? "titem_1"),
     questionText: "What should I read next?",
     ...overrides,
+  };
+}
+
+function createLikeState(threadItemPublicId: string) {
+  return {
+    threadItemPublicId,
+    isLiked: false,
+    count: 0,
+    disabled: true,
   };
 }

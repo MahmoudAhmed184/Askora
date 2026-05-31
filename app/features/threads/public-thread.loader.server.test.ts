@@ -199,22 +199,60 @@ describe("loadPublicThreadPage", () => {
       },
     });
   });
+
+  it("sets follow and per-answer like state for non-owner viewers", async () => {
+    await expect(
+      loadAvailableThread({
+        rows: [
+          createItem({
+            likeCount: 3,
+            viewerLiked: true,
+          }),
+        ],
+        session: nonOwnerSession,
+        viewerFollowingProfileIds: ["profile_1"],
+      }),
+    ).resolves.toMatchObject({
+      status: "page",
+      page: {
+        status: "available",
+        follow: {
+          visible: true,
+          isFollowing: true,
+          disabled: false,
+        },
+        items: [
+          {
+            type: "answer",
+            like: {
+              isLiked: true,
+              count: 3,
+              disabled: false,
+            },
+          },
+        ],
+      },
+    });
+  });
 });
 
 function loadAvailableThread({
   rows = [createItem()],
   session = anonymousSession,
   thread = createThread(),
+  viewerFollowingProfileIds = [],
 }: {
   rows?: PublicThreadItemRow[];
   session?: Parameters<typeof loadPublicThreadPage>[0]["session"];
   thread?: PublicThreadRecord;
+  viewerFollowingProfileIds?: string[];
 } = {}) {
   return loadPublicThreadPage({
     session,
     store: createThreadStore({
       rows,
       threads: [thread],
+      viewerFollowingProfileIds,
     }),
     threadPublicId: thread.publicId,
     username: thread.ownerUsername,
@@ -232,9 +270,11 @@ function getPage(result: Awaited<ReturnType<typeof loadAvailableThread>>) {
 function createThreadStore({
   rows = [createItem()],
   threads = [],
+  viewerFollowingProfileIds = [],
 }: {
   rows?: PublicThreadItemRow[];
   threads?: PublicThreadRecord[];
+  viewerFollowingProfileIds?: string[];
 } = {}): PublicThreadStore {
   return {
     findThreadByPublicId(threadPublicId) {
@@ -242,10 +282,13 @@ function createThreadStore({
         threads.find((thread) => thread.publicId === threadPublicId),
       );
     },
-    findThreadItems(threadId) {
+    findThreadItems({ threadId }) {
       const thread = threads.find((candidate) => candidate.id === threadId);
 
       return Promise.resolve(thread === undefined ? [] : rows);
+    },
+    isViewerFollowingProfile({ targetProfileId }) {
+      return Promise.resolve(viewerFollowingProfileIds.includes(targetProfileId));
     },
   };
 }
@@ -264,6 +307,7 @@ function createThread(
     ownerAvatarUrl: null,
     ownerIsActive: true,
     ownerUserDeletedAt: null,
+    ownerShowLikeCounts: true,
     anonymousQuestionsEnabled: true,
     followUpPermissionDefault: "anyone",
     followUpPermissionOverride: null,

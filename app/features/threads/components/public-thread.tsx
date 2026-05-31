@@ -5,6 +5,8 @@ import { PublicShell } from "~/components/app/public-shell";
 import { Button } from "~/components/ui/button";
 import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
 import { BetaNoindexBadge } from "~/features/profiles/components/profile-header";
+import { FollowButton } from "~/features/social/components/follow-button";
+import { LikeButton } from "~/features/social/components/like-button";
 import type {
   PublicThreadAnswerItem,
   PublicThreadItem,
@@ -30,6 +32,7 @@ export function PublicThread({ betaNoindex, page }: PublicThreadProps) {
           {betaNoindex ? <BetaNoindexBadge /> : null}
         </div>
         <PublicThreadHeader
+          follow={page.follow}
           profile={page.profile}
           publishedAt={page.thread.publishedAt}
         />
@@ -132,9 +135,11 @@ function UnavailablePublicThread({
 }
 
 function PublicThreadHeader({
+  follow,
   profile,
   publishedAt,
 }: {
+  follow: Extract<PublicThreadPageData, { status: "available" }>["follow"];
   profile: PublicThreadProfileView;
   publishedAt: string;
 }) {
@@ -159,12 +164,15 @@ function PublicThreadHeader({
           </div>
         </div>
       </div>
-      <time
-        className="text-sm leading-6 text-muted-foreground sm:text-right"
-        dateTime={publishedAt}
-      >
-        {formatDate(publishedAt)}
-      </time>
+      <div className="flex flex-col items-start gap-3 sm:items-end">
+        <time
+          className="text-sm leading-6 text-muted-foreground sm:text-right"
+          dateTime={publishedAt}
+        >
+          {formatDate(publishedAt)}
+        </time>
+        <FollowButton follow={follow} />
+      </div>
     </header>
   );
 }
@@ -224,9 +232,12 @@ function AnswerThreadItem({
           <time dateTime={item.publishedAt}>{formatDate(item.publishedAt)}</time>
         </div>
 
-        {controls.canManage ? (
-          <PublishedAnswerOwnerControls answer={item} controls={controls} />
-        ) : undefined}
+        <div className="flex flex-wrap items-center gap-2">
+          <LikeButton like={item.like} />
+          {controls.canManage ? (
+            <PublishedAnswerOwnerControls answer={item} controls={controls} />
+          ) : undefined}
+        </div>
       </header>
 
       {item.questionText === undefined ? undefined : (

@@ -4,6 +4,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import {
   authUsers,
+  follows,
   pinnedAnswers,
   profiles,
   questions,
@@ -17,6 +18,13 @@ import {
 } from "~/features/answers/published-answer-controls.server";
 import type { QuestionTextMode } from "~/features/answers/answer.schema";
 import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import { findThreadItemLikeSummaries } from "~/features/social/social-data.server";
+import {
+  getFollowControlState,
+  getLikeControlState,
+  type FollowControlState,
+  type LikeControlState,
+} from "~/features/social/social-controls";
 import {
   getPublicThreadFollowUpState,
   type PublicThreadFollowUpState,
@@ -38,6 +46,7 @@ export interface PublicThreadRecord {
   ownerAvatarUrl: string | null;
   ownerIsActive: boolean;
   ownerUserDeletedAt: Date | null;
+  ownerShowLikeCounts: boolean;
   anonymousQuestionsEnabled: boolean;
   followUpPermissionDefault: FollowUpPermission;
   followUpPermissionOverride: FollowUpPermission | null;
@@ -48,6 +57,7 @@ export interface PublicThreadRecord {
 }
 
 export interface PublicThreadItemRow {
+  threadItemId?: string | undefined;
   publicId: string;
   questionId: string;
   answerText: string;
@@ -64,13 +74,22 @@ export interface PublicThreadItemRow {
   identityMode: AnswerQuestionIdentity;
   askerDisplayName: string | null;
   askerUsername: string | null;
+  likeCount?: number | undefined;
+  viewerLiked?: boolean | undefined;
 }
 
 export interface PublicThreadStore {
   findThreadByPublicId(
     threadPublicId: string,
   ): Promise<PublicThreadRecord | undefined>;
-  findThreadItems(threadId: string): Promise<PublicThreadItemRow[]>;
+  findThreadItems(params: {
+    threadId: string;
+    viewerProfileId: string | undefined;
+  }): Promise<PublicThreadItemRow[]>;
+  isViewerFollowingProfile(params: {
+    targetProfileId: string;
+    viewerProfileId: string;
+  }): Promise<boolean>;
 }
 
 export type PublicThreadLoadResult =
@@ -92,6 +111,7 @@ export type PublicThreadPageData =
       items: PublicThreadItem[];
       followUp: PublicThreadFollowUpState;
       publishedAnswerControls: PublishedAnswerControlState;
+      follow: FollowControlState;
     }
   | {
       status: "unavailable";
@@ -118,6 +138,7 @@ export interface PublicThreadAnswerItem {
   answerText: string;
   publishedAt: string;
   pinPosition: number | null;
+  like: LikeControlState;
   questionText?: string;
   asker?: {
     displayName: string;
@@ -161,7 +182,17 @@ export async function loadPublicThreadPage({
     );
   }
 
-  const rows = await store.findThreadItems(thread.id);
+  const [rows, isViewerFollowing] = await Promise.all([
+    store.findThreadItems({
+      threadId: thread.id,
+      viewerProfileId: getViewerProfileId(session),
+    }),
+    findViewerFollowState({
+      session,
+      store,
+      targetProfileId: thread.ownerProfileId,
+    }),
+  ]);
   const initialItem = rows.find(
     (row) => row.questionId === thread.initialQuestionId,
   );
@@ -188,7 +219,13 @@ export async function loadPublicThreadPage({
       },
       items: createPublicThreadItems({
         initialQuestionId: thread.initialQuestionId,
+        owner: {
+          profileId: thread.ownerProfileId,
+          showLikeCounts: thread.ownerShowLikeCounts,
+          userId: thread.ownerUserId,
+        },
         rows,
+        session,
       }),
       followUp: getPublicThreadFollowUpState({
         actor: session,
@@ -210,6 +247,16 @@ export async function loadPublicThreadPage({
           userId: thread.ownerUserId,
         },
         session,
+      }),
+      follow: getFollowControlState({
+        isFollowing: isViewerFollowing,
+        session,
+        target: {
+          id: thread.ownerProfileId,
+          isActive: thread.ownerIsActive,
+          userId: thread.ownerUserId,
+          username: thread.ownerUsername,
+        },
       }),
     },
     responseStatus: 200,
@@ -234,6 +281,7 @@ export function createDrizzlePublicThreadStore(
           ownerAvatarUrl: profiles.avatarUrl,
           ownerIsActive: profiles.isActive,
           ownerUserDeletedAt: authUsers.deletedAt,
+          ownerShowLikeCounts: profiles.showLikeCounts,
           anonymousQuestionsEnabled: profiles.anonymousQuestionsEnabled,
           followUpPermissionDefault: profiles.followUpPermissionDefault,
           followUpPermissionOverride: threads.followUpPermissionOverride,
@@ -254,11 +302,12 @@ export function createDrizzlePublicThreadStore(
 
       return thread;
     },
-    async findThreadItems(threadId) {
+    async findThreadItems({ threadId, viewerProfileId }) {
       const askerProfiles = alias(profiles, "thread_asker_profiles");
 
-      return database
+      const rows = await database
         .select({
+          threadItemId: threadItems.id,
           publicId: threadItems.publicId,
           questionId: threadItems.questionId,
           answerText: threadItems.answerText,
@@ -289,22 +338,55 @@ export function createDrizzlePublicThreadStore(
         )
         .where(eq(threadItems.threadId, threadId))
         .orderBy(asc(threadItems.position), asc(threadItems.createdAt));
+      const summaries = await findThreadItemLikeSummaries({
+        database,
+        threadItemIds: rows.map((row) => row.threadItemId),
+        viewerProfileId,
+      });
+
+      return rows.map((row) => {
+        const summary = summaries.get(row.threadItemId);
+
+        return {
+          ...row,
+          likeCount: summary?.count ?? 0,
+          viewerLiked: summary?.isLikedByViewer ?? false,
+        };
+      });
+    },
+    async isViewerFollowingProfile({ targetProfileId, viewerProfileId }) {
+      const [follow] = await database
+        .select({ followedProfileId: follows.followedProfileId })
+        .from(follows)
+        .where(
+          and(
+            eq(follows.followerProfileId, viewerProfileId),
+            eq(follows.followedProfileId, targetProfileId),
+          ),
+        )
+        .limit(1);
+
+      return follow !== undefined;
     },
   };
 }
 
 export function createPublicThreadItems({
+  owner = anonymousThreadOwner,
   initialQuestionId,
   rows,
+  session = anonymousSession,
 }: {
   initialQuestionId: string;
   rows: PublicThreadItemRow[];
+  owner?: PublicThreadItemOwner | undefined;
+  session?: CurrentSessionSummary | undefined;
 }): PublicThreadItem[] {
   const sortedRows = [...rows].sort(compareThreadItemRows);
 
   return sortedRows.flatMap((row, index): PublicThreadItem[] => {
     if (isVisiblePublishedThreadItem(row)) {
-      return [toPublicThreadAnswerItem(row)];
+      return [toPublicThreadAnswerItem({ owner, row, session })];
     }
 
     if (shouldShowRemovedMarker({ index, initialQuestionId, rows: sortedRows })) {
@@ -346,9 +428,21 @@ function isPublishedThreadAvailable(thread: PublicThreadRecord) {
   );
 }
 
-function toPublicThreadAnswerItem(
-  row: PublicThreadItemRow,
-): PublicThreadAnswerItem {
+interface PublicThreadItemOwner {
+  profileId: string;
+  userId: string;
+  showLikeCounts: boolean;
+}
+
+function toPublicThreadAnswerItem({
+  owner,
+  row,
+  session,
+}: {
+  owner: PublicThreadItemOwner;
+  row: PublicThreadItemRow;
+  session: CurrentSessionSummary;
+}): PublicThreadAnswerItem {
   const questionText = getPublicQuestionText(row);
 
   return {
@@ -357,6 +451,16 @@ function toPublicThreadAnswerItem(
     answerText: row.answerText,
     publishedAt: (row.publishedAt ?? new Date(0)).toISOString(),
     pinPosition: row.pinPosition,
+    like: getLikeControlState({
+      count: owner.showLikeCounts ? (row.likeCount ?? 0) : undefined,
+      isLiked: row.viewerLiked ?? false,
+      session,
+      target: {
+        ownerProfileId: owner.profileId,
+        ownerUserId: owner.userId,
+        threadItemPublicId: row.publicId,
+      },
+    }),
     ...(questionText === undefined ? {} : { questionText }),
     ...getPublicAsker(row, questionText),
   };
@@ -381,6 +485,33 @@ function getPublicAsker(
       username: row.askerUsername,
     },
   };
+}
+
+async function findViewerFollowState({
+  session,
+  store,
+  targetProfileId,
+}: {
+  session: CurrentSessionSummary;
+  store: PublicThreadStore;
+  targetProfileId: string;
+}) {
+  const viewerProfileId = getViewerProfileId(session);
+
+  if (viewerProfileId === undefined) {
+    return false;
+  }
+
+  return store.isViewerFollowingProfile({
+    targetProfileId,
+    viewerProfileId,
+  });
+}
+
+function getViewerProfileId(session: CurrentSessionSummary) {
+  return session.status === "authenticated" && session.profileStatus === "complete"
+    ? session.profile.id
+    : undefined;
 }
 
 function getPublicQuestionText(row: PublicThreadItemRow) {
@@ -441,3 +572,13 @@ function compareThreadItemRows(
 
   return left.createdAt.getTime() - right.createdAt.getTime();
 }
+
+const anonymousSession = {
+  status: "anonymous",
+} satisfies CurrentSessionSummary;
+
+const anonymousThreadOwner = {
+  profileId: "",
+  userId: "",
+  showLikeCounts: false,
+} satisfies PublicThreadItemOwner;

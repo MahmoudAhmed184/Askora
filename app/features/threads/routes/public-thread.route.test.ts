@@ -97,6 +97,12 @@ function createAvailablePage(): PublicThreadPageData {
         answerText: "Public answer for the thread.",
         publishedAt: "2026-05-31T12:00:00.000Z",
         pinPosition: null,
+        like: {
+          threadItemPublicId: "titem_1",
+          isLiked: false,
+          count: 0,
+          disabled: true,
+        },
       },
     ],
     followUp: {
@@ -109,6 +115,12 @@ function createAvailablePage(): PublicThreadPageData {
     },
     publishedAnswerControls: {
       canManage: false,
+      disabled: false,
+    },
+    follow: {
+      visible: false,
+      username: "person",
+      isFollowing: false,
       disabled: false,
     },
   };
