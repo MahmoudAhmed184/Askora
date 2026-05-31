@@ -7,6 +7,13 @@ import {
 } from "~/features/settings/settings.schema";
 
 export const answerIntentValues = ["save_draft", "publish"] as const;
+export const publishedAnswerActionIntentValues = [
+  "edit",
+  "unpublish",
+  "delete",
+  "pin",
+  "unpin",
+] as const;
 
 const trimmedAnswerTextSchema = z
   .string()
@@ -69,7 +76,31 @@ export const answerSubmissionSchema = z
         : undefined,
   }));
 
+export const publishedAnswerActionSchema = z.discriminatedUnion("intent", [
+  z.object({
+    intent: z.literal("edit"),
+    answerText: trimmedAnswerTextSchema,
+  }),
+  z.object({
+    intent: z.literal("unpublish"),
+  }),
+  z.object({
+    intent: z.literal("delete"),
+  }),
+  z.object({
+    intent: z.literal("pin"),
+  }),
+  z.object({
+    intent: z.literal("unpin"),
+  }),
+]);
+
 export type AnswerIntent = (typeof answerIntentValues)[number];
+export type PublishedAnswerActionIntent =
+  (typeof publishedAnswerActionIntentValues)[number];
 export type QuestionTextMode = (typeof questionTextModeValues)[number];
 export type AnswerSubmission = z.infer<typeof answerSubmissionSchema>;
+export type PublishedAnswerActionSubmission = z.infer<
+  typeof publishedAnswerActionSchema
+>;
 export type AnswerFollowUpPermissionOverride = FollowUpPermission | null;
