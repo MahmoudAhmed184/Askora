@@ -1,0 +1,2 @@
+CREATE INDEX "notifications_unread_recipient_expires_idx" ON "notifications" USING btree ("recipient_user_id","expires_at") WHERE "notifications"."read_at" is null;--> statement-breakpoint
+CREATE INDEX "thread_items_feed_order_idx" ON "thread_items" USING btree ("status","published_at","created_at","public_id") WHERE "thread_items"."deleted_at" is null;

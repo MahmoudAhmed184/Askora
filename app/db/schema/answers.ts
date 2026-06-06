@@ -140,6 +140,9 @@ export const threadItems = pgTable(
     index("thread_items_published_idx")
       .on(table.status, table.publishedAt)
       .where(sql`${table.deletedAt} is null`),
+    index("thread_items_feed_order_idx")
+      .on(table.status, table.publishedAt, table.createdAt, table.publicId)
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 
@@ -204,6 +207,9 @@ export const notifications = pgTable(
       table.recipientUserId,
       table.readAt,
     ),
+    index("notifications_unread_recipient_expires_idx")
+      .on(table.recipientUserId, table.expiresAt)
+      .where(sql`${table.readAt} is null`),
     uniqueIndex("notifications_question_answered_unique")
       .on(table.recipientUserId, table.type, table.questionId)
       .where(
