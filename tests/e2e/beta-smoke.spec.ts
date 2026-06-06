@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { Pool } from "@neondatabase/serverless";
 
 import { betaFixture, createBetaSessionCookie, seedBetaFixtures } from "../../scripts/seed-beta.mjs";
@@ -6,6 +6,7 @@ import { betaFixture, createBetaSessionCookie, seedBetaFixtures } from "../../sc
 const databaseUrl = process.env.DATABASE_URL;
 const playwrightAppUrl = "http://127.0.0.1:5173";
 const authSecret = process.env.BETTER_AUTH_SECRET;
+const noJavaScriptQuestionText = "No-JavaScript beta smoke question?";
 
 test.describe("beta seeded smoke", () => {
   test.skip(
@@ -54,12 +55,29 @@ test.describe("beta seeded smoke", () => {
       await page.goto(`/${betaFixture.profiles.owner.username}`);
       await page.waitForTimeout(1_600);
 
+      const submitResponse = page.waitForResponse((response) => {
+        const request = response.request();
+
+        return (
+          request.method() === "POST" &&
+          response.url().includes(
+            `/${betaFixture.profiles.owner.username}/questions`,
+          )
+        );
+      });
+
       await page
         .getByLabel("Question")
-        .fill("No-JavaScript beta smoke question?");
+        .fill(noJavaScriptQuestionText);
       await page.getByRole("button", { name: "Send question" }).click();
+      const response = await submitResponse;
+      await page.waitForLoadState("domcontentloaded");
 
-      await expect(page.getByRole("status")).toContainText("Question sent.");
+      expect(response.status()).toBeGreaterThanOrEqual(300);
+      expect(response.status()).toBeLessThan(400);
+      await expect(page).toHaveURL(
+        new RegExp(`/${betaFixture.profiles.owner.username}#ask$`),
+      );
     });
   });
 
@@ -71,7 +89,11 @@ test.describe("beta seeded smoke", () => {
     await expect(page.getByText(betaFixture.questions.inbox.text)).toBeVisible();
 
     await page.goto("/dashboard/filtered");
-    await expect(page.getByRole("heading", { name: "Filtered" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Filtered/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     await expect(page.getByText(betaFixture.questions.filtered.text)).toBeVisible();
   });
 
@@ -121,7 +143,7 @@ test.describe("beta seeded smoke", () => {
       .fill("Can you expand on that seeded answer?");
     await page.getByRole("button", { name: "Send follow-up" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Follow-up sent.");
+    await expectToast(page, "Follow-up sent.");
   });
 
   test("viewer can like an answer and follow a profile", async ({
@@ -132,27 +154,43 @@ test.describe("beta seeded smoke", () => {
 
     await page.goto(`/${betaFixture.profiles.owner.username}`);
     await page.getByRole("button", { name: "Follow" }).click();
+    await expectToast(page, "Profile followed.");
     await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
 
     await page
       .getByRole("button", { name: /Like answer/ })
       .first()
       .click();
+    await expectToast(page, "Reaction added.");
     await expect(
       page.getByRole("button", { name: /Unlike answer/ }).first(),
     ).toBeVisible();
+  });
+
+  test("owner can mark notifications read with a toast", async ({
+    context,
+    page,
+  }) => {
+    await signInAs(context, betaFixture.users.owner);
+
+    await page.goto("/dashboard/notifications");
+    await page.getByRole("button", { name: "Mark all read" }).click();
+
+    await expectToast(page, "All notifications marked read.");
+    await expect(page.getByText("0 unread")).toBeVisible();
   });
 
   test("owner can create a report from inbox", async ({ context, page }) => {
     await signInAs(context, betaFixture.users.owner);
 
     await page.goto("/dashboard/inbox");
+    await page.getByRole("button", { name: "Question actions" }).first().click();
     await page.getByRole("button", { name: "Report" }).first().click();
     await page.getByLabel("Reason").selectOption("other");
     await page.getByLabel("Details").fill("Beta smoke report.");
     await page.getByRole("button", { name: "Submit report" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Report submitted");
+    await expectToast(page, "Report submitted");
   });
 
   test("admin can dismiss a seeded report", async ({ context, page }) => {
@@ -163,9 +201,7 @@ test.describe("beta seeded smoke", () => {
     await page.getByLabel("Action").selectOption("dismiss");
     await page.getByRole("button", { name: "Apply action" }).click();
 
-    await expect(page.getByRole("status")).toContainText(
-      "Dismiss report applied.",
-    );
+    await expectToast(page, "Dismiss report applied.");
   });
 
   test("mobile public profile smoke", async ({ context, page }, testInfo) => {
@@ -216,4 +252,10 @@ function getPool(pool: Pool | undefined) {
   }
 
   return pool;
+}
+
+async function expectToast(page: Page, text: string | RegExp) {
+  await expect(
+    page.locator("[data-sonner-toast]").filter({ hasText: text }).first(),
+  ).toBeVisible();
 }
