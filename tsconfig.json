@@ -6,6 +6,7 @@
   ],
   "exclude": [
     "build",
+    "design",
     "dist",
     "node_modules"
   ],

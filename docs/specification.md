@@ -154,7 +154,7 @@ MVP includes:
 - Profile deactivation and account deletion flow.
 - Creator-level moderation controls.
 - Minimal admin moderation dashboard.
-- Static curated starter prompts in dashboard.
+- Static curated starter prompts in the authenticated app.
 - Minimal internal event logging.
 - Noindex beta configuration.
 - Basic Terms and Privacy Policy pages before external beta.
@@ -203,6 +203,20 @@ Rationale:
 - Drizzle keeps SQL and schema close to TypeScript.
 - Better Auth owns auth/session/OAuth/magic-link mechanics, while product identity remains in domain tables.
 
+Design implementation:
+
+- The current visual source artifact is `design/prototype`; production routes
+  should port its styling through `app/app.css`, shared UI primitives, app
+  shells, and feature-owned components while preserving route URLs and
+  loader/action contracts.
+- The inbox workflow keeps `/dashboard/inbox`, `/dashboard/drafts`, and
+  `/dashboard/filtered` as direct URLs, presented as one route-aware workflow in
+  the signed-in app UI.
+- The signed-in product must not expose "Dashboard" as visible product
+  language. Feed, Inbox, Notifications, Profile, and Settings are the primary
+  app areas, reached through the floating pill nav while `/dashboard/**` remains
+  the stable URL namespace.
+
 ## Auth And Identity
 
 Auth methods:
@@ -214,16 +228,17 @@ Auth methods:
 Auth flow:
 
 1. User authenticates.
-2. If profile setup is incomplete, user must complete profile setup before entering dashboard.
+2. If profile setup is incomplete, user must complete profile setup before entering the signed-in app.
 3. Required setup fields: username and display name.
 4. Optional setup field: bio.
-5. After setup, user lands on a simple share screen.
+5. After setup, user lands on a simple share step with copy/native-share actions.
+6. Later completed-profile sign-ins land on Feed, not setup.
 
 Incomplete-profile users:
 
 - May ask anonymously as logged-in users.
 - Must complete profile before asking with identity attached.
-- Must complete profile before following, liking, or accessing their dashboard.
+- Must complete profile before following, liking, or accessing signed-in app routes.
 
 Identity model:
 
@@ -559,7 +574,7 @@ MVP notification channel:
 
 - In-app notifications only.
 - Email is only for auth magic links.
-- Show notifications through a dashboard notifications page plus a bell/unread count in authenticated navigation.
+- Show notifications through an authenticated notifications page plus an unread indicator in the floating pill nav.
 
 Priority order:
 
@@ -774,7 +789,7 @@ AI prompt generation is postponed.
 
 MVP includes static curated starter prompts only:
 
-- Prompts live in the dashboard, not onboarding.
+- Prompts live in the authenticated app, not onboarding.
 - Prompts are optional.
 - Prompts are private until answered.
 - Ship 6 prompt categories: casual, deep, funny, friends, work/school, and random.
@@ -794,7 +809,7 @@ Post-setup share screen:
 - Include public profile URL.
 - Include copy button.
 - Include platform share options when available.
-- Dashboard should keep a persistent share button.
+- The owner profile and share step should keep persistent share actions.
 
 Sharing target:
 
@@ -1095,7 +1110,8 @@ Recommended route map:
   - Post-setup share screen.
 
 - `GET /dashboard`
-  - Overview of inbox, drafts, notifications, share CTA.
+  - Preserved route that redirects completed users to `/dashboard/feed`.
+  - Do not render a visible Dashboard concept.
 
 - `GET /dashboard/inbox`
   - Private incoming questions.
