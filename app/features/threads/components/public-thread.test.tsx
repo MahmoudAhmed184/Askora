@@ -1,11 +1,31 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { PublicThread } from "~/features/threads/components/public-thread";
 import type { PublicThreadPageData } from "~/features/threads/public-thread.loader.server";
 
 describe("PublicThread", () => {
+  beforeAll(() => {
+    globalThis.IntersectionObserver = class IntersectionObserver {
+      disconnect() {
+        return undefined;
+      }
+
+      observe() {
+        return undefined;
+      }
+
+      takeRecords() {
+        return [];
+      }
+
+      unobserve() {
+        return undefined;
+      }
+    } as unknown as typeof IntersectionObserver;
+  });
+
   it("renders answers as escaped plain text with preserved line breaks", () => {
     const { container } = renderPublicThread(
       createAvailablePage({
@@ -25,6 +45,7 @@ describe("PublicThread", () => {
     expect(
       screen.getByRole("button", { name: /like answer \(0\)/i }),
     ).toBeDisabled();
+    expect(screen.getByText(/^Person ·/)).toBeInTheDocument();
     expect(container.querySelector("script")).toBeNull();
   });
 
@@ -110,12 +131,12 @@ describe("PublicThread", () => {
       }),
     );
 
-    fireEvent.click(screen.getByText("Manage"));
+    openPublishedAnswerMenu();
 
-    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Pin" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Unpublish" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Edit silently" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Pin" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Unpublish" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
 
     ownerRender.unmount();
 
@@ -125,7 +146,9 @@ describe("PublicThread", () => {
       }),
     );
 
-    expect(screen.queryByText("Manage")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /manage published answer/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders generic unavailable state", () => {
@@ -138,14 +161,51 @@ describe("PublicThread", () => {
     expect(screen.getByText("@person")).toBeInTheDocument();
     expect(screen.getByText("This thread is unavailable")).toBeInTheDocument();
   });
+
+  it("renders a dismiss target in app-shell popup mode", () => {
+    renderPublicThread(createAvailablePage(), {
+      session: {
+        profile: {
+          username: "person",
+          displayName: "Person",
+        },
+      },
+      profileHref: "/person",
+      unreadNotificationCount: 0,
+    });
+
+    expect(screen.getByRole("link", { name: "Dismiss thread" })).toHaveAttribute(
+      "href",
+      "/dashboard/feed",
+    );
+  });
 });
 
-function renderPublicThread(page: PublicThreadPageData) {
+function renderPublicThread(
+  page: PublicThreadPageData,
+  shell?: {
+    session: {
+      profile: {
+        username: string;
+        displayName: string;
+      };
+    };
+    profileHref: string;
+    unreadNotificationCount: number;
+  },
+) {
   const router = createMemoryRouter(
     [
       {
         path: "/",
-        element: <PublicThread betaNoindex={false} page={page} />,
+        element: (
+          <PublicThread
+            betaNoindex={false}
+            closeHref="/dashboard/feed"
+            page={page}
+            shell={shell}
+          />
+        ),
       },
     ],
     {
@@ -154,6 +214,12 @@ function renderPublicThread(page: PublicThreadPageData) {
   );
 
   return render(<RouterProvider router={router} />);
+}
+
+function openPublishedAnswerMenu() {
+  fireEvent.pointerDown(
+    screen.getByRole("button", { name: /manage published answer/i }),
+  );
 }
 
 function createAvailablePage(

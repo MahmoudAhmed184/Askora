@@ -1,6 +1,7 @@
 import { Send } from "lucide-react";
 import { Form } from "react-router";
 
+import { ActionToast } from "~/components/app/action-toast";
 import { PendingButton } from "~/components/app/pending-button";
 import {
   Field,
@@ -32,11 +33,17 @@ export function FollowUpComposer({
   return (
     <section
       aria-labelledby="follow-up-title"
-      className="rounded-lg border bg-card p-5 text-card-foreground"
+      className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)]"
       id="follow-up"
     >
+      <ActionToast
+        description={flash?.status === "success" ? flash.prompt : undefined}
+        message={getFollowUpToastMessage(flash)}
+        tone={flash?.status === "success" ? "success" : "error"}
+        trigger={flash}
+      />
       <Form method="post" replace>
-        <FieldGroup>
+        <FieldGroup className="gap-5">
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-semibold" id="follow-up-title">
               Ask a follow-up
@@ -45,9 +52,6 @@ export function FollowUpComposer({
               {followUp.description}
             </p>
           </div>
-
-          <FlashMessage flash={flash} />
-
           <input name="timingToken" type="hidden" value={timingToken} />
           <div aria-hidden="true" className="hidden">
             <label htmlFor="follow-up-website">Website</label>
@@ -90,12 +94,6 @@ export function FollowUpComposer({
 
           <IdentityControls error={error} followUp={followUp} />
 
-          {error?.formError === undefined ? null : (
-            <p className="text-sm leading-6 text-destructive" role="alert">
-              {error.formError}
-            </p>
-          )}
-
           <PendingButton className="w-full sm:w-fit" pendingText="Sending">
             <Send data-icon="inline-start" />
             Send follow-up
@@ -104,6 +102,14 @@ export function FollowUpComposer({
       </Form>
     </section>
   );
+}
+
+function getFollowUpToastMessage(flash: FollowUpFlash | undefined) {
+  if (flash?.status === "success") {
+    return flash.message;
+  }
+
+  return flash?.formError;
 }
 
 function IdentityControls({
@@ -167,7 +173,7 @@ function IdentityOption({
   value: "anonymous" | "attributed";
 }) {
   return (
-    <label className="flex gap-3 rounded-lg border bg-background p-3 text-sm">
+    <label className="flex gap-3 rounded-xl border bg-secondary p-3 text-sm">
       <input
         className="mt-1 size-4 accent-primary"
         defaultChecked={defaultChecked}
@@ -180,22 +186,5 @@ function IdentityOption({
         <span className="leading-5 text-muted-foreground">{description}</span>
       </span>
     </label>
-  );
-}
-
-function FlashMessage({ flash }: { flash: FollowUpFlash | undefined }) {
-  if (flash?.status !== "success") {
-    return null;
-  }
-
-  return (
-    <div className="rounded-lg border bg-background p-3" role="status">
-      <p className="text-sm font-medium">{flash.message}</p>
-      {flash.prompt === undefined ? null : (
-        <p className="mt-1 text-sm leading-6 text-muted-foreground">
-          {flash.prompt}
-        </p>
-      )}
-    </div>
   );
 }

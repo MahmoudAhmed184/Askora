@@ -1,8 +1,13 @@
+import type { ReactNode } from "react";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { data, Link, redirect } from "react-router";
 
+import type { AppShellData } from "~/components/app/app-shell-data";
+import { DashboardShell } from "~/components/app/dashboard-shell";
 import { PublicShell } from "~/components/app/public-shell";
 import { Button } from "~/components/ui/button";
+import { getCurrentSessionSummaryFromContext } from "~/features/auth/auth.server";
+import { loadAppShellData } from "~/features/dashboard/app-shell.server";
 import { FollowUpComposer } from "~/features/threads/components/follow-up-composer";
 import { ThreadContextPreview } from "~/features/threads/components/thread-context-preview";
 import {
@@ -21,14 +26,15 @@ import { noindexHeaders } from "~/lib/response.server";
 
 import type { Route } from "./+types/follow-up.route";
 
-export async function loader({ params, request }: Route.LoaderArgs) {
+export async function loader({ context, params, request }: Route.LoaderArgs) {
   const username = params.username;
   const threadPublicId = params.threadPublicId;
-  const { getCurrentSessionSummary } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await getCurrentSessionSummary(request);
+  const session = getCurrentSessionSummaryFromContext(context);
   const headers = new Headers();
+  const shellPromise =
+    session.status === "authenticated" && session.profileStatus === "complete"
+      ? loadAppShellData({ session })
+      : Promise.resolve(undefined);
 
   if (hasFollowUpFlashCookie(request)) {
     headers.append("Set-Cookie", clearFollowUpFlashCookieHeader());
@@ -55,6 +61,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     {
       app: getPublicAppConfig(),
       page: result.page,
+      shell: await shellPromise,
     },
     {
       headers,
@@ -63,13 +70,10 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   );
 }
 
-export async function action({ params, request }: Route.ActionArgs) {
+export async function action({ context, params, request }: Route.ActionArgs) {
   const username = params.username;
   const threadPublicId = params.threadPublicId;
-  const { getCurrentSessionSummary } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await getCurrentSessionSummary(request);
+  const session = getCurrentSessionSummaryFromContext(context);
   const result = await submitThreadFollowUp({
     formData: await request.formData(),
     request,
@@ -135,15 +139,19 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function FollowUpRoute({ loaderData }: Route.ComponentProps) {
   if (loaderData.page.status === "unavailable") {
-    return <UnavailableFollowUp page={loaderData.page} />;
+    return (
+      <FollowUpShell shell={loaderData.shell}>
+        <UnavailableFollowUp page={loaderData.page} />
+      </FollowUpShell>
+    );
   }
 
   const { page } = loaderData;
 
   return (
-    <PublicShell>
-      <div className="flex flex-col gap-6">
-        <header className="flex flex-col gap-4 border-b pb-5">
+    <FollowUpShell shell={loaderData.shell}>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <header className="flex flex-col gap-4 rounded-3xl border bg-card p-6 shadow-[var(--shadow-card)]">
           <Button asChild className="w-fit" size="sm" variant="outline">
             <Link to={`/${page.profile.username}/a/${page.thread.publicId}`}>
               <ArrowLeft data-icon="inline-start" />
@@ -153,7 +161,7 @@ export default function FollowUpRoute({ loaderData }: Route.ComponentProps) {
           <div className="flex min-w-0 gap-4">
             <ProfileAvatar profile={page.profile} />
             <div className="flex min-w-0 flex-col gap-2">
-              <h1 className="break-words text-3xl font-semibold leading-tight">
+              <h1 className="break-words font-serif text-4xl font-bold leading-tight text-foreground">
                 Ask a follow-up
               </h1>
               <p className="break-words text-sm leading-6 text-muted-foreground">
@@ -182,8 +190,22 @@ export default function FollowUpRoute({ loaderData }: Route.ComponentProps) {
           <FollowUpUnavailableState followUp={page.followUp} />
         )}
       </div>
-    </PublicShell>
+    </FollowUpShell>
   );
+}
+
+function FollowUpShell({
+  children,
+  shell,
+}: {
+  children: ReactNode;
+  shell: AppShellData | undefined;
+}) {
+  if (shell) {
+    return <DashboardShell shell={shell}>{children}</DashboardShell>;
+  }
+
+  return <PublicShell>{children}</PublicShell>;
 }
 
 function UnavailableFollowUp({
@@ -192,20 +214,18 @@ function UnavailableFollowUp({
   page: Extract<FollowUpPageData, { status: "unavailable" }>;
 }) {
   return (
-    <PublicShell>
-      <section className="mx-auto flex min-h-[50svh] max-w-xl flex-col justify-center gap-3 py-10">
-        <p className="break-all text-sm font-medium text-muted-foreground">
-          @{page.username}
-        </p>
-        <h1 className="text-3xl font-semibold leading-tight">
-          This thread is unavailable
-        </h1>
-        <p className="text-sm leading-6 text-muted-foreground">
-          The answer thread may have been removed, unpublished, or made
-          unavailable by the profile owner.
-        </p>
-      </section>
-    </PublicShell>
+    <section className="mx-auto flex min-h-[50svh] max-w-xl flex-col justify-center gap-3 py-10">
+      <p className="break-all text-sm font-medium text-muted-foreground">
+        @{page.username}
+      </p>
+      <h1 className="font-serif text-4xl font-bold leading-tight text-primary">
+        This thread is unavailable
+      </h1>
+      <p className="text-sm leading-6 text-muted-foreground">
+        The answer thread may have been removed, unpublished, or made
+        unavailable by the profile owner.
+      </p>
+    </section>
   );
 }
 
@@ -219,7 +239,7 @@ function FollowUpUnavailableState({
   }
 
   return (
-    <section className="flex flex-col items-start gap-4 rounded-lg border border-dashed bg-background p-5">
+    <section className="flex flex-col items-start gap-4 rounded-3xl border border-dashed bg-card/70 p-6">
       <div className="flex flex-col gap-2">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <LockKeyhole aria-hidden="true" className="size-4" />
@@ -250,14 +270,14 @@ function ProfileAvatar({
     return (
       <img
         alt=""
-        className="size-14 shrink-0 rounded-lg border bg-muted object-cover"
+        className="size-14 shrink-0 rounded-full border bg-muted object-cover"
         src={profile.avatarUrl}
       />
     );
   }
 
   return (
-    <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-primary text-xl font-semibold text-primary-foreground">
+    <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-secondary font-serif text-xl font-bold text-primary">
       {profile.displayName.slice(0, 1).toUpperCase()}
     </span>
   );
