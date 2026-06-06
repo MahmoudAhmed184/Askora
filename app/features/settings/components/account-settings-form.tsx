@@ -1,16 +1,27 @@
 import {
   AlertTriangle,
-  CheckCircle2,
   RotateCcw,
   ShieldOff,
   Trash2,
   Undo2,
 } from "lucide-react";
-import { useState, type ComponentProps, type ReactNode } from "react";
-import { Form } from "react-router";
+import { useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { Form, useNavigation } from "react-router";
 
+import { ActionToast } from "~/components/app/action-toast";
 import { PendingButton } from "~/components/app/pending-button";
-import type { Button } from "~/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
+import { Button } from "~/components/ui/button";
+import { buttonVariants } from "~/components/ui/button-variants";
 import {
   Field,
   FieldDescription,
@@ -32,24 +43,31 @@ interface AccountSettingsFormProps {
   result: AccountSettingsSubmissionResult | undefined;
 }
 
+type AccountSettingsSuccessResult = Extract<
+  AccountSettingsSubmissionResult,
+  {
+    status:
+      | "deactivated"
+      | "reactivated"
+      | "deletion_requested"
+      | "deletion_cancelled";
+  }
+>;
+
 export function AccountSettingsForm({
   isSuspended,
   result,
   settings,
 }: AccountSettingsFormProps) {
-  const formError = getFormError(result);
-
   return (
-    <div className="border-y py-6">
-      <FieldGroup className="gap-6">
-        {formError === undefined ? undefined : (
-          <p className="text-sm leading-6 text-destructive" role="alert">
-            {formError}
-          </p>
-        )}
-        <SuccessNotice result={result} />
-
-        <section aria-labelledby="profile-lifecycle-heading" className="grid gap-4">
+    <div className="p-5 text-card-foreground sm:p-6">
+      <ActionToast
+        message={getAccountSettingsToastMessage(result)}
+        tone={isAccountSuccessResult(result) ? "success" : "error"}
+        trigger={result}
+      />
+      <FieldGroup className="gap-5">
+        <section aria-labelledby="profile-lifecycle-heading" className="grid gap-3">
           <SectionHeader
             description="Hide or restore your public profile without deleting the account."
             icon={<ShieldOff aria-hidden="true" className="size-4" />}
@@ -64,7 +82,7 @@ export function AccountSettingsForm({
           />
         </section>
 
-        <section aria-labelledby="deletion-heading" className="grid gap-4 border-t pt-6">
+        <section aria-labelledby="deletion-heading" className="grid gap-3 border-t pt-5">
           <SectionHeader
             description={`Request account deletion with a ${String(settings.deletionGraceDays)}-day cancellation window.`}
             icon={<Trash2 aria-hidden="true" className="size-4" />}
@@ -136,6 +154,8 @@ function ProfileLifecycleAction({
         confirmationLabel="Type DEACTIVATE"
         confirmationToken="DEACTIVATE"
         description="Your profile and public threads become unavailable until you reactivate."
+        dialogDescription="Your profile and public threads will become unavailable until you reactivate from account settings."
+        dialogTitle="Deactivate profile?"
         intent="deactivate"
         pendingText="Deactivating"
         result={result}
@@ -161,9 +181,11 @@ function ProfileLifecycleAction({
       <input name="intent" type="hidden" value="reactivate" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <PendingButton
-          className="w-full sm:w-auto"
+          className="self-start"
           disabled={isSuspended}
+          pendingName="intent"
           pendingText="Reactivating"
+          pendingValue="reactivate"
           type="submit"
         >
           <RotateCcw data-icon="inline-start" />
@@ -220,8 +242,10 @@ function DeletionAction({
         <input name="intent" type="hidden" value="cancel_deletion" />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <PendingButton
-            className="w-full sm:w-auto"
+            className="self-start"
+            pendingName="intent"
             pendingText="Cancelling deletion"
+            pendingValue="cancel_deletion"
             type="submit"
             variant="outline"
           >
@@ -246,6 +270,8 @@ function DeletionAction({
       confirmationLabel="Type DELETE"
       confirmationToken="DELETE"
       description="Your account enters the deletion grace period. The cleanup job anonymizes identity after the window ends."
+      dialogDescription={`Your profile will hide immediately. Cleanup can anonymize account identity after the ${String(settings.deletionGraceDays)}-day grace period.`}
+      dialogTitle="Request account deletion?"
       intent="request_deletion"
       pendingText="Requesting deletion"
       result={result}
@@ -259,6 +285,8 @@ function ConfirmationActionForm({
   confirmationLabel,
   confirmationToken,
   description,
+  dialogDescription,
+  dialogTitle,
   intent,
   pendingText,
   result,
@@ -268,58 +296,165 @@ function ConfirmationActionForm({
   confirmationLabel: string;
   confirmationToken: "DEACTIVATE" | "DELETE";
   description: string;
+  dialogDescription: string;
+  dialogTitle: string;
   intent: Extract<AccountAction, "deactivate" | "request_deletion">;
   pendingText: string;
   result: AccountSettingsSubmissionResult | undefined;
   variant: ComponentProps<typeof Button>["variant"];
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const confirmedSubmitRef = useRef(false);
   const [confirmation, setConfirmation] = useState("");
-  const error = getConfirmationError(result, intent);
+  const [clientError, setClientError] = useState<string | undefined>();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+  const error = clientError ?? getConfirmationError(result, intent);
   const inputId = `${intent}-confirmation`;
   const descriptionId = `${intent}-description`;
   const messageId = `${intent}-message`;
-  const buttonDisabled = confirmation !== confirmationToken;
+  const buttonDisabled = confirmation !== confirmationToken || isSubmitting;
 
   return (
-    <Form aria-label={buttonLabel} className="grid gap-3" method="post">
-      <input name="intent" type="hidden" value={intent} />
-      <Field data-invalid={error !== undefined ? true : undefined}>
-        <FieldLabel htmlFor={inputId}>{confirmationLabel}</FieldLabel>
-        <Input
-          aria-describedby={`${descriptionId} ${messageId}`}
-          aria-invalid={error !== undefined}
-          autoComplete="off"
-          id={inputId}
-          name="confirmation"
-          onChange={(event) => {
-            setConfirmation(event.currentTarget.value);
-          }}
-          value={confirmation}
-        />
-        <FieldDescription id={descriptionId}>{description}</FieldDescription>
-        {error === undefined ? (
-          <span id={messageId} />
-        ) : (
-          <p className="text-sm leading-6 text-destructive" id={messageId} role="alert">
-            {error}
-          </p>
-        )}
-      </Field>
-      <PendingButton
-        className="w-full sm:w-auto"
-        disabled={buttonDisabled}
-        pendingText={pendingText}
-        type="submit"
-        variant={variant}
+    <>
+      <Form
+        aria-label={buttonLabel}
+        className="grid gap-3"
+        method="post"
+        onSubmit={(event) => {
+          if (confirmedSubmitRef.current) {
+            confirmedSubmitRef.current = false;
+            return;
+          }
+
+          if (confirmation !== confirmationToken) {
+            event.preventDefault();
+            setClientError(getConfirmationTokenError(intent));
+            return;
+          }
+
+          event.preventDefault();
+          setDialogOpen(true);
+        }}
+        ref={formRef}
       >
-        {intent === "deactivate" ? (
-          <ShieldOff data-icon="inline-start" />
-        ) : (
-          <Trash2 data-icon="inline-start" />
-        )}
-        {buttonLabel}
-      </PendingButton>
-    </Form>
+        <input name="intent" type="hidden" value={intent} />
+        <Field data-invalid={error !== undefined ? true : undefined}>
+          <FieldLabel htmlFor={inputId}>{confirmationLabel}</FieldLabel>
+          <Input
+            aria-describedby={`${descriptionId} ${messageId}`}
+            aria-invalid={error !== undefined}
+            autoComplete="off"
+            id={inputId}
+            name="confirmation"
+            onChange={(event) => {
+              setConfirmation(event.currentTarget.value);
+              setClientError(undefined);
+            }}
+            value={confirmation}
+          />
+          <FieldDescription id={descriptionId}>{description}</FieldDescription>
+          {error === undefined ? (
+            <span id={messageId} />
+          ) : (
+            <p
+              className="text-sm leading-6 text-destructive"
+              id={messageId}
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+        </Field>
+        <PendingButton
+          className="justify-self-start"
+          disabled={buttonDisabled}
+          pendingName="intent"
+          pendingText={pendingText}
+          pendingValue={intent}
+          type="submit"
+          variant={variant}
+        >
+          {intent === "deactivate" ? (
+            <ShieldOff data-icon="inline-start" />
+          ) : (
+            <Trash2 data-icon="inline-start" />
+          )}
+          {buttonLabel}
+        </PendingButton>
+      </Form>
+
+      <ConfirmAccountActionDialog
+        actionLabel={buttonLabel}
+        description={dialogDescription}
+        disabled={isSubmitting}
+        intent={intent}
+        onConfirm={() => {
+          confirmedSubmitRef.current = true;
+          formRef.current?.requestSubmit();
+        }}
+        onOpenChange={setDialogOpen}
+        open={dialogOpen}
+        title={dialogTitle}
+      />
+    </>
+  );
+}
+
+function ConfirmAccountActionDialog({
+  actionLabel,
+  description,
+  disabled,
+  intent,
+  onConfirm,
+  onOpenChange,
+  open,
+  title,
+}: {
+  actionLabel: string;
+  description: string;
+  disabled: boolean;
+  intent: Extract<AccountAction, "deactivate" | "request_deletion">;
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  title: string;
+}) {
+  const destructive = intent === "request_deletion";
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={disabled}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            asChild
+            className={buttonVariants({
+              variant: destructive ? "destructive" : "default",
+            })}
+          >
+            <Button
+              disabled={disabled}
+              onClick={onConfirm}
+              type="button"
+              variant={destructive ? "destructive" : "default"}
+            >
+              {destructive ? (
+                <Trash2 data-icon="inline-start" />
+              ) : (
+                <ShieldOff data-icon="inline-start" />
+              )}
+              {actionLabel}
+            </Button>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -335,7 +470,7 @@ function StatePanel({
   return (
     <div
       className={cn(
-        "rounded-md border bg-background p-4 text-sm leading-6",
+        "rounded-xl border bg-secondary p-3 text-sm leading-6",
         tone === "danger" ? "border-destructive/35" : undefined,
       )}
     >
@@ -345,28 +480,24 @@ function StatePanel({
   );
 }
 
-function SuccessNotice({
-  result,
-}: {
-  result: AccountSettingsSubmissionResult | undefined;
-}) {
-  if (
-    result?.status !== "deactivated" &&
-    result?.status !== "reactivated" &&
-    result?.status !== "deletion_requested" &&
-    result?.status !== "deletion_cancelled"
-  ) {
-    return undefined;
+function getAccountSettingsToastMessage(
+  result: AccountSettingsSubmissionResult | undefined,
+) {
+  if (isAccountSuccessResult(result)) {
+    return getSuccessMessage(result.status);
   }
 
+  return getFormError(result);
+}
+
+function isAccountSuccessResult(
+  result: AccountSettingsSubmissionResult | undefined,
+): result is AccountSettingsSuccessResult {
   return (
-    <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground" role="status">
-      <CheckCircle2
-        aria-hidden="true"
-        className="mt-1 size-4 shrink-0 text-foreground"
-      />
-      {getSuccessMessage(result.status)}
-    </p>
+    result?.status === "deactivated" ||
+    result?.status === "reactivated" ||
+    result?.status === "deletion_requested" ||
+    result?.status === "deletion_cancelled"
   );
 }
 
@@ -411,6 +542,16 @@ function getConfirmationError(
   }
 
   return errors.confirmation;
+}
+
+function getConfirmationTokenError(
+  intent: Extract<AccountAction, "deactivate" | "request_deletion">,
+) {
+  if (intent === "deactivate") {
+    return "Type DEACTIVATE to deactivate your profile.";
+  }
+
+  return "Type DELETE to request account deletion.";
 }
 
 function getFieldErrors(

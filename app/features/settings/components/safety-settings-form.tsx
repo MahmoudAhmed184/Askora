@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   Ban,
-  CheckCircle2,
   MessageCircleOff,
   Save,
   Shield,
@@ -11,6 +10,7 @@ import {
 import { useState } from "react";
 import { Form } from "react-router";
 
+import { ActionToast } from "~/components/app/action-toast";
 import { PendingButton } from "~/components/app/pending-button";
 import { Badge } from "~/components/ui/badge";
 import {
@@ -26,6 +26,7 @@ import {
   type SafetySettingsSubmissionResult,
   type SafetySettingsViewData,
 } from "~/features/settings/safety-settings.server";
+import { formatMediumDateTime } from "~/lib/date-format";
 
 type SafetySettingsSuccessResult = Extract<
   SafetySettingsSubmissionResult,
@@ -55,27 +56,21 @@ export function SafetySettingsForm({
       : settings.acceptingQuestions,
   );
   const fieldErrors = getFieldErrors(result);
-  const formError = getFormError(result);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 p-5 sm:p-6">
+      <ActionToast
+        message={getSafetySettingsToastMessage(result)}
+        tone={result !== undefined && isSuccessResult(result) ? "success" : "error"}
+        trigger={result}
+      />
       {disabled ? <LockedNotice /> : undefined}
-      {formError === undefined ? undefined : (
-        <p className="text-sm leading-6 text-destructive" role="alert">
-          {formError}
-        </p>
-      )}
-      {result !== undefined && isSuccessResult(result) ? (
-        <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground" role="status">
-          <CheckCircle2
-            aria-hidden="true"
-            className="mt-1 size-4 shrink-0 text-foreground"
-          />
-          {getSuccessMessage(result.status)}
-        </p>
-      ) : undefined}
 
-      <Form aria-label="Question safety" className="border-y py-6" method="post">
+      <Form
+        aria-label="Question safety"
+        className="text-card-foreground"
+        method="post"
+      >
         <input name="intent" type="hidden" value="update_safety" />
         <FieldGroup className="gap-5">
           <fieldset className="contents" disabled={disabled}>
@@ -95,7 +90,7 @@ export function SafetySettingsForm({
                 </div>
               </div>
 
-              <label className="flex items-start gap-3 rounded-md border bg-background p-3">
+              <label className="flex items-start gap-3 rounded-xl border bg-secondary p-3">
                 <input
                   checked={acceptingQuestions}
                   className="mt-1 size-4 accent-primary"
@@ -118,9 +113,11 @@ export function SafetySettingsForm({
           </fieldset>
 
           <PendingButton
-            className="w-full sm:w-auto"
+            className="self-start"
             disabled={disabled}
+            pendingName="intent"
             pendingText="Saving safety"
+            pendingValue="update_safety"
             type="submit"
           >
             <Save data-icon="inline-start" />
@@ -165,9 +162,11 @@ export function SafetySettingsForm({
             </Field>
           </fieldset>
           <PendingButton
-            className="w-full sm:w-auto"
+            className="self-start"
             disabled={disabled}
+            pendingName="intent"
             pendingText="Adding phrase"
+            pendingValue="add_muted_phrase"
             type="submit"
             variant="outline"
           >
@@ -200,6 +199,16 @@ export function SafetySettingsForm({
   );
 }
 
+function getSafetySettingsToastMessage(
+  result: SafetySettingsSubmissionResult | undefined,
+) {
+  if (result !== undefined && isSuccessResult(result)) {
+    return getSuccessMessage(result.status);
+  }
+
+  return getFormError(result);
+}
+
 function MutedPhraseList({
   disabled,
   settings,
@@ -209,7 +218,7 @@ function MutedPhraseList({
 }) {
   if (settings.mutedPhrases.length === 0) {
     return (
-      <p className="rounded-md border bg-background p-3 text-sm leading-6 text-muted-foreground">
+      <p className="rounded-xl border bg-secondary p-3 text-sm leading-6 text-muted-foreground">
         No muted phrases.
       </p>
     );
@@ -219,7 +228,7 @@ function MutedPhraseList({
     <ul className="flex flex-col gap-2">
       {settings.mutedPhrases.map((phrase) => (
         <li
-          className="flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-xl border bg-secondary p-3 sm:flex-row sm:items-center sm:justify-between"
           key={phrase.id}
         >
           <div className="min-w-0">
@@ -236,7 +245,9 @@ function MutedPhraseList({
             <input name="mutedPhraseId" type="hidden" value={phrase.id} />
             <PendingButton
               disabled={disabled}
+              pendingName="mutedPhraseId"
               pendingText="Removing"
+              pendingValue={phrase.id}
               size="sm"
               type="submit"
               variant="outline"
@@ -260,7 +271,7 @@ function BlockList({
 }) {
   if (blocks.length === 0) {
     return (
-      <p className="rounded-md border bg-background p-3 text-sm leading-6 text-muted-foreground">
+      <p className="rounded-xl border bg-secondary p-3 text-sm leading-6 text-muted-foreground">
         No blocked senders.
       </p>
     );
@@ -270,7 +281,7 @@ function BlockList({
     <ul className="flex flex-col gap-2">
       {blocks.map((block) => (
         <li
-          className="flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-xl border bg-secondary p-3 sm:flex-row sm:items-center sm:justify-between"
           key={block.id}
         >
           <div className="flex min-w-0 flex-col gap-1">
@@ -290,7 +301,9 @@ function BlockList({
             <input name="blockId" type="hidden" value={block.id} />
             <PendingButton
               disabled={disabled}
+              pendingName="blockId"
               pendingText="Unblocking"
+              pendingValue={block.id}
               size="sm"
               type="submit"
               variant="outline"
@@ -325,7 +338,7 @@ function FieldError({
 
 function LockedNotice() {
   return (
-    <div className="flex items-start gap-3 border-l px-4 py-1 text-sm leading-6 text-muted-foreground">
+    <div className="flex items-start gap-3 rounded-2xl border bg-secondary/70 px-4 py-3 text-sm leading-6 text-muted-foreground">
       <AlertTriangle
         aria-hidden="true"
         className="mt-0.5 size-4 shrink-0 text-destructive"
@@ -424,8 +437,5 @@ function getBlockTypeLabel(type: SafetyBlockView["type"]) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatMediumDateTime(value);
 }

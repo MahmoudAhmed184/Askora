@@ -1,7 +1,8 @@
-import { AlertTriangle, CheckCircle2, Eye, MessageCircle, Save } from "lucide-react";
+import { AlertTriangle, Eye, MessageCircle, Save } from "lucide-react";
 import { useState } from "react";
 import { Form } from "react-router";
 
+import { ActionToast } from "~/components/app/action-toast";
 import { PendingButton } from "~/components/app/pending-button";
 import {
   Field,
@@ -48,26 +49,20 @@ export function PrivacySettingsForm({
   const initialValues = result?.values ?? settings;
   const [values, setValues] = useState(initialValues);
   const fieldErrors = getFieldErrors(result);
-  const formError = getFormError(result);
 
   return (
-    <Form aria-label="Privacy settings" className="border-y py-6" method="post">
+    <Form
+      aria-label="Privacy settings"
+      className="p-5 text-card-foreground sm:p-6"
+      method="post"
+    >
+      <ActionToast
+        message={getPrivacySettingsToastMessage(result)}
+        tone={result?.status === "updated" ? "success" : "error"}
+        trigger={result}
+      />
       <FieldGroup className="gap-5">
         {disabled ? <LockedNotice /> : undefined}
-        {formError === undefined ? undefined : (
-          <p className="text-sm leading-6 text-destructive" role="alert">
-            {formError}
-          </p>
-        )}
-        {result?.status === "updated" ? (
-          <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground" role="status">
-            <CheckCircle2
-              aria-hidden="true"
-              className="mt-1 size-4 shrink-0 text-foreground"
-            />
-            Privacy settings saved.
-          </p>
-        ) : undefined}
 
         <fieldset className="contents" disabled={disabled}>
           <section aria-labelledby="questions-heading" className="flex flex-col gap-4">
@@ -177,7 +172,7 @@ export function PrivacySettingsForm({
         </fieldset>
 
         <PendingButton
-          className="w-full sm:w-auto"
+          className="self-start"
           disabled={disabled}
           pendingText="Saving privacy"
           type="submit"
@@ -188,6 +183,16 @@ export function PrivacySettingsForm({
       </FieldGroup>
     </Form>
   );
+}
+
+function getPrivacySettingsToastMessage(
+  result: PrivacySettingsSubmissionResult | undefined,
+) {
+  if (result?.status === "updated") {
+    return "Privacy settings saved.";
+  }
+
+  return getFormError(result);
 }
 
 function ToggleField({
@@ -207,7 +212,7 @@ function ToggleField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex items-start gap-3 rounded-md border bg-background p-3">
+    <label className="flex items-start gap-3 rounded-xl border bg-secondary p-3">
       <input
         checked={checked}
         className="mt-1 size-4 accent-primary"
@@ -255,7 +260,7 @@ function SelectField({
         aria-describedby={`${id}-description ${messageId}`}
         aria-invalid={error !== undefined}
         className={cn(
-          "flex h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20",
+          "flex h-10 w-full min-w-0 rounded-xl border border-input bg-card px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20",
         )}
         id={id}
         name={name}
@@ -284,7 +289,7 @@ function SelectField({
 
 function LockedNotice() {
   return (
-    <div className="flex items-start gap-3 border-l px-4 py-1 text-sm leading-6 text-muted-foreground">
+    <div className="flex items-start gap-3 rounded-2xl border bg-secondary/70 px-4 py-3 text-sm leading-6 text-muted-foreground">
       <AlertTriangle
         aria-hidden="true"
         className="mt-0.5 size-4 shrink-0 text-destructive"

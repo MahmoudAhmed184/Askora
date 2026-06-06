@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
@@ -52,6 +52,43 @@ describe("AccountSettingsForm", () => {
     expect(
       screen.queryByText("Type DEACTIVATE to deactivate your profile."),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens a confirmation dialog before requesting account deletion", () => {
+    renderAccountSettingsForm();
+
+    fireEvent.change(screen.getByLabelText(/type delete/i), {
+      target: { value: "DELETE" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /request account deletion/i }),
+    );
+
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Request account deletion?",
+    });
+
+    expect(
+      within(dialog).getByText(/your profile will hide immediately/i),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", {
+        name: /request account deletion/i,
+      }),
+    ).toBeEnabled();
+  });
+
+  it("shows inline confirmation errors before opening a severe confirmation", () => {
+    renderAccountSettingsForm();
+
+    fireEvent.submit(
+      screen.getByRole("form", { name: /request account deletion/i }),
+    );
+
+    expect(
+      screen.getByText("Type DELETE to request account deletion."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("shows pending deletion UI without auto-reactivation controls", () => {

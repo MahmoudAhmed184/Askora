@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   AtSign,
-  CheckCircle2,
   IdCard,
   Image,
   MessageSquareText,
@@ -11,6 +10,7 @@ import {
 import { useState } from "react";
 import { Form } from "react-router";
 
+import { ActionToast } from "~/components/app/action-toast";
 import { PendingButton } from "~/components/app/pending-button";
 import {
   Field,
@@ -50,27 +50,27 @@ export function ProfileSettingsForm({
     initialValues.avatarSource,
   );
   const fieldErrors = getFieldErrors(result);
-  const formError = getFormError(result);
   const usernamePolicyIssue =
     username.length > 0 ? getUsernamePolicyIssue(username.trim()) : undefined;
   const usernameMessage = fieldErrors.username ?? usernamePolicyIssue;
   const googleAvatarAvailable = settings.googleAvatarUrl !== undefined;
 
   return (
-    <Form aria-label="Profile settings" className="border-y py-6" method="post">
+    <Form
+      aria-label="Profile settings"
+      className="p-5 text-card-foreground sm:p-6"
+      method="post"
+    >
+      <ActionToast
+        message={getProfileSettingsToastMessage({
+          redirectReservationDays: settings.redirectReservationDays,
+          result,
+        })}
+        tone={result?.status === "updated" ? "success" : "error"}
+        trigger={result}
+      />
       <FieldGroup className="gap-5">
         {disabled ? <LockedNotice /> : undefined}
-        {formError === undefined ? undefined : (
-          <p className="text-sm leading-6 text-destructive" role="alert">
-            {formError}
-          </p>
-        )}
-        {result?.status === "updated" ? (
-          <SavedNotice
-            redirectReservationDays={settings.redirectReservationDays}
-            result={result}
-          />
-        ) : undefined}
 
         <fieldset className="contents" disabled={disabled}>
           <Field data-invalid={usernameMessage !== undefined ? true : undefined}>
@@ -217,7 +217,7 @@ export function ProfileSettingsForm({
         </fieldset>
 
         <PendingButton
-          className="w-full sm:w-auto"
+          className="self-start"
           disabled={disabled}
           pendingText="Saving profile"
           type="submit"
@@ -252,7 +252,7 @@ function AvatarSourceOption({
   return (
     <label
       className={cn(
-        "flex min-h-24 gap-3 rounded-md border bg-background p-3 text-sm transition-colors",
+        "flex min-h-24 gap-3 rounded-xl border bg-secondary p-3 text-sm transition-colors",
         checked ? "border-foreground/25" : "border-border",
         disabled ? "opacity-60" : "hover:border-foreground/20",
       )}
@@ -289,7 +289,7 @@ function AvatarSourceOption({
 
 function LockedNotice() {
   return (
-    <div className="flex items-start gap-3 border-l px-4 py-1 text-sm leading-6 text-muted-foreground">
+    <div className="flex items-start gap-3 rounded-2xl border bg-secondary/70 px-4 py-3 text-sm leading-6 text-muted-foreground">
       <AlertTriangle
         aria-hidden="true"
         className="mt-0.5 size-4 shrink-0 text-destructive"
@@ -299,40 +299,26 @@ function LockedNotice() {
   );
 }
 
-function SavedNotice({
+function getProfileSettingsToastMessage({
   redirectReservationDays,
   result,
 }: {
   redirectReservationDays: number;
-  result: ProfileSettingsSubmissionResult;
+  result: ProfileSettingsSubmissionResult | undefined;
 }) {
-  if (result.status !== "updated") {
-    return undefined;
+  if (result?.status !== "updated") {
+    return getFormError(result);
   }
 
-  if (result.usernameChanged) {
-    return (
-      <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground" role="status">
-        <CheckCircle2
-          aria-hidden="true"
-          className="mt-1 size-4 shrink-0 text-foreground"
-        />
-        Profile saved. @{result.previousUsername} redirects to @
-        {result.values.username} through {result.redirectUntilDate}; the old
-        username stays reserved for {redirectReservationDays} days.
-      </p>
-    );
+  if (!result.usernameChanged) {
+    return "Profile saved.";
   }
 
-  return (
-    <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground" role="status">
-      <CheckCircle2
-        aria-hidden="true"
-        className="mt-1 size-4 shrink-0 text-foreground"
-      />
-      Profile saved.
-    </p>
-  );
+  if (!result.previousUsername || !result.redirectUntilDate) {
+    return "Profile saved.";
+  }
+
+  return `Profile saved. @${result.previousUsername} redirects to @${result.values.username} through ${result.redirectUntilDate}; the old username stays reserved for ${String(redirectReservationDays)} days.`;
 }
 
 function getFieldErrors(
