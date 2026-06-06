@@ -1,39 +1,20 @@
-import { data, useActionData } from "react-router";
+import { data, useActionData, useOutletContext } from "react-router";
 
 import type { Route } from "./+types/account.route";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
 import { AccountSettingsForm } from "~/features/settings/components/account-settings-form";
-import { SettingsShell } from "~/features/settings/components/settings-shell";
 import {
-  loadAccountSettings,
   submitAccountSettings,
   type AccountSettingsSubmissionResult,
 } from "~/features/settings/account-settings.server";
+import type { SettingsRouteContext } from "~/features/settings/settings-route-context";
 
 interface AccountSettingsActionData {
   account: AccountSettingsSubmissionResult;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { isSessionSuspended, requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
-
-  if (session instanceof Response) {
-    return session;
-  }
-
-  return {
-    settings: await loadAccountSettings({ session }),
-    isSuspended: isSessionSuspended(session),
-  };
-}
-
-export async function action({ request }: Route.ActionArgs) {
-  const { requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function action({ context, request }: Route.ActionArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -54,24 +35,17 @@ export function meta() {
   return [{ title: "Account settings | qna-platform" }];
 }
 
-export default function AccountSettingsRoute({
-  loaderData,
-}: Route.ComponentProps) {
+export default function AccountSettingsRoute() {
   const actionData = useActionData<typeof action>();
+  const { isSuspended, settings } = useOutletContext<SettingsRouteContext>();
 
   return (
-    <SettingsShell
-      description="Manage profile availability and account deletion requests."
-      isSuspended={loaderData.isSuspended}
-      title="Account settings"
-    >
-      <AccountSettingsForm
-        isSuspended={loaderData.isSuspended}
-        key={getAccountSettingsFormKey(actionData?.account)}
-        result={actionData?.account}
-        settings={loaderData.settings}
-      />
-    </SettingsShell>
+    <AccountSettingsForm
+      isSuspended={isSuspended}
+      key={getAccountSettingsFormKey(actionData?.account)}
+      result={actionData?.account}
+      settings={settings.account}
+    />
   );
 }
 

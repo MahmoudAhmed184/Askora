@@ -1,79 +1,121 @@
 import type { ReactNode } from "react";
-import { Link, useLocation, useRouteLoaderData } from "react-router";
+import { useLocation, useNavigation } from "react-router";
 
-import type { loader as rootLoader } from "~/root";
-import { NotificationBell } from "~/features/notifications/components/notification-bell";
+import type { AppShellData } from "~/components/app/app-shell-data";
+import {
+  FloatingPillNav,
+  type FloatingPillNavItem,
+} from "~/components/app/floating-pill-nav";
 import { cn } from "~/lib/utils";
 
 interface DashboardShellProps {
+  shell: AppShellData;
   children: ReactNode;
 }
 
-export function DashboardShell({ children }: DashboardShellProps) {
+export function DashboardShell({ children, shell }: DashboardShellProps) {
   const location = useLocation();
-  const rootData = useRouteLoaderData<typeof rootLoader>("root");
-  const unreadNotificationCount = rootData?.notifications.unreadCount ?? 0;
+  const navigation = useNavigation();
+  const navigationLocation = navigation.location as
+    | { pathname: string }
+    | undefined;
+  const isRouteLoading =
+    navigation.state === "loading" &&
+    navigationLocation?.pathname !== location.pathname;
+  const appNavigation = getAppNavigation({
+    hasUnreadNotifications: shell.unreadNotificationCount > 0,
+    profileHref: shell.profileHref,
+  });
+  const activeValue = getActiveNavigationValue({
+    pathname: location.pathname,
+    profileHref: shell.profileHref,
+  });
+  const pendingValue = navigationLocation
+    ? getActiveNavigationValue({
+        pathname: navigationLocation.pathname,
+        profileHref: shell.profileHref,
+      })
+    : undefined;
+
+  const normalizedPendingValue =
+    isRouteLoading && pendingValue !== activeValue ? pendingValue : undefined;
 
   return (
-    <div className="min-h-screen bg-surface text-foreground">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-4">
-          <Link className="text-sm font-semibold" to="/">
-            qna-platform
-          </Link>
-          <div className="flex items-center justify-end gap-2">
-            <NotificationBell unreadCount={unreadNotificationCount} />
-            <nav
-              aria-label="Dashboard navigation"
-              className="flex flex-wrap justify-end gap-1 text-sm"
-            >
-              {dashboardLinks.map((link) => {
-                const isActive =
-                  link.activePrefix === undefined
-                    ? location.pathname === link.to
-                    : location.pathname.startsWith(link.activePrefix);
-
-                return (
-                  <Link
-                    aria-current={isActive ? "page" : undefined}
-                    className={cn(
-                      "rounded-md px-3 py-2 font-medium transition-colors",
-                      isActive
-                        ? "bg-surface text-foreground"
-                        : "text-muted-foreground hover:bg-surface hover:text-foreground",
-                    )}
-                    key={link.to}
-                    to={link.to}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl px-5 py-6">{children}</main>
+    <div className="min-h-screen bg-background text-foreground">
+      <main
+        aria-busy={isRouteLoading || undefined}
+        className={cn(
+          "mx-auto w-full max-w-7xl px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-8 transition-opacity duration-150 sm:px-6 sm:pt-10 lg:px-8",
+          isRouteLoading && "opacity-70",
+        )}
+      >
+        {children}
+      </main>
+      <div
+        aria-hidden="true"
+        className="app-nav-scrim pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(5.5rem+env(safe-area-inset-bottom))] sm:hidden"
+      />
+      <FloatingPillNav
+        activeValue={activeValue}
+        ariaLabel="Primary app navigation"
+        items={appNavigation}
+        pendingValue={normalizedPendingValue}
+      />
     </div>
   );
 }
 
-interface DashboardLink {
-  to: string;
-  label: string;
-  activePrefix?: string;
+interface AppNavigationInput {
+  hasUnreadNotifications: boolean;
+  profileHref: string;
 }
 
-const dashboardLinks: readonly DashboardLink[] = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/dashboard/feed", label: "Feed" },
-  { to: "/dashboard/inbox", label: "Inbox" },
-  { to: "/dashboard/prompts", label: "Prompts" },
-  { to: "/dashboard/drafts", label: "Drafts" },
-  { to: "/dashboard/filtered", label: "Filtered" },
-  {
-    to: "/dashboard/settings/profile",
-    label: "Settings",
-    activePrefix: "/dashboard/settings",
-  },
-] as const;
+function getAppNavigation({
+  hasUnreadNotifications,
+  profileHref,
+}: AppNavigationInput): readonly FloatingPillNavItem[] {
+  return [
+    { value: "feed", to: "/dashboard/feed", label: "Feed" },
+    { value: "inbox", to: "/dashboard/inbox", label: "Inbox" },
+    {
+      value: "notifications",
+      to: "/dashboard/notifications",
+      label: "Notifications",
+      mobileLabel: "Notifications",
+      hasIndicator: hasUnreadNotifications,
+    },
+    { value: "profile", to: profileHref, label: "Profile" },
+    { value: "settings", to: "/dashboard/settings/profile", label: "Settings" },
+  ] as const;
+}
+
+function getActiveNavigationValue({
+  pathname,
+  profileHref,
+}: {
+  pathname: string;
+  profileHref: string;
+}) {
+  if (
+    pathname === "/dashboard/inbox" ||
+    pathname === "/dashboard/drafts" ||
+    pathname === "/dashboard/filtered" ||
+    pathname.startsWith("/dashboard/answer/")
+  ) {
+    return "inbox";
+  }
+
+  if (pathname === "/dashboard/notifications") {
+    return "notifications";
+  }
+
+  if (pathname.startsWith("/dashboard/settings")) {
+    return "settings";
+  }
+
+  if (profileHref !== "/dashboard/settings/profile" && pathname === profileHref) {
+    return "profile";
+  }
+
+  return "feed";
+}

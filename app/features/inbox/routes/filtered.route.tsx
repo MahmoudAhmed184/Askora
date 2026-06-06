@@ -1,9 +1,13 @@
 import { data, useActionData } from "react-router";
 
 import type { Route } from "./+types/filtered.route";
-import { DashboardShell } from "~/components/app/dashboard-shell";
-import { Badge } from "~/components/ui/badge";
+import { ActionToast } from "~/components/app/action-toast";
+import {
+  isSessionSuspended,
+  requireCompletedProfileSessionFromContext,
+} from "~/features/auth/auth.server";
 import { InboxList } from "~/features/inbox/components/inbox-list";
+import { InboxWorkflowShell } from "~/features/inbox/components/inbox-workflow-nav";
 import {
   handleInboxAction,
   type InboxActionResult,
@@ -14,11 +18,8 @@ interface FilteredRouteActionData {
   inbox: InboxActionResult;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { isSessionSuspended, requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function loader({ context }: Route.LoaderArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -30,11 +31,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const { requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function action({ context, request }: Route.ActionArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -59,39 +57,33 @@ export default function FilteredRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
 
   return (
-    <DashboardShell>
-      <div className="flex flex-col gap-6">
-        <header className="flex flex-col gap-3 border-b pb-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">Filtered</Badge>
-            <Badge variant="outline">{loaderData.folder.questions.length} total</Badge>
-            {loaderData.isSuspended ? <Badge variant="outline">Locked</Badge> : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-normal">
-              Filtered questions
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Questions held outside the inbox by muted phrases or safety checks.
-            </p>
-          </div>
-        </header>
+    <InboxWorkflowShell
+      active="filtered"
+      counts={{ filtered: loaderData.folder.questions.length }}
+      description="Questions held outside the inbox by muted phrases or safety checks."
+      locked={loaderData.isSuspended}
+    >
+      <ActionToast
+        message={getInboxErrorToastMessage(actionData?.inbox)}
+        tone="error"
+        trigger={actionData?.inbox}
+      />
 
-        {actionData?.inbox.status === "invalid" ||
-        actionData?.inbox.status === "denied" ? (
-          <p className="text-sm leading-6 text-destructive" role="alert">
-            {actionData.inbox.formError}
-          </p>
-        ) : null}
-
-        <InboxList
-          disabled={loaderData.isSuspended}
-          folder="filtered"
-          questions={loaderData.folder.questions}
-        />
-      </div>
-    </DashboardShell>
+      <InboxList
+        disabled={loaderData.isSuspended}
+        folder="filtered"
+        questions={loaderData.folder.questions}
+      />
+    </InboxWorkflowShell>
   );
+}
+
+function getInboxErrorToastMessage(result: InboxActionResult | undefined) {
+  if (result?.status === "invalid" || result?.status === "denied") {
+    return result.formError;
+  }
+
+  return undefined;
 }
 
 function getInboxActionResponseStatus(result: InboxActionResult) {

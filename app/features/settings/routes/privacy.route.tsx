@@ -1,39 +1,20 @@
-import { data, useActionData } from "react-router";
+import { data, useActionData, useOutletContext } from "react-router";
 
 import type { Route } from "./+types/privacy.route";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
 import { PrivacySettingsForm } from "~/features/settings/components/privacy-settings-form";
-import { SettingsShell } from "~/features/settings/components/settings-shell";
 import {
-  loadPrivacySettings,
   submitPrivacySettings,
   type PrivacySettingsSubmissionResult,
 } from "~/features/settings/privacy-settings.server";
+import type { SettingsRouteContext } from "~/features/settings/settings-route-context";
 
 interface PrivacySettingsActionData {
   privacy: PrivacySettingsSubmissionResult;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { isSessionSuspended, requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
-
-  if (session instanceof Response) {
-    return session;
-  }
-
-  return {
-    settings: await loadPrivacySettings({ session }),
-    isSuspended: isSessionSuspended(session),
-  };
-}
-
-export async function action({ request }: Route.ActionArgs) {
-  const { requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function action({ context, request }: Route.ActionArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -54,24 +35,17 @@ export function meta() {
   return [{ title: "Privacy settings | qna-platform" }];
 }
 
-export default function PrivacySettingsRoute({
-  loaderData,
-}: Route.ComponentProps) {
+export default function PrivacySettingsRoute() {
   const actionData = useActionData<typeof action>();
+  const { isSuspended, settings } = useOutletContext<SettingsRouteContext>();
 
   return (
-    <SettingsShell
-      description="Control question intake, follow-up permissions, and public count visibility."
-      isSuspended={loaderData.isSuspended}
-      title="Privacy settings"
-    >
-      <PrivacySettingsForm
-        disabled={loaderData.isSuspended}
-        key={getPrivacySettingsFormKey(actionData?.privacy)}
-        result={actionData?.privacy}
-        settings={loaderData.settings}
-      />
-    </SettingsShell>
+    <PrivacySettingsForm
+      disabled={isSuspended}
+      key={getPrivacySettingsFormKey(actionData?.privacy)}
+      result={actionData?.privacy}
+      settings={settings.privacy}
+    />
   );
 }
 

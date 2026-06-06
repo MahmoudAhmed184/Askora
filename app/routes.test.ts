@@ -4,7 +4,7 @@ import routes from "~/routes";
 
 describe("route config", () => {
   it("registers dashboard routes before the public username route", () => {
-    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+    const paths = getRoutePaths();
     const usernameIndex = paths.indexOf(":username");
 
     expect(paths.indexOf("dashboard")).toBeLessThan(usernameIndex);
@@ -29,7 +29,7 @@ describe("route config", () => {
   });
 
   it("registers admin routes before the public username route", () => {
-    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+    const paths = getRoutePaths();
     const usernameIndex = paths.indexOf(":username");
 
     expect(paths.indexOf("admin")).toBeLessThan(usernameIndex);
@@ -37,7 +37,7 @@ describe("route config", () => {
   });
 
   it("registers public thread permalinks before the public username route", () => {
-    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+    const paths = getRoutePaths();
     const usernameIndex = paths.indexOf(":username");
 
     expect(paths.indexOf(":username/a/:threadPublicId/follow-ups")).toBeLessThan(
@@ -49,7 +49,7 @@ describe("route config", () => {
   });
 
   it("registers follow-up routes before the public thread permalink", () => {
-    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+    const paths = getRoutePaths();
 
     expect(paths.indexOf(":username/a/:threadPublicId/follow-ups")).toBeLessThan(
       paths.indexOf(":username/a/:threadPublicId"),
@@ -57,8 +57,38 @@ describe("route config", () => {
   });
 
   it("does not register a sitemap route during beta", () => {
-    const paths = routes.map((route) => ("path" in route ? route.path : "index"));
+    const paths = getRoutePaths();
 
     expect(paths).not.toContain("sitemap.xml");
   });
 });
+
+function getRoutePaths() {
+  return flattenRoutePaths(routes);
+}
+
+interface TestRouteEntry {
+  path?: string;
+  children?: readonly TestRouteEntry[];
+}
+
+function flattenRoutePaths(
+  routeEntries: readonly TestRouteEntry[],
+  parentPath = "",
+): string[] {
+  return routeEntries.flatMap((routeEntry) => {
+    const path = routeEntry.path;
+    const fullPath =
+      path === undefined
+        ? "index"
+        : parentPath === ""
+          ? path
+          : `${parentPath}/${path}`;
+    const childPaths =
+      routeEntry.children === undefined
+        ? []
+        : flattenRoutePaths(routeEntry.children, fullPath);
+
+    return [fullPath, ...childPaths];
+  });
+}

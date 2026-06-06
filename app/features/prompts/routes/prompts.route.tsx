@@ -1,7 +1,11 @@
 import { data, redirect, useActionData } from "react-router";
 
-import { DashboardShell } from "~/components/app/dashboard-shell";
+import { ActionToast } from "~/components/app/action-toast";
 import { Badge } from "~/components/ui/badge";
+import {
+  isSessionSuspended,
+  requireCompletedProfileSessionFromContext,
+} from "~/features/auth/auth.server";
 import { StarterPromptPicker } from "~/features/prompts/components/starter-prompt-picker";
 import {
   createStarterPromptQuestion,
@@ -15,11 +19,8 @@ interface StarterPromptRouteActionData {
   starterPrompt: StarterPromptActionResult;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { isSessionSuspended, requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export function loader({ context }: Route.LoaderArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -31,11 +32,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const { requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function action({ context, request }: Route.ActionArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -64,15 +62,20 @@ export default function PromptsRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
 
   return (
-    <DashboardShell>
+    <>
+      <ActionToast
+        message={getStarterPromptToastMessage(actionData?.starterPrompt)}
+        tone="error"
+        trigger={actionData?.starterPrompt}
+      />
       <div className="flex flex-col gap-6">
-        <header className="flex flex-col gap-3 border-b pb-5">
+        <header className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">Starter prompts</Badge>
             {loaderData.isSuspended ? <Badge variant="outline">Locked</Badge> : null}
           </div>
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-normal">
+            <h1 className="font-serif text-4xl font-extrabold text-foreground">
               Pick a question to answer
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -82,20 +85,23 @@ export default function PromptsRoute({ loaderData }: Route.ComponentProps) {
           </div>
         </header>
 
-        {actionData?.starterPrompt.status === "invalid" ||
-        actionData?.starterPrompt.status === "denied" ? (
-          <p className="text-sm leading-6 text-destructive" role="alert">
-            {actionData.starterPrompt.formError}
-          </p>
-        ) : null}
-
         <StarterPromptPicker
           categories={loaderData.categories}
           disabled={loaderData.isSuspended}
         />
       </div>
-    </DashboardShell>
+    </>
   );
+}
+
+function getStarterPromptToastMessage(
+  result: StarterPromptActionResult | undefined,
+) {
+  if (result?.status === "invalid" || result?.status === "denied") {
+    return result.formError;
+  }
+
+  return undefined;
 }
 
 function getStarterPromptActionResponseStatus(

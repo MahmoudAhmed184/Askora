@@ -1,39 +1,20 @@
-import { data, useActionData } from "react-router";
+import { data, useActionData, useOutletContext } from "react-router";
 
 import type { Route } from "./+types/profile.route";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
 import { ProfileSettingsForm } from "~/features/settings/components/profile-settings-form";
-import { SettingsShell } from "~/features/settings/components/settings-shell";
 import {
-  loadProfileSettings,
   submitProfileSettings,
   type ProfileSettingsSubmissionResult,
 } from "~/features/settings/profile-settings.server";
+import type { SettingsRouteContext } from "~/features/settings/settings-route-context";
 
 interface ProfileSettingsActionData {
   profile: ProfileSettingsSubmissionResult;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { isSessionSuspended, requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
-
-  if (session instanceof Response) {
-    return session;
-  }
-
-  return {
-    settings: await loadProfileSettings({ session }),
-    isSuspended: isSessionSuspended(session),
-  };
-}
-
-export async function action({ request }: Route.ActionArgs) {
-  const { requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function action({ context, request }: Route.ActionArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -54,24 +35,17 @@ export function meta() {
   return [{ title: "Profile settings | qna-platform" }];
 }
 
-export default function ProfileSettingsRoute({
-  loaderData,
-}: Route.ComponentProps) {
+export default function ProfileSettingsRoute() {
   const actionData = useActionData<typeof action>();
+  const { isSuspended, settings } = useOutletContext<SettingsRouteContext>();
 
   return (
-    <SettingsShell
-      description="Manage your public identity, avatar source, and reserved username."
-      isSuspended={loaderData.isSuspended}
-      title="Profile settings"
-    >
-      <ProfileSettingsForm
-        disabled={loaderData.isSuspended}
-        key={getProfileSettingsFormKey(actionData?.profile)}
-        result={actionData?.profile}
-        settings={loaderData.settings}
-      />
-    </SettingsShell>
+    <ProfileSettingsForm
+      disabled={isSuspended}
+      key={getProfileSettingsFormKey(actionData?.profile)}
+      result={actionData?.profile}
+      settings={settings.profile}
+    />
   );
 }
 

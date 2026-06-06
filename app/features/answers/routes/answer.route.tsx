@@ -1,6 +1,5 @@
-import { data, redirect, useActionData } from "react-router";
+import { data, Link, redirect, useActionData } from "react-router";
 
-import { DashboardShell } from "~/components/app/dashboard-shell";
 import { Badge } from "~/components/ui/badge";
 import { AnswerEditor } from "~/features/answers/components/answer-editor";
 import {
@@ -8,6 +7,10 @@ import {
   loadAnswerEditor,
   type AnswerActionResult,
 } from "~/features/answers/answer.server";
+import {
+  isSessionSuspended,
+  requireCompletedProfileSessionFromContext,
+} from "~/features/auth/auth.server";
 
 import type { Route } from "./+types/answer.route";
 
@@ -15,11 +18,8 @@ interface AnswerRouteActionData {
   answer: AnswerActionResult;
 }
 
-export async function loader({ params, request }: Route.LoaderArgs) {
-  const { isSessionSuspended, requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function loader({ context, params, request }: Route.LoaderArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -40,17 +40,15 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   }
 
   return {
+    closeHref: getAnswerEditorCloseHref(request),
     status: "found" as const,
     editor: result.editor,
     isSuspended: isSessionSuspended(session),
   };
 }
 
-export async function action({ params, request }: Route.ActionArgs) {
-  const { requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function action({ context, params, request }: Route.ActionArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -81,46 +79,50 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
 
   if (loaderData.status === "not_found") {
     return (
-      <DashboardShell>
-        <div className="flex flex-col gap-3 border-b pb-5">
-          <Badge variant="secondary">Answer</Badge>
-          <h1 className="text-3xl font-semibold tracking-normal">
-            Question not found
-          </h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            This question is not available for answering.
-          </p>
-        </div>
-      </DashboardShell>
+      <div className="flex flex-col gap-3 border-b pb-5">
+        <Badge variant="secondary">Answer</Badge>
+        <h1 className="font-serif text-4xl font-bold text-primary">
+          Question not found
+        </h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          This question is not available for answering.
+        </p>
+      </div>
     );
   }
 
   return (
-    <DashboardShell>
-      <div className="flex flex-col gap-6">
-        <header className="flex flex-col gap-3 border-b pb-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">Answer</Badge>
-            {loaderData.isSuspended ? <Badge variant="outline">Locked</Badge> : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-normal">
-              Draft and publish
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Answers publish as plain text on @{loaderData.editor.profile.username}.
-            </p>
-          </div>
-        </header>
-
+    <div className="fixed inset-0 z-40 flex items-center justify-center overflow-hidden px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:pb-28 sm:pt-10">
+      <Link
+        aria-label="Dismiss answer editor"
+        className="absolute inset-0 bg-background/92"
+        to={loaderData.closeHref}
+      />
+      <div className="relative z-10 flex max-h-[calc(100svh_-_9rem_-_env(safe-area-inset-bottom))] w-full max-w-[53rem] sm:max-h-[calc(100svh_-_9rem)]">
         <AnswerEditor
           actionResult={actionData?.answer}
+          closeHref={loaderData.closeHref}
           disabled={loaderData.isSuspended}
           editor={loaderData.editor}
+          key={loaderData.editor.question.publicId}
         />
       </div>
-    </DashboardShell>
+    </div>
   );
+}
+
+function getAnswerEditorCloseHref(request: Request) {
+  const returnTo = new URL(request.url).searchParams.get("returnTo");
+
+  if (
+    returnTo === null ||
+    !returnTo.startsWith("/") ||
+    returnTo.startsWith("//")
+  ) {
+    return "/dashboard/inbox";
+  }
+
+  return returnTo;
 }
 
 function getAnswerActionResponseStatus(result: AnswerActionResult) {
