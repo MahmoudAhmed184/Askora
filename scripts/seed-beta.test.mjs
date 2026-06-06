@@ -71,6 +71,8 @@ describe("seedBetaFixtures", () => {
     ).resolves.toMatchObject({
       users: 5,
       questions: 3,
+      pinnedAnswers: 1,
+      notifications: 3,
       reports: 1,
     });
 

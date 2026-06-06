@@ -229,6 +229,7 @@ async function insertBetaFixtures({ client, now, secret }) {
   await insertQuestions({ client, now, secret });
   await insertPublishedThread({ client, now });
   await insertSocialFixtures({ client, now });
+  await insertNotificationFixtures({ client, now });
   await insertModerationFixtures({ client, now });
 }
 
@@ -497,6 +498,22 @@ async function insertPublishedThread({ client, now }) {
       now,
     ],
   );
+  await client.query(
+    `
+      insert into pinned_answers (
+        profile_id,
+        thread_item_id,
+        position,
+        created_at
+      )
+      values ($1, $2, 1, $3)
+    `,
+    [
+      betaFixture.profiles.owner.id,
+      betaFixture.threadItems.published.id,
+      now,
+    ],
+  );
 }
 
 async function insertSocialFixtures({ client, now }) {
@@ -526,6 +543,76 @@ async function insertSocialFixtures({ client, now }) {
       now,
     ],
   );
+}
+
+async function insertNotificationFixtures({ client, now }) {
+  const notifications = [
+    {
+      id: "beta_notification_follow_up_asked",
+      recipientUserId: betaFixture.users.owner.id,
+      type: "follow_up_asked",
+      actorUserId: betaFixture.users.viewer.id,
+      threadId: betaFixture.threads.published.id,
+      threadItemId: null,
+      questionId: betaFixture.questions.filtered.id,
+      readAt: null,
+      createdAt: addMinutes(now, -8),
+    },
+    {
+      id: "beta_notification_answer_liked",
+      recipientUserId: betaFixture.users.owner.id,
+      type: "answer_liked",
+      actorUserId: betaFixture.users.admin.id,
+      threadId: betaFixture.threads.published.id,
+      threadItemId: betaFixture.threadItems.published.id,
+      questionId: null,
+      readAt: null,
+      createdAt: addMinutes(now, -42),
+    },
+    {
+      id: "beta_notification_profile_followed",
+      recipientUserId: betaFixture.users.owner.id,
+      type: "profile_followed",
+      actorUserId: betaFixture.users.admin.id,
+      threadId: null,
+      threadItemId: null,
+      questionId: null,
+      readAt: addMinutes(now, -30),
+      createdAt: addDays(now, -1),
+    },
+  ];
+
+  for (const notification of notifications) {
+    await client.query(
+      `
+        insert into notifications (
+          id,
+          recipient_user_id,
+          type,
+          actor_user_id,
+          thread_id,
+          thread_item_id,
+          question_id,
+          read_at,
+          created_at,
+          expires_at
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `,
+      [
+        notification.id,
+        notification.recipientUserId,
+        notification.type,
+        notification.actorUserId,
+        notification.threadId,
+        notification.threadItemId,
+        notification.questionId,
+        notification.readAt,
+        notification.createdAt,
+        addDays(now, 180),
+      ],
+    );
+  }
 }
 
 async function insertModerationFixtures({ client, now }) {
@@ -606,11 +693,17 @@ function getSeedSummary() {
     questions: 3,
     threads: 1,
     threadItems: 1,
+    pinnedAnswers: 1,
     follows: 1,
     likes: 1,
+    notifications: 3,
     reports: 1,
     blocks: 1,
   };
+}
+
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60 * 1000);
 }
 
 function addDays(date, days) {
