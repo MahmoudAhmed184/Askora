@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  data,
   isRouteErrorResponse,
   Links,
   Meta,
@@ -13,39 +14,53 @@ import type { Route } from "./+types/root";
 import "./app.css";
 
 import { Toaster } from "~/components/ui/sonner";
-import { getPublicAppConfig } from "~/lib/config.server";
-import { noindexHeaders } from "~/lib/response.server";
+import { currentSessionContext } from "~/features/auth/auth.context";
+import {
+  getCurrentSessionSummary,
+  getCurrentSessionSummaryFromContext,
+  toPublicSessionSummary,
+  type PublicSessionSummary,
+} from "~/features/auth/auth.server";
+import { getPublicAppConfig, type PublicAppConfig } from "~/lib/config.server";
+import {
+  createDocumentHeaders,
+  mergeNoindexHeaders,
+} from "~/lib/response.server";
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { getCurrentSessionSummary, toPublicSessionSummary } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await getCurrentSessionSummary(request);
-  const unreadNotificationCount =
-    session.status === "authenticated" && session.profileStatus === "complete"
-      ? await getUnreadNotificationCountForSession(session.user.id)
-      : 0;
+export interface RootLoaderData {
+  app: PublicAppConfig;
+  session: PublicSessionSummary;
+}
 
-  return {
+// eslint-disable-next-line react-refresh/only-export-components
+export const middleware: Route.MiddlewareFunction[] = [
+  async ({ context, request }) => {
+    context.set(
+      currentSessionContext,
+      await getCurrentSessionSummary(request),
+    );
+  },
+];
+
+export function loader({ context, request }: Route.LoaderArgs) {
+  const session = getCurrentSessionSummaryFromContext(context);
+
+  const loaderData: RootLoaderData = {
     app: getPublicAppConfig(),
     session: toPublicSessionSummary(session),
-    notifications: {
-      unreadCount: unreadNotificationCount,
-    },
   };
+
+  return data(loaderData, {
+    headers: createDocumentHeaders({
+      hasCookie: request.headers.has("Cookie"),
+      isAuthenticated: session.status === "authenticated",
+    }),
+  });
 }
 
-async function getUnreadNotificationCountForSession(userId: string) {
-  const { getUnreadNotificationCount } = await import(
-    "~/features/notifications/notification.server"
-  );
-
-  return getUnreadNotificationCount({ recipientUserId: userId });
-}
-
-export function headers() {
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
   const app = getPublicAppConfig();
-  return app.betaNoindex ? noindexHeaders() : {};
+  return mergeNoindexHeaders(new Headers(loaderHeaders), app.betaNoindex);
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -109,7 +124,7 @@ export function ErrorBoundary() {
         <p className="text-sm font-medium text-muted-foreground">
           qna-platform
         </p>
-        <h1 className="text-2xl font-semibold">{title}</h1>
+        <h1 className="font-serif text-3xl font-bold text-primary">{title}</h1>
         <p className="text-sm leading-6 text-muted-foreground">
           {message}
         </p>

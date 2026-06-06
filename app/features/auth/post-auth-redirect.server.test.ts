@@ -19,8 +19,10 @@ describe("post-auth redirects", () => {
     expect(getPostAuthRedirectPath(createIncompleteSession())).toBe("/setup");
   });
 
-  it("sends completed-profile users to the temporary share destination", () => {
-    expect(getPostAuthRedirectPath(createCompletedSession())).toBe("/setup/share");
+  it("sends completed-profile users to Feed", () => {
+    expect(getPostAuthRedirectPath(createCompletedSession())).toBe(
+      "/dashboard/feed",
+    );
   });
 });
 
@@ -29,9 +31,9 @@ describe("profile guard redirect decisions", () => {
     expect(getIncompleteProfileGuardRedirectPath(anonymousSession)).toBe("/login");
   });
 
-  it("redirects setup-route completed profiles to share", () => {
+  it("redirects setup-route completed profiles to Feed", () => {
     expect(getIncompleteProfileGuardRedirectPath(createCompletedSession())).toBe(
-      "/setup/share",
+      "/dashboard/feed",
     );
   });
 

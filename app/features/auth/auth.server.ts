@@ -2,11 +2,12 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { eq } from "drizzle-orm";
-import { redirect } from "react-router";
+import { redirect, type RouterContextProvider } from "react-router";
 
 import { getRuntimeDatabase } from "~/db/client.server";
 import * as databaseSchema from "~/db/schema";
 import { authUsers, profiles } from "~/db/schema";
+import { currentSessionContext } from "~/features/auth/auth.context";
 import {
   completeInviteForCreatedUser,
   requireConsumedInviteForUserCreate,
@@ -54,6 +55,8 @@ export type CurrentSessionSummary =
       status: "anonymous";
     }
   | AuthenticatedSessionSummary;
+
+export type CurrentSessionContextReader = Pick<RouterContextProvider, "get">;
 
 export type PublicSessionSummary =
   | {
@@ -162,6 +165,12 @@ export async function getPublicSessionSummary(request: Request) {
   return toPublicSessionSummary(await getCurrentSessionSummary(request));
 }
 
+export function getCurrentSessionSummaryFromContext(
+  context: CurrentSessionContextReader,
+): CurrentSessionSummary {
+  return context.get(currentSessionContext);
+}
+
 export function toPublicSessionSummary(
   session: CurrentSessionSummary,
 ): PublicSessionSummary {
@@ -201,10 +210,36 @@ export async function requireAuthenticatedSession(
   return session as AuthenticatedSessionSummary;
 }
 
+export function requireAuthenticatedSessionFromContext(
+  context: CurrentSessionContextReader,
+): AuthenticatedSessionSummary | Response {
+  const session = getCurrentSessionSummaryFromContext(context);
+  const redirectPath = getAuthenticatedGuardRedirectPath(session);
+
+  if (redirectPath !== undefined) {
+    return redirect(redirectPath);
+  }
+
+  return session as AuthenticatedSessionSummary;
+}
+
 export async function requireIncompleteProfileSession(
   request: Request,
 ): Promise<IncompleteProfileSessionSummary | Response> {
   const session = await getCurrentSessionSummary(request);
+  const redirectPath = getIncompleteProfileGuardRedirectPath(session);
+
+  if (redirectPath !== undefined) {
+    return redirect(redirectPath);
+  }
+
+  return session as IncompleteProfileSessionSummary;
+}
+
+export function requireIncompleteProfileSessionFromContext(
+  context: CurrentSessionContextReader,
+): IncompleteProfileSessionSummary | Response {
+  const session = getCurrentSessionSummaryFromContext(context);
   const redirectPath = getIncompleteProfileGuardRedirectPath(session);
 
   if (redirectPath !== undefined) {
@@ -227,6 +262,19 @@ export async function requireCompletedProfileSession(
   return session as CompletedProfileSessionSummary;
 }
 
+export function requireCompletedProfileSessionFromContext(
+  context: CurrentSessionContextReader,
+): CompletedProfileSessionSummary | Response {
+  const session = getCurrentSessionSummaryFromContext(context);
+  const redirectPath = getCompletedProfileGuardRedirectPath(session);
+
+  if (redirectPath !== undefined) {
+    return redirect(redirectPath);
+  }
+
+  return session as CompletedProfileSessionSummary;
+}
+
 export function getAuthenticatedGuardRedirectPath(
   session: CurrentSessionSummary,
 ) {
@@ -240,7 +288,7 @@ export function getIncompleteProfileGuardRedirectPath(
     return "/login";
   }
 
-  return session.profileStatus === "complete" ? "/setup/share" : undefined;
+  return session.profileStatus === "complete" ? "/dashboard/feed" : undefined;
 }
 
 export function getCompletedProfileGuardRedirectPath(

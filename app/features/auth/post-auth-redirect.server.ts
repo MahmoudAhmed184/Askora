@@ -5,5 +5,5 @@ export function getPostAuthRedirectPath(session?: CurrentSessionSummary) {
     return "/login";
   }
 
-  return session.profileStatus === "complete" ? "/setup/share" : "/setup";
+  return session.profileStatus === "complete" ? "/dashboard/feed" : "/setup";
 }
