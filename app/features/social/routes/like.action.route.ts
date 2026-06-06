@@ -1,5 +1,7 @@
 import { data, redirect } from "react-router";
 
+import { wantsToastResult } from "~/components/app/toast-result";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
 import {
   handleLikeAction,
   type LikeActionResult,
@@ -15,22 +17,24 @@ export function loader() {
   return redirect("/dashboard/feed");
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const { requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function action({ context, request }: Route.ActionArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
   }
 
+  const formData = await request.formData();
   const result = await handleLikeAction({
-    formData: await request.formData(),
+    formData,
     session,
   });
 
   if (isSuccessfulLikeAction(result)) {
+    if (wantsToastResult(formData)) {
+      return data<LikeActionRouteData>({ like: result });
+    }
+
     return redirect(result.redirectTo);
   }
 

@@ -1,6 +1,8 @@
 import { UserCheck, UserPlus } from "lucide-react";
 import { useFetcher, useLocation } from "react-router";
 
+import { ActionToast } from "~/components/app/action-toast";
+import { ToastResultInput } from "~/components/app/toast-result-input";
 import { Button } from "~/components/ui/button";
 import type { FollowActionResult } from "~/features/social/follow.action.server";
 import type { FollowControlState } from "~/features/social/social-controls";
@@ -29,9 +31,17 @@ export function FollowButton({ follow }: FollowButtonProps) {
         ? false
         : follow.isFollowing;
   const disabled = follow.disabled || fetcher.state !== "idle";
+  const result = fetcher.data?.follow;
+  const toastCopy = getFollowToastCopy(result);
 
   return (
     <fetcher.Form action="/dashboard/follows" method="post">
+      <ActionToast
+        message={toastCopy.message}
+        tone={toastCopy.tone}
+        trigger={result}
+      />
+      <ToastResultInput />
       <input
         name="intent"
         type="hidden"
@@ -55,6 +65,23 @@ export function FollowButton({ follow }: FollowButtonProps) {
       </Button>
     </fetcher.Form>
   );
+}
+
+function getFollowToastCopy(result: FollowActionResult | undefined): {
+  message: string | undefined;
+  tone: "error" | "success";
+} {
+  switch (result?.status) {
+    case undefined:
+      return { message: undefined, tone: "success" };
+    case "followed":
+      return { message: "Profile followed.", tone: "success" };
+    case "unfollowed":
+      return { message: "Profile unfollowed.", tone: "success" };
+    case "invalid":
+    case "denied":
+      return { message: result.formError, tone: "error" };
+  }
 }
 
 function getReturnTo(location: ReturnType<typeof useLocation>) {

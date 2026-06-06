@@ -6,6 +6,7 @@ import {
   authUsers,
   blocks,
   follows,
+  likes,
   profiles,
   questions,
   threadItems,
@@ -14,7 +15,6 @@ import {
 import type { AnswerQuestionIdentity } from "~/features/answers/answer.server";
 import type { QuestionTextMode } from "~/features/answers/answer.schema";
 import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
-import { findThreadItemLikeSummaries } from "~/features/social/social-data.server";
 import { getLikeControlState, type LikeControlState } from "~/features/social/social-controls";
 import {
   encodeFeedCursor,
@@ -110,11 +110,7 @@ export async function loadSocialFeed({
     viewerProfileId: session.profile.id,
     viewerUserId: session.user.id,
   });
-  const visibleRows = rows
-    .filter(isVisibleFeedRow)
-    .sort(compareFeedRows)
-    .slice(0, SOCIAL_FEED_PAGE_SIZE + 1);
-  const pageRows = visibleRows.slice(0, SOCIAL_FEED_PAGE_SIZE);
+  const pageRows = rows.slice(0, SOCIAL_FEED_PAGE_SIZE);
 
   return {
     profile: {
@@ -123,7 +119,7 @@ export async function loadSocialFeed({
     },
     items: pageRows.map((row) => toSocialFeedItem(row, session)),
     nextCursor:
-      visibleRows.length > SOCIAL_FEED_PAGE_SIZE
+      rows.length > SOCIAL_FEED_PAGE_SIZE
         ? encodeFeedCursor(createCursorFromRow(pageRows.at(-1)))
         : undefined,
   };
@@ -173,6 +169,9 @@ export function createDrizzleSocialFeedStore(
           identityMode: questions.identityMode,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
+          blockedByOwner: sql<boolean>`false`,
+          likeCount: sql<number>`coalesce((select count(*)::int from ${likes} where ${likes.threadItemId} = ${threadItems.id}), 0)`,
+          viewerLiked: sql<boolean>`exists(select 1 from ${likes} where ${likes.threadItemId} = ${threadItems.id} and ${likes.profileId} = ${viewerProfileId})`,
         })
         .from(follows)
         .innerJoin(profiles, eq(profiles.id, follows.followedProfileId))
@@ -198,22 +197,8 @@ export function createDrizzleSocialFeedStore(
           desc(threadItems.publicId),
         )
         .limit(limit);
-      const summaries = await findThreadItemLikeSummaries({
-        database,
-        threadItemIds: rows.map((row) => row.threadItemId),
-        viewerProfileId,
-      });
 
-      return rows.map((row) => {
-        const summary = summaries.get(row.threadItemId);
-
-        return {
-          ...row,
-          blockedByOwner: false,
-          likeCount: summary?.count ?? 0,
-          viewerLiked: summary?.isLikedByViewer ?? false,
-        };
-      });
+      return rows;
     },
   };
 }
@@ -274,17 +259,6 @@ function createCursorFromRow(row: SocialFeedRow | undefined): FeedCursor {
   };
 }
 
-function isVisibleFeedRow(row: SocialFeedRow) {
-  return (
-    row.threadStatus === "published" &&
-    row.itemStatus === "published" &&
-    row.itemDeletedAt === null &&
-    row.ownerIsActive &&
-    row.ownerUserDeletedAt === null &&
-    !row.blockedByOwner
-  );
-}
-
 function getPublicQuestionText(row: SocialFeedRow) {
   if (
     row.questionTextMode === "hidden" ||
@@ -311,23 +285,6 @@ function getPublicAsker(row: SocialFeedRow, questionText: string | null) {
     displayName: row.askerDisplayName,
     username: row.askerUsername,
   };
-}
-
-function compareFeedRows(left: SocialFeedRow, right: SocialFeedRow) {
-  const publishedOrder =
-    getFeedSortDate(right).getTime() - getFeedSortDate(left).getTime();
-
-  if (publishedOrder !== 0) {
-    return publishedOrder;
-  }
-
-  const createdOrder = right.createdAt.getTime() - left.createdAt.getTime();
-
-  if (createdOrder !== 0) {
-    return createdOrder;
-  }
-
-  return right.threadItemPublicId.localeCompare(left.threadItemPublicId);
 }
 
 function getFeedSortDate(row: SocialFeedRow) {

@@ -173,7 +173,7 @@ describe("follow actions", () => {
 });
 
 describe("social feed", () => {
-  it("includes followed published answers only and preserves public visibility", async () => {
+  it("maps store-filtered followed answers and preserves public visibility", async () => {
     const store = createFeedStore({
       followedProfileIds: ["profile_owner"],
       rows: [
@@ -467,12 +467,24 @@ function createFeedStore({
       return Promise.resolve(
         rows
           .filter((row) => followedProfileIds.includes(row.ownerProfileId))
+          .filter(isVisibleFeedRowForTest)
           .filter((row) => isAfterCursor(row, cursor))
           .sort(compareFeedRowsForTest)
           .slice(0, limit),
       );
     },
   };
+}
+
+function isVisibleFeedRowForTest(row: SocialFeedRow) {
+  return (
+    row.threadStatus === "published" &&
+    row.itemStatus === "published" &&
+    row.itemDeletedAt === null &&
+    row.ownerIsActive &&
+    row.ownerUserDeletedAt === null &&
+    !row.blockedByOwner
+  );
 }
 
 function createFeedRow(overrides: Partial<SocialFeedRow> = {}): SocialFeedRow {

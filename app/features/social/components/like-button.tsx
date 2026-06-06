@@ -1,6 +1,8 @@
 import { Heart } from "lucide-react";
 import { useFetcher, useLocation } from "react-router";
 
+import { ActionToast } from "~/components/app/action-toast";
+import { ToastResultInput } from "~/components/app/toast-result-input";
 import { Button } from "~/components/ui/button";
 import type { LikeActionResult } from "~/features/social/like.action.server";
 import type { LikeControlState } from "~/features/social/social-controls";
@@ -25,9 +27,17 @@ export function LikeButton({ like }: LikeButtonProps) {
         : like.isLiked;
   const count = getOptimisticCount({ isLiked, like, pendingIntent });
   const disabled = like.disabled || fetcher.state !== "idle";
+  const result = fetcher.data?.like;
+  const toastCopy = getLikeToastCopy(result);
 
   return (
     <fetcher.Form action="/dashboard/likes" method="post">
+      <ActionToast
+        message={toastCopy.message}
+        tone={toastCopy.tone}
+        trigger={result}
+      />
+      <ToastResultInput />
       <input name="intent" type="hidden" value={isLiked ? "unlike" : "like"} />
       <input
         name="threadItemPublicId"
@@ -44,8 +54,9 @@ export function LikeButton({ like }: LikeButtonProps) {
         variant={isLiked ? "secondary" : "outline"}
       >
         <Heart data-icon="inline-start" />
-        {isLiked ? "Liked" : "Like"}
-        {count === undefined ? null : (
+        {count === undefined ? (
+          isLiked ? "Liked" : "Like"
+        ) : (
           <span className="tabular-nums">{count}</span>
         )}
       </Button>
@@ -63,6 +74,23 @@ function getLikeButtonLabel({
   const action = isLiked ? "Unlike answer" : "Like answer";
 
   return count === undefined ? action : `${action} (${String(count)})`;
+}
+
+function getLikeToastCopy(result: LikeActionResult | undefined): {
+  message: string | undefined;
+  tone: "error" | "success";
+} {
+  switch (result?.status) {
+    case undefined:
+      return { message: undefined, tone: "success" };
+    case "liked":
+      return { message: "Reaction added.", tone: "success" };
+    case "unliked":
+      return { message: "Reaction removed.", tone: "success" };
+    case "invalid":
+    case "denied":
+      return { message: result.formError, tone: "error" };
+  }
 }
 
 function getOptimisticCount({
