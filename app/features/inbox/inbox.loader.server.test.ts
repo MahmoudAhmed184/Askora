@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
 import {
-  loadInboxDashboard,
   loadInboxFolder,
   type InboxLoaderStore,
   type InboxFolder,
@@ -10,49 +9,6 @@ import {
 } from "~/features/inbox/inbox.loader.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
-
-describe("loadInboxDashboard", () => {
-  it("counts owner-scoped non-deleted inbox and filtered questions", async () => {
-    const inbox = createInboxLoaderStore({
-      questions: [
-        createQuestion({ status: "inbox" }),
-        createQuestion({ id: "question_2", publicId: "qst_2", status: "filtered" }),
-        createQuestion({
-          id: "question_deleted",
-          publicId: "qst_deleted",
-          deletedAt: now,
-        }),
-        createQuestion({
-          id: "question_other",
-          publicId: "qst_other",
-          recipientProfileId: "profile_other",
-        }),
-        createQuestion({
-          id: "question_draft",
-          publicId: "qst_draft",
-          status: "draft",
-        }),
-      ],
-    });
-
-    const dashboard = await loadInboxDashboard({
-      session: completedSession,
-      store: inbox.store,
-    });
-
-    expect(inbox.calls).toEqual([
-      {
-        profileId: "profile_1",
-        userId: "user_1",
-        statuses: ["inbox", "filtered"],
-      },
-    ]);
-    expect(dashboard.counts).toEqual({
-      inbox: 1,
-      filtered: 1,
-    });
-  });
-});
 
 describe("loadInboxFolder", () => {
   it("loads only non-deleted owner questions for the requested folder", async () => {

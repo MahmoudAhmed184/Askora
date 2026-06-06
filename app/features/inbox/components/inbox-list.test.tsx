@@ -37,29 +37,37 @@ describe("InboxList", () => {
     expect(screen.queryByText("profile_secret")).not.toBeInTheDocument();
   });
 
-  it("shows inbox actions without restore", () => {
+  it("shows inbox actions without restore", async () => {
     renderInboxList();
 
     expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /block sender/i }),
+      screen.getByRole("button", { name: /question actions/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /answer/i })).toHaveAttribute(
       "href",
-      "/dashboard/answer/qst_1",
+      "/dashboard/answer/qst_1?returnTo=%2F",
     );
-    expect(screen.getByText("Report")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /report/i })).not.toBeInTheDocument();
+    openActionsMenu();
+    expect(
+      await screen.findByRole("menuitem", { name: /report/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /block sender/i }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /restore/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("shows filtered restore and report-plus-block default", () => {
+  it("shows filtered restore and report-plus-block default", async () => {
     renderInboxList({ folder: "filtered" });
 
     expect(screen.getByRole("button", { name: /restore/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Report"));
+    openActionsMenu();
+    fireEvent.click(await screen.findByRole("menuitem", { name: /report/i }));
 
     expect(
       screen.getByRole("checkbox", { name: /also block sender/i }),
@@ -91,6 +99,16 @@ function renderInboxList({
   );
 
   render(<RouterProvider router={router} />);
+}
+
+function openActionsMenu() {
+  fireEvent.pointerDown(
+    screen.getByRole("button", { name: /question actions/i }),
+    {
+      button: 0,
+      ctrlKey: false,
+    },
+  );
 }
 
 const defaultQuestion = {

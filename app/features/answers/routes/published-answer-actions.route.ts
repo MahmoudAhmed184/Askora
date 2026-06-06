@@ -1,5 +1,7 @@
 import { data, redirect } from "react-router";
 
+import { wantsToastResult } from "~/components/app/toast-result";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
 import {
   handlePublishedAnswerAction,
   type PublishedAnswerActionResult,
@@ -15,23 +17,25 @@ export function loader() {
   return redirect("/dashboard");
 }
 
-export async function action({ params, request }: Route.ActionArgs) {
-  const { requireCompletedProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireCompletedProfileSession(request);
+export async function action({ context, params, request }: Route.ActionArgs) {
+  const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
   }
 
+  const formData = await request.formData();
   const result = await handlePublishedAnswerAction({
-    formData: await request.formData(),
+    formData,
     session,
     threadItemPublicId: params.threadItemPublicId,
   });
 
   if (isSuccessfulPublishedAnswerAction(result)) {
+    if (wantsToastResult(formData)) {
+      return data<PublishedAnswerActionRouteData>({ publishedAnswer: result });
+    }
+
     return redirect(result.redirectTo);
   }
 

@@ -1,11 +1,13 @@
 import { PencilLine, RotateCcw, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, useFetcher } from "react-router";
+import { Link, useFetcher, useLocation } from "react-router";
 
+import { ActionToast } from "~/components/app/action-toast";
 import { Button } from "~/components/ui/button";
 import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
 import type { InboxActionResult } from "~/features/inbox/inbox-actions.server";
 import type { InboxQuestionView } from "~/features/inbox/inbox.loader.server";
+import { formatMediumDateTime } from "~/lib/date-format";
 
 interface QuestionCardProps {
   question: InboxQuestionView;
@@ -48,39 +50,49 @@ function QuestionCardFrame({
   restoreAction,
 }: QuestionCardProps & { restoreAction: boolean }) {
   const fetcher = useFetcher<InboxFetcherData>();
+  const location = useLocation();
   const isPending = fetcher.state !== "idle";
   const result = fetcher.data?.inbox;
+  const answerHref = createAnswerHref({
+    location,
+    questionPublicId: question.publicId,
+  });
 
   return (
-    <article className="flex flex-col gap-4 rounded-lg border bg-card p-5 text-card-foreground shadow-sm">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <span>{question.identity === "attributed" ? "Attributed" : "Anonymous"}</span>
-          <span aria-hidden="true">/</span>
+    <article className="flex flex-col gap-6 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong sm:p-8">
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
+          <span className="rounded-full border bg-secondary px-3 py-1 font-semibold text-foreground">
+            {question.identity === "attributed" ? "Attributed" : "Anonymous"}
+          </span>
           <time dateTime={question.createdAt}>
             {formatQuestionCreatedAt(question.createdAt)}
           </time>
         </div>
+        <QuestionModerationControls
+          disabled={disabled || isPending}
+          questionPublicId={question.publicId}
+        />
       </header>
 
-      <p className="whitespace-pre-wrap break-words text-base leading-7">
+      <p className="whitespace-pre-wrap break-words font-serif text-2xl font-bold italic leading-tight text-foreground">
         {question.text}
       </p>
 
-      {result === undefined ? undefined : <ActionResultMessage result={result} />}
+      <ActionResultToast result={result} />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {!restoreAction && !disabled && !isPending ? (
-          <Button asChild size="sm">
-            <Link to={`/dashboard/answer/${question.publicId}`}>
+          <Button asChild className="w-full" size="sm">
+            <Link to={answerHref}>
               <PencilLine data-icon="inline-start" />
-              Answer
+              Answer question
             </Link>
           </Button>
         ) : !restoreAction ? (
-          <Button disabled size="sm">
+          <Button className="w-full" disabled size="sm">
             <PencilLine data-icon="inline-start" />
-            Answer
+            Answer question
           </Button>
         ) : undefined}
 
@@ -100,14 +112,9 @@ function QuestionCardFrame({
           fetcher={fetcher}
           icon={<Trash2 data-icon="inline-start" />}
           intent="delete"
-          label="Delete"
+          label={restoreAction ? "Delete" : "Drop"}
           questionPublicId={question.publicId}
-          variant="outline"
-        />
-
-        <QuestionModerationControls
-          disabled={disabled || isPending}
-          questionPublicId={question.publicId}
+          variant="destructive"
         />
       </div>
     </article>
@@ -129,13 +136,20 @@ function InlineActionForm({
   intent: "delete" | "restore" | "block";
   label: string;
   questionPublicId: string;
-  variant?: "default" | "outline";
+  variant?: "default" | "destructive" | "outline";
 }) {
   return (
     <fetcher.Form method="post">
       <input name="intent" type="hidden" value={intent} />
       <input name="questionPublicId" type="hidden" value={questionPublicId} />
-      <Button disabled={disabled} size="sm" type="submit" variant={variant}>
+      <Button
+        aria-label={intent === "delete" ? "Delete question" : undefined}
+        className="w-full"
+        disabled={disabled}
+        size="sm"
+        type="submit"
+        variant={variant}
+      >
         {icon}
         {label}
       </Button>
@@ -143,20 +157,34 @@ function InlineActionForm({
   );
 }
 
-function ActionResultMessage({ result }: { result: InboxActionResult }) {
-  if (result.status === "invalid" || result.status === "denied") {
-    return (
-      <p className="text-sm leading-6 text-destructive" role="alert">
-        {result.formError}
-      </p>
-    );
+function ActionResultToast({
+  result,
+}: {
+  result: InboxActionResult | undefined;
+}) {
+  return (
+    <ActionToast
+      message={getActionResultToastMessage(result)}
+      tone={
+        result?.status === "invalid" || result?.status === "denied"
+          ? "error"
+          : "success"
+      }
+      trigger={result}
+    />
+  );
+}
+
+function getActionResultToastMessage(result: InboxActionResult | undefined) {
+  if (result === undefined) {
+    return undefined;
   }
 
-  return (
-    <p className="text-sm leading-6 text-muted-foreground" role="status">
-      {getSuccessMessage(result.status)}
-    </p>
-  );
+  if (result.status === "invalid" || result.status === "denied") {
+    return result.formError;
+  }
+
+  return getSuccessMessage(result.status);
 }
 
 function getSuccessMessage(status: InboxActionSuccessStatus) {
@@ -175,8 +203,22 @@ function getSuccessMessage(status: InboxActionSuccessStatus) {
 }
 
 function formatQuestionCreatedAt(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatMediumDateTime(value);
+}
+
+function createAnswerHref({
+  location,
+  questionPublicId,
+}: {
+  location: {
+    hash: string;
+    pathname: string;
+    search: string;
+  };
+  questionPublicId: string;
+}) {
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
+  const params = new URLSearchParams({ returnTo });
+
+  return `/dashboard/answer/${questionPublicId}?${params.toString()}`;
 }

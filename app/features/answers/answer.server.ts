@@ -255,11 +255,13 @@ export async function loadAnswerEditor({
     return { status: "not_found" };
   }
 
-  const draft = await store.findDraftItemByQuestionId(question.question.id);
-  const threadContext = await loadAnswerThreadContext({
-    question: question.question,
-    store,
-  });
+  const [draft, threadContext] = await Promise.all([
+    store.findDraftItemByQuestionId(question.question.id),
+    loadAnswerThreadContext({
+      question: question.question,
+      store,
+    }),
+  ]);
 
   return {
     status: "found",

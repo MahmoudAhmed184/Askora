@@ -32,14 +32,6 @@ export interface InboxQuestionView {
   createdAt: string;
 }
 
-export interface InboxDashboardViewData {
-  profile: {
-    username: string;
-    displayName: string;
-  };
-  counts: Record<InboxFolder, number>;
-}
-
 export interface InboxFolderViewData {
   folder: InboxFolder;
   questions: InboxQuestionView[];
@@ -51,34 +43,6 @@ export interface InboxLoaderStore {
     userId: string;
     statuses: readonly InboxFolder[];
   }): Promise<StoredInboxQuestion[]>;
-}
-
-export async function loadInboxDashboard({
-  session,
-  store = createDrizzleInboxLoaderStore(),
-}: {
-  session: CompletedProfileSessionSummary;
-  store?: InboxLoaderStore;
-}): Promise<InboxDashboardViewData> {
-  const visibleQuestions = await findVisibleOwnerQuestions({
-    session,
-    statuses: inboxFolderValues,
-    store,
-  });
-
-  return {
-    profile: {
-      username: session.profile.username,
-      displayName: session.profile.displayName,
-    },
-    counts: {
-      inbox: visibleQuestions.filter((question) => question.status === "inbox")
-        .length,
-      filtered: visibleQuestions.filter(
-        (question) => question.status === "filtered",
-      ).length,
-    },
-  };
 }
 
 export async function loadInboxFolder({

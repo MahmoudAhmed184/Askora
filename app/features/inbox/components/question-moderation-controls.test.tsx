@@ -5,10 +5,11 @@ import { describe, expect, it } from "vitest";
 import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
 
 describe("QuestionModerationControls", () => {
-  it("opens a report dialog with report-plus-block checked by default", () => {
+  it("opens a report dialog with report-plus-block checked by default", async () => {
     renderModerationControls();
 
-    fireEvent.click(screen.getByRole("button", { name: /report/i }));
+    openActionsMenu();
+    fireEvent.click(await screen.findByRole("menuitem", { name: /report/i }));
 
     expect(screen.getByRole("dialog", { name: /report question/i })).toBeInTheDocument();
     expect(
@@ -19,19 +20,39 @@ describe("QuestionModerationControls", () => {
     ).toBeInTheDocument();
   });
 
-  it("opens block confirmation instead of submitting immediately", () => {
+  it("opens block confirmation instead of submitting immediately", async () => {
     renderModerationControls();
 
-    fireEvent.click(screen.getByRole("button", { name: /block sender/i }));
+    openActionsMenu();
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /block sender/i }),
+    );
 
     expect(screen.getByRole("dialog", { name: /block sender/i })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /confirm block/i }),
     ).toBeInTheDocument();
   });
+
+  it("can expose report and block as inline actions", () => {
+    renderModerationControls({ variant: "inline" });
+
+    expect(
+      screen.queryByRole("button", { name: /question actions/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Report" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /block sender/i }));
+
+    expect(screen.getByRole("dialog", { name: /block sender/i })).toBeInTheDocument();
+  });
 });
 
-function renderModerationControls() {
+function renderModerationControls({
+  variant = "menu",
+}: {
+  variant?: "menu" | "inline";
+} = {}) {
   const router = createMemoryRouter(
     [
       {
@@ -40,6 +61,7 @@ function renderModerationControls() {
           <QuestionModerationControls
             disabled={false}
             questionPublicId="qst_1"
+            variant={variant}
           />
         ),
       },
@@ -50,4 +72,14 @@ function renderModerationControls() {
   );
 
   render(<RouterProvider router={router} />);
+}
+
+function openActionsMenu() {
+  fireEvent.pointerDown(
+    screen.getByRole("button", { name: /question actions/i }),
+    {
+      button: 0,
+      ctrlKey: false,
+    },
+  );
 }
