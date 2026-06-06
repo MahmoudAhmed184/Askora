@@ -8,7 +8,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
-    <section className="flex flex-col items-start gap-4 rounded-lg border border-dashed bg-background p-6">
+    <section className="flex flex-col items-start gap-4 rounded-3xl border border-dashed bg-card/70 p-6 shadow-[var(--shadow-card)]">
       <div className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">{title}</h2>
         {description === undefined ? null : (
