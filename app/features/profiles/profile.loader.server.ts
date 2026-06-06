@@ -80,6 +80,11 @@ export interface PublicProfileView {
   displayName: string;
   avatarUrl: string | null;
   bio: string | null;
+  askSettings: {
+    acceptingQuestions: boolean;
+    anonymousQuestionsEnabled: boolean;
+    permission: AskPermission;
+  };
   counts: {
     answers: number;
     followers: number | undefined;
@@ -280,6 +285,11 @@ function getPublicProfileView({
     displayName: profile.displayName,
     avatarUrl: profile.avatarUrl,
     bio: profile.bio,
+    askSettings: {
+      acceptingQuestions: profile.acceptingQuestions,
+      anonymousQuestionsEnabled: profile.anonymousQuestionsEnabled,
+      permission: profile.askPermission,
+    },
     counts: {
       answers: publishedAnswers.length,
       followers: profile.showFollowerCounts ? social.followerCount : undefined,

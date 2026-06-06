@@ -12,7 +12,7 @@ export function PermissionState({ ask }: PermissionStateProps) {
   return (
     <section
       aria-labelledby="ask-permission-title"
-      className="flex flex-col gap-4 rounded-lg border bg-card p-5 text-card-foreground"
+      className="flex flex-col gap-4 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7"
       id="ask"
     >
       <div className="flex items-start gap-3">

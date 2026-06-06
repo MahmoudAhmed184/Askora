@@ -160,6 +160,11 @@ describe("createPublicProfilePageData", () => {
       status: "available",
       profile: {
         username: "person",
+        askSettings: {
+          acceptingQuestions: true,
+          anonymousQuestionsEnabled: true,
+          permission: "everyone",
+        },
         counts: {
           answers: 1,
           followers: undefined,

@@ -53,6 +53,11 @@ function createAvailablePage(): PublicProfilePageData {
       displayName: "Person",
       avatarUrl: null,
       bio: null,
+      askSettings: {
+        acceptingQuestions: true,
+        anonymousQuestionsEnabled: true,
+        permission: "everyone",
+      },
       counts: {
         answers: 0,
         followers: 0,

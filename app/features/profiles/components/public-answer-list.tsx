@@ -1,5 +1,5 @@
-import { Pin } from "lucide-react";
-import { Link } from "react-router";
+import { MessageCircle, Pin } from "lucide-react";
+import { Link, useLocation } from "react-router";
 
 import { EmptyState } from "~/components/app/empty-state";
 import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
@@ -9,6 +9,7 @@ import {
   type PublishedAnswerControlState,
 } from "~/features/answers/published-answer-controls";
 import { LikeButton } from "~/features/social/components/like-button";
+import { formatMediumDateTime } from "~/lib/date-format";
 
 interface PublicAnswerListProps {
   answers: PublicPublishedAnswer[];
@@ -42,13 +43,19 @@ export function PublicAnswerList({
   return (
     <section
       aria-labelledby="published-answers-title"
-      className="flex flex-col gap-3 pt-2"
+      className="flex flex-col gap-4 pt-2"
       id="published-answers"
     >
-      <h2 className="text-lg font-semibold" id="published-answers-title">
-        Published answers
+      <h2
+        className="flex items-center gap-2 font-serif text-xl font-bold text-foreground"
+        id="published-answers-title"
+      >
+        Answers Feed
+        <span className="rounded bg-secondary px-2 py-1 font-mono text-[0.68rem] font-semibold text-primary">
+          Latest
+        </span>
       </h2>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {answers.map((answer) => (
           <PublicAnswerArticle
             answer={answer}
@@ -71,12 +78,19 @@ function PublicAnswerArticle({
   controls: PublishedAnswerControlState;
   profileUsername: string;
 }) {
+  const location = useLocation();
+  const threadHref = createThreadHref({
+    location,
+    profileUsername,
+    threadPublicId: answer.threadPublicId,
+  });
+
   return (
-    <article className="flex flex-col gap-4 rounded-lg border bg-card p-5 text-card-foreground shadow-sm">
+    <article className="flex flex-col gap-5 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
           {answer.pinPosition === null ? undefined : (
-            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium text-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
               <Pin aria-hidden="true" className="size-3" />
               Pinned {answer.pinPosition}
             </span>
@@ -84,26 +98,17 @@ function PublicAnswerArticle({
           <time dateTime={answer.publishedAt}>
             {formatDate(answer.publishedAt)}
           </time>
-          <Link
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-            to={`/${profileUsername}/a/${answer.threadPublicId}#item-${answer.publicId}`}
-          >
-            View thread
-          </Link>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <LikeButton like={answer.like} />
-          {controls.canManage ? (
-            <PublishedAnswerOwnerControls answer={answer} controls={controls} />
-          ) : undefined}
-        </div>
+        {controls.canManage ? (
+          <PublishedAnswerOwnerControls answer={answer} controls={controls} />
+        ) : undefined}
       </header>
 
       {answer.questionTextMode === "hidden" ||
       answer.questionText === null ? undefined : (
-        <div className="flex flex-col gap-2 border-b pb-4">
-          <p className="whitespace-pre-wrap break-words text-base font-medium leading-7">
+        <div className="flex flex-col gap-2 border-b border-dashed pb-5">
+          <p className="whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
             {answer.questionText}
           </p>
           {answer.asker === undefined ? undefined : (
@@ -118,16 +123,45 @@ function PublicAnswerArticle({
         </div>
       )}
 
-      <p className="whitespace-pre-wrap break-words text-base leading-7">
+      <p className="whitespace-pre-wrap break-words text-[0.96rem] leading-8 text-foreground/85 sm:text-base">
         {answer.answerText}
       </p>
+
+      <footer className="flex flex-col gap-3 border-t border-dashed pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <LikeButton like={answer.like} />
+          <Link
+            className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_4px_14px_var(--accent-glow)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            to={threadHref}
+          >
+            <MessageCircle data-icon="inline-start" />
+            Thread
+          </Link>
+        </div>
+      </footer>
     </article>
   );
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatMediumDateTime(value);
+}
+
+function createThreadHref({
+  location,
+  profileUsername,
+  threadPublicId,
+}: {
+  location: {
+    hash: string;
+    pathname: string;
+    search: string;
+  };
+  profileUsername: string;
+  threadPublicId: string;
+}) {
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
+  const params = new URLSearchParams({ returnTo });
+
+  return `/${profileUsername}/a/${threadPublicId}?${params.toString()}`;
 }

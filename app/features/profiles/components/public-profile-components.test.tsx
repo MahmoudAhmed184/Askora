@@ -1,9 +1,14 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
-import { AskComposer } from "~/features/profiles/components/ask-composer";
+import {
+  AskComposer,
+  AskComposerPreview,
+} from "~/features/profiles/components/ask-composer";
 import { PermissionState } from "~/features/profiles/components/permission-state";
+import { ProfileSideRail } from "~/features/profiles/components/profile-side-rail";
 import { PublicAnswerList } from "~/features/profiles/components/public-answer-list";
 import { UnavailableProfile } from "~/features/profiles/components/unavailable-profile";
 import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
@@ -11,8 +16,21 @@ import type { PublicAskStateAllowed } from "~/features/profiles/ask-permissions.
 import type { PublicAskFlash } from "~/features/profiles/ask-friction.server";
 import type { PublicProfileView } from "~/features/profiles/profile.loader.server";
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+    warning: vi.fn(),
+  },
+}));
+
 describe("public profile components", () => {
-  it("shows ask success and the guest account prompt", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("toasts ask success and the guest account prompt", async () => {
     renderWithRouter(
       <AskComposer
         ask={allowedAsk}
@@ -26,10 +44,13 @@ describe("public profile components", () => {
       />,
     );
 
-    expect(screen.getByText("Question sent.")).toBeInTheDocument();
-    expect(
-      screen.getByText(/create an account to get notified/i),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Question sent.", {
+        description: "Create an account to get notified if a question is answered.",
+        id: "action-toast:success:Question sent.:Create an account to get notified if a question is answered.",
+      });
+    });
+    expect(screen.queryByText("Question sent.")).not.toBeInTheDocument();
   });
 
   it("shows ask field errors and preserves the submitted question", () => {
@@ -57,6 +78,48 @@ describe("public profile components", () => {
     expect(screen.getByRole("textbox", { name: /question/i })).toHaveValue(
       "x".repeat(501),
     );
+  });
+
+  it("fills the public question with a selected prompt suggestion", () => {
+    renderWithRouter(
+      <AskComposer
+        ask={allowedAsk}
+        flash={undefined}
+        profile={profile}
+        timingToken="token"
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Use prompt: What changed your mind recently?",
+      }),
+    );
+
+    expect(screen.getByRole("textbox", { name: /question/i })).toHaveValue(
+      "What changed your mind recently?",
+    );
+  });
+
+  it("renders owner ask preview without a submitting form", () => {
+    const { container } = renderWithRouter(
+      <AskComposerPreview ask={allowedAsk} profile={profile} />,
+    );
+
+    expect(
+      screen.getByRole("region", { name: "Public ask preview" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Public preview")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Question preview" })).toHaveAttribute(
+      "readonly",
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Use prompt: What changed your mind recently?",
+      }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send question" })).toBeDisabled();
+    expect(container.querySelector("form")).toBeNull();
   });
 
   it("shows permission and unavailable states", () => {
@@ -108,10 +171,11 @@ describe("public profile components", () => {
       "break-words",
     );
     expect(screen.getByText(/<script>alert/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View thread" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Thread" })).toHaveAttribute(
       "href",
-      "/person/a/thr_1#item-titem_1",
+      "/person/a/thr_1?returnTo=%2F",
     );
+    expect(screen.queryByRole("link", { name: "View thread" })).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /like answer \(0\)/i }),
     ).toBeDisabled();
@@ -145,12 +209,32 @@ describe("public profile components", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Manage"));
+    openPublishedAnswerMenu();
 
-    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Pin" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Unpublish" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Edit silently" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Pin" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Unpublish" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Edit silently" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Edit published answer" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save answer" })).toBeEnabled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close edit published answer" }),
+    );
+    openPublishedAnswerMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unpublish" }));
+
+    expect(
+      screen.getByRole("alertdialog", { name: "Unpublish answer?" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Unpublish answer" }),
+    ).toBeEnabled();
 
     ownerRender.unmount();
 
@@ -162,7 +246,9 @@ describe("public profile components", () => {
       />,
     );
 
-    expect(screen.queryByText("Manage")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /manage published answer/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("disables owner controls for suspended owners", () => {
@@ -174,12 +260,39 @@ describe("public profile components", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Manage"));
+    expect(
+      screen.getByRole("button", { name: /manage published answer/i }),
+    ).toBeDisabled();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Pin" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Unpublish" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+  it("renders profile side rail pinned threads without ask state", () => {
+    renderWithRouter(
+      <ProfileSideRail
+        answers={[
+          createPublishedAnswer({
+            like: {
+              threadItemPublicId: "titem_1",
+              isLiked: false,
+              count: 2,
+              disabled: false,
+            },
+            pinPosition: 1,
+            questionText: "What changed your mind recently?",
+          }),
+        ]}
+        profile={profile}
+      />,
+    );
+
+    expect(screen.queryByText("Ask State")).not.toBeInTheDocument();
+    expect(screen.getByText("Pinned Threads")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /what changed your mind recently/i }),
+    ).toHaveAttribute(
+      "href",
+      "/person/a/thr_1?returnTo=%2F",
+    );
   });
 });
 
@@ -199,6 +312,12 @@ function renderWithRouter(element: React.ReactNode) {
   return render(<RouterProvider router={router} />);
 }
 
+function openPublishedAnswerMenu() {
+  fireEvent.pointerDown(
+    screen.getByRole("button", { name: /manage published answer/i }),
+  );
+}
+
 const allowedAsk = {
   status: "allowed",
   defaultIdentity: "anonymous",
@@ -212,6 +331,11 @@ const profile = {
   displayName: "Person",
   avatarUrl: null,
   bio: null,
+  askSettings: {
+    acceptingQuestions: true,
+    anonymousQuestionsEnabled: true,
+    permission: "everyone",
+  },
   counts: {
     answers: 0,
     followers: 0,

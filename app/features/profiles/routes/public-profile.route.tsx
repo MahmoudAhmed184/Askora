@@ -1,13 +1,20 @@
 import { data, redirect } from "react-router";
 
+import { DashboardShell } from "~/components/app/dashboard-shell";
 import { PublicShell } from "~/components/app/public-shell";
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
-import { AskComposer } from "~/features/profiles/components/ask-composer";
+import {
+  getCurrentSessionSummaryFromContext,
+  type CurrentSessionSummary,
+} from "~/features/auth/auth.server";
+import {
+  AskComposer,
+} from "~/features/profiles/components/ask-composer";
 import { PermissionState } from "~/features/profiles/components/permission-state";
 import {
   BetaNoindexBadge,
   ProfileHeader,
 } from "~/features/profiles/components/profile-header";
+import { ProfileSideRail } from "~/features/profiles/components/profile-side-rail";
 import { PublicAnswerList } from "~/features/profiles/components/public-answer-list";
 import { UnavailableProfile } from "~/features/profiles/components/unavailable-profile";
 import { findPublishedAnswersForProfile } from "~/features/answers/answer.server";
@@ -22,6 +29,7 @@ import {
 } from "~/features/profiles/profile.loader.server";
 import { getPublishedAnswerControlState } from "~/features/answers/published-answer-controls.server";
 import { findPublicProfileSocialStats } from "~/features/social/social-data.server";
+import { loadAppShellData } from "~/features/dashboard/app-shell.server";
 import {
   createPublicNoindexHeaders,
   createRobotsMetaTag,
@@ -30,16 +38,11 @@ import { getPublicAppConfig } from "~/lib/config.server";
 
 import type { Route } from "./+types/public-profile.route";
 
-export async function loader({ params, request }: Route.LoaderArgs) {
+export async function loader({ context, params, request }: Route.LoaderArgs) {
   const username = params.username;
+  const session = getCurrentSessionSummaryFromContext(context);
 
-  const { getCurrentSessionSummary } = await import(
-    "~/features/auth/auth.server"
-  );
-  const [resolution, session] = await Promise.all([
-    resolvePublicProfile({ username }),
-    getCurrentSessionSummary(request),
-  ]);
+  const resolution = await resolvePublicProfile({ username });
   const headers = new Headers();
 
   if (hasPublicAskFlashCookie(request)) {
@@ -58,6 +61,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
           status: "unavailable" as const,
           username: resolution.username,
         },
+        shell: await loadShellForSession(session),
       },
       {
         headers: createPublicNoindexHeaders({
@@ -77,6 +81,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
           status: "unavailable" as const,
           username: resolution.username,
         },
+        shell: await loadShellForSession(session),
       },
       {
         headers: createPublicNoindexHeaders({
@@ -87,7 +92,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     );
   }
 
-  const [publishedAnswers, social] = await Promise.all([
+  const completedSession =
+    session.status === "authenticated" && session.profileStatus === "complete"
+      ? session
+      : undefined;
+  const [publishedAnswers, social, shell] = await Promise.all([
     findPublishedAnswersForProfile({
       profileId: resolution.profile.id,
       session,
@@ -96,6 +105,9 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       profileId: resolution.profile.id,
       viewerProfileId: getViewerProfileId(session),
     }),
+    completedSession === undefined
+      ? undefined
+      : loadAppShellData({ session: completedSession }),
   ]);
 
   return data(
@@ -112,6 +124,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         session,
         social,
       }),
+      shell,
     },
     { headers },
   );
@@ -120,6 +133,12 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 function getViewerProfileId(session: CurrentSessionSummary) {
   return session.status === "authenticated" && session.profileStatus === "complete"
     ? session.profile.id
+    : undefined;
+}
+
+function loadShellForSession(session: CurrentSessionSummary) {
+  return session.status === "authenticated" && session.profileStatus === "complete"
+    ? loadAppShellData({ session })
     : undefined;
 }
 
@@ -168,34 +187,91 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function PublicProfileRoute({ loaderData }: Route.ComponentProps) {
   if (loaderData.page.status === "unavailable") {
-    return <UnavailableProfile username={loaderData.page.username} />;
+    const content = <UnavailableProfile username={loaderData.page.username} />;
+
+    if (loaderData.shell !== undefined) {
+      return <DashboardShell shell={loaderData.shell}>{content}</DashboardShell>;
+    }
+
+    return <PublicShell>{content}</PublicShell>;
   }
 
   const { page } = loaderData;
+  const isOwnerView = page.publishedAnswerControls.canManage;
+  const hasPinnedAnswers = page.publishedAnswers.some(
+    (answer) => answer.pinPosition !== null,
+  );
+  const content = (
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+      {loaderData.app.betaNoindex ? (
+        <div className="flex justify-end">
+          <BetaNoindexBadge />
+        </div>
+      ) : null}
+      <ProfileHeader
+        follow={page.follow}
+        isOwnerView={isOwnerView}
+        profile={page.profile}
+      />
+      <div
+        className={
+          hasPinnedAnswers
+            ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start"
+            : "flex flex-col gap-6"
+        }
+      >
+        <div className="flex min-w-0 flex-col gap-6">
+          {renderAskSurface({ isOwnerView, page })}
+          <div>
+            <PublicAnswerList
+              answers={page.publishedAnswers}
+              controls={page.publishedAnswerControls}
+              profileUsername={page.profile.username}
+            />
+          </div>
+        </div>
+        {hasPinnedAnswers ? (
+          <ProfileSideRail
+            answers={page.publishedAnswers}
+            profile={page.profile}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+
+  if (loaderData.shell !== undefined) {
+    return <DashboardShell shell={loaderData.shell}>{content}</DashboardShell>;
+  }
 
   return (
     <PublicShell>
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-end">
-          {loaderData.app.betaNoindex ? <BetaNoindexBadge /> : null}
-        </div>
-        <ProfileHeader follow={page.follow} profile={page.profile} />
-        {page.ask.status === "allowed" ? (
-          <AskComposer
-            ask={page.ask}
-            flash={page.askFlash}
-            profile={page.profile}
-            timingToken={page.timingToken ?? ""}
-          />
-        ) : (
-          <PermissionState ask={page.ask} />
-        )}
-        <PublicAnswerList
-          answers={page.publishedAnswers}
-          controls={page.publishedAnswerControls}
-          profileUsername={page.profile.username}
-        />
-      </div>
+      {content}
     </PublicShell>
+  );
+}
+
+function renderAskSurface({
+  isOwnerView,
+  page,
+}: {
+  isOwnerView: boolean;
+  page: Extract<Route.ComponentProps["loaderData"]["page"], { status: "available" }>;
+}) {
+  if (page.ask.status !== "allowed") {
+    return isOwnerView ? null : <PermissionState ask={page.ask} />;
+  }
+
+  if (isOwnerView) {
+    return null;
+  }
+
+  return (
+    <AskComposer
+      ask={page.ask}
+      flash={page.askFlash}
+      profile={page.profile}
+      timingToken={page.timingToken ?? ""}
+    />
   );
 }
