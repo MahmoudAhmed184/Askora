@@ -1,9 +1,21 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 import { ShareProfilePanel } from "~/features/profile-setup/components/share-profile-panel";
 
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
+
 describe("ShareProfilePanel", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders the canonical URL and share controls", () => {
     renderShareProfilePanel();
 
@@ -25,7 +37,12 @@ describe("ShareProfilePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /copy/i }));
 
     expect(writeText).toHaveBeenCalledWith("https://app.example.com/person");
-    expect(await screen.findByText(/copied/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Profile URL copied.", {
+        id: "profile-url-copied",
+      });
+    });
+    expect(screen.queryByText(/profile url copied/i)).not.toBeInTheDocument();
   });
 });
 

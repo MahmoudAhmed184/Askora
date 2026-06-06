@@ -36,14 +36,12 @@ export function SetupForm({ defaults, disabled, result }: SetupFormProps) {
   const usernameMessage = fieldErrors.username ?? usernamePolicyIssue;
 
   return (
-    <Form aria-label="Set up profile" className="border-y py-6" method="post">
+    <Form
+      aria-label="Set up profile"
+      className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7"
+      method="post"
+    >
       <FieldGroup>
-        {result?.formError === undefined ? undefined : (
-          <p className="text-sm leading-6 text-destructive" role="alert">
-            {result.formError}
-          </p>
-        )}
-
         <Field data-invalid={usernameMessage !== undefined ? true : undefined}>
           <FieldLabel htmlFor="username">Username</FieldLabel>
           <div className="relative">

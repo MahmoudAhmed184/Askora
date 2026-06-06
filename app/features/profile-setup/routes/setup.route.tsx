@@ -1,14 +1,20 @@
 import { AlertTriangle, ArrowRight, Link2, ShieldCheck } from "lucide-react";
-import type { ReactNode } from "react";
 import { data, Link, redirect, useActionData } from "react-router";
 
 import type { Route } from "./+types/setup.route";
+import { ActionToast } from "~/components/app/action-toast";
+import {
+  isSessionSuspended,
+  requireIncompleteProfileSessionFromContext,
+} from "~/features/auth/auth.server";
+import { OnboardingShell } from "~/features/profile-setup/components/onboarding-shell";
 import { SetupForm } from "~/features/profile-setup/components/setup-form";
 import {
   getProfileSetupDefaults,
   submitProfileSetup,
   type ProfileSetupFormResult,
 } from "~/features/profile-setup/profile-setup.server";
+import { createSetupShareAccessCookieHeader } from "~/features/profile-setup/setup-share-access.server";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 
@@ -16,11 +22,8 @@ interface SetupActionData {
   setup: ProfileSetupFormResult;
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { isSessionSuspended, requireIncompleteProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireIncompleteProfileSession(request);
+export function loader({ context }: Route.LoaderArgs) {
+  const session = requireIncompleteProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -32,11 +35,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const { requireIncompleteProfileSession } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await requireIncompleteProfileSession(request);
+export async function action({ context, request }: Route.ActionArgs) {
+  const session = requireIncompleteProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -48,7 +48,11 @@ export async function action({ request }: Route.ActionArgs) {
   });
 
   if (result.status === "created") {
-    return redirect("/setup/share");
+    return redirect("/setup/share", {
+      headers: {
+        "Set-Cookie": createSetupShareAccessCookieHeader(result.profile.id),
+      },
+    });
   }
 
   return data<SetupActionData>(
@@ -65,15 +69,20 @@ export default function SetupRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
 
   return (
-    <OnboardingShell>
-      <div className="grid gap-10 py-4 lg:min-h-[calc(100svh-10rem)] lg:grid-cols-[minmax(0,0.92fr)_minmax(340px,0.68fr)] lg:items-center">
-        <section className="flex max-w-2xl flex-col gap-6">
+    <OnboardingShell activeStep="profile">
+      <ActionToast
+        message={actionData?.setup.formError}
+        tone="error"
+        trigger={actionData?.setup}
+      />
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-start">
+        <section className="flex min-w-0 flex-col gap-5">
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">Profile setup</Badge>
             <Badge variant="outline">One public link</Badge>
           </div>
           <div className="flex flex-col gap-4">
-            <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">
+            <h1 className="font-serif text-4xl font-bold leading-tight text-primary sm:text-5xl">
               Choose the profile people will use to ask you questions.
             </h1>
             <p className="max-w-xl text-base leading-7 text-muted-foreground">
@@ -115,7 +124,7 @@ function getProfileSetupResponseStatus(result: ProfileSetupFormResult) {
 
 function SuspendedNotice() {
   return (
-    <div className="flex items-start gap-3 border-l px-4 py-1 text-sm leading-6 text-muted-foreground">
+    <div className="flex items-start gap-3 rounded-2xl border bg-secondary/70 px-4 py-3 text-sm leading-6 text-muted-foreground">
       <AlertTriangle
         aria-hidden="true"
         className="mt-0.5 size-4 shrink-0 text-destructive"
@@ -127,7 +136,10 @@ function SuspendedNotice() {
 
 function SetupPreview() {
   return (
-    <aside aria-label="Profile setup preview" className="border-y py-6 lg:pl-6">
+    <aside
+      aria-label="Profile setup preview"
+      className="rounded-3xl border bg-card p-6 shadow-[var(--shadow-card)] lg:p-7"
+    >
       <div className="flex flex-col gap-5">
         <div className="flex items-center gap-3 rounded-full border bg-card px-3 py-2">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
@@ -156,26 +168,5 @@ function SetupPreview() {
         </Button>
       </div>
     </aside>
-  );
-}
-
-function OnboardingShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="border-b bg-background/90">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-4">
-          <Link className="flex items-center gap-2.5 text-sm font-semibold" to="/">
-            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm text-primary-foreground">
-              Q
-            </span>
-            <span>Q&A Platform</span>
-          </Link>
-          <span className="text-sm text-muted-foreground">Setup</span>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8 sm:py-12">
-        {children}
-      </main>
-    </div>
   );
 }

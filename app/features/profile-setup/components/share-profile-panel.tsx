@@ -1,6 +1,8 @@
 import { Check, Clipboard, Share2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
@@ -20,19 +22,41 @@ export function ShareProfilePanel({
   async function copyProfileUrl() {
     if (!hasClipboard()) {
       setStatus("unavailable");
+      toast.error("Copy is unavailable in this browser.", {
+        id: "profile-url-copy-unavailable",
+      });
       return;
     }
 
-    await navigator.clipboard.writeText(canonicalUrl);
-    setStatus("copied");
+    try {
+      await navigator.clipboard.writeText(canonicalUrl);
+      setStatus("copied");
+      toast.success("Profile URL copied.", { id: "profile-url-copied" });
+    } catch {
+      setStatus("unavailable");
+      toast.error("Copy is unavailable in this browser.", {
+        id: "profile-url-copy-unavailable",
+      });
+    }
   }
 
   async function shareProfileUrl() {
     if (hasNativeShare()) {
-      await navigator.share({
-        title: `${displayName} on Q&A Platform`,
-        url: canonicalUrl,
-      });
+      try {
+        await navigator.share({
+          title: `${displayName} on Q&A Platform`,
+          url: canonicalUrl,
+        });
+        toast.success("Native share sheet requested.", {
+          id: "profile-url-native-share",
+        });
+      } catch (error) {
+        if (!isAbortError(error)) {
+          toast.error("Share is unavailable in this browser.", {
+            id: "profile-url-native-share-unavailable",
+          });
+        }
+      }
       return;
     }
 
@@ -40,13 +64,19 @@ export function ShareProfilePanel({
   }
 
   return (
-    <section aria-labelledby="share-profile-heading" className="border-y py-6">
+    <section
+      aria-labelledby="share-profile-heading"
+      className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7"
+    >
       <div className="flex flex-col gap-2">
+        <div>
+          <Badge variant="secondary">Setup complete</Badge>
+        </div>
         <p className="text-sm font-medium text-muted-foreground">
           Public profile URL
         </p>
         <h1
-          className="max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl"
+          className="max-w-2xl font-serif text-3xl font-bold leading-tight text-primary sm:text-4xl"
           id="share-profile-heading"
         >
           Your profile is ready to share.
@@ -88,33 +118,7 @@ export function ShareProfilePanel({
           </Button>
         </div>
       </div>
-
-      <ShareMessage status={status} />
     </section>
-  );
-}
-
-function ShareMessage({ status }: { status: ShareStatus }) {
-  if (status === "idle") {
-    return (
-      <p className="mt-4 text-sm leading-6 text-muted-foreground">
-        This canonical URL is reserved for your profile.
-      </p>
-    );
-  }
-
-  if (status === "copied") {
-    return (
-      <p className="mt-4 text-sm leading-6 text-foreground" role="status">
-        Profile URL copied.
-      </p>
-    );
-  }
-
-  return (
-    <p className="mt-4 text-sm leading-6 text-destructive" role="status">
-      Copy is unavailable in this browser.
-    </p>
   );
 }
 
@@ -132,4 +136,8 @@ function hasNativeShare() {
     "share" in navigator &&
     typeof navigator.share === "function"
   );
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }
