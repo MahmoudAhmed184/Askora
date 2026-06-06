@@ -1,11 +1,24 @@
-import { ShieldCheck } from "lucide-react";
-import { data, redirect, useActionData } from "react-router";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Inbox,
+  MessageCircle,
+  ShieldCheck,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import { data, Link, redirect, useActionData } from "react-router";
 
 import type { Route } from "./+types/login.route";
+import {
+  ActionToast,
+  type ActionToastTone,
+} from "~/components/app/action-toast";
 import { PublicShell } from "~/components/app/public-shell";
 import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import { getAuthProviderStatus } from "~/lib/config.server";
 import { getFormString, parseFormData } from "~/lib/zod-form";
+import { auth, getCurrentSessionSummaryFromContext } from "~/features/auth/auth.server";
 import {
   getPostAuthRedirectPath,
 } from "~/features/auth/post-auth-redirect.server";
@@ -29,11 +42,8 @@ const MAGIC_LINK_IP_RATE_LIMIT_MAX = 20;
 
 type LoginIntent = "google" | "magic-link";
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const { getCurrentSessionSummary } = await import(
-    "~/features/auth/auth.server"
-  );
-  const session = await getCurrentSessionSummary(request);
+export function loader({ context }: Route.LoaderArgs) {
+  const session = getCurrentSessionSummaryFromContext(context);
 
   if (session.status === "authenticated") {
     return redirect(getPostAuthRedirectPath(session));
@@ -105,38 +115,128 @@ export function meta() {
 
 export default function LoginRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
+  const loginToast = getLoginToast(actionData?.login);
 
   return (
-    <PublicShell>
-      <div className="mx-auto grid w-full max-w-4xl gap-8 py-4 lg:min-h-[calc(100svh-15rem)] lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-        <section className="flex flex-col gap-5">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">Private beta</Badge>
-            <Badge variant="outline">Invite required</Badge>
+    <PublicShell showSessionEntry={false}>
+      <ActionToast
+        message={loginToast?.message}
+        tone={loginToast?.tone ?? "info"}
+        trigger={loginToast?.trigger}
+      />
+      <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.78fr)] lg:items-center">
+        <section className="relative min-w-0 overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
+          <div
+            aria-hidden="true"
+            className="h-36 bg-[linear-gradient(135deg,oklch(0.72_0.13_310),oklch(0.47_0.15_294))] sm:h-44"
+          >
+            <div className="size-full opacity-15 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px),linear-gradient(to_bottom,var(--primary)_1px,transparent_1px)] [background-size:22px_22px]" />
           </div>
-          <div className="flex flex-col gap-3">
-            <h1 className="max-w-xl text-4xl font-semibold leading-tight sm:text-5xl">
-              Claim your Q&A profile when your invite is ready.
+
+          <div className="p-6 pt-0 sm:p-8 sm:pt-0">
+            <div className="-mt-12 flex flex-wrap items-end justify-between gap-4">
+              <div className="flex size-24 items-center justify-center rounded-full border-4 border-card bg-secondary font-serif text-3xl font-extrabold text-primary shadow-[0_8px_22px_oklch(0.17_0.035_292_/_0.16)]">
+                QA
+              </div>
+              <div className="flex flex-wrap gap-2 pb-1">
+                <Badge variant="secondary">Private beta</Badge>
+                <Badge variant="outline">Invite gate</Badge>
+              </div>
+            </div>
+
+            <h1 className="mt-7 max-w-2xl font-serif text-4xl font-extrabold leading-tight text-foreground sm:text-5xl">
+              Enter the private side of the public profile.
             </h1>
-            <p className="max-w-md text-base leading-7 text-muted-foreground">
-              Sign in is intentionally limited while profiles, invites, and
-              email delivery are wired into the next slice.
+            <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+              Review incoming questions, draft answers, and publish only the
+              threads you want readers to see.
             </p>
-          </div>
-          <div className="flex items-start gap-3 border-l px-4 py-1 text-sm leading-6 text-muted-foreground">
-            <ShieldCheck
-              aria-hidden="true"
-              className="mt-0.5 size-4 shrink-0 text-foreground"
-            />
-            Anonymous questions are anonymous to recipients and viewers, not to
-            the platform.
+
+            <div className="mt-7 border-y border-dashed py-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="flex items-center gap-2 font-mono text-xs font-bold text-primary">
+                  <Inbox data-icon="inline-start" />
+                  Waiting in inbox
+                </p>
+                <Badge variant="secondary">3 private questions</Badge>
+              </div>
+              <p className="mt-4 max-w-xl font-serif text-2xl font-bold italic leading-9 text-primary">
+                "Which answer should stay private until it is actually useful?"
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <AccessSignal
+                icon={<ShieldCheck data-icon="inline-start" />}
+                label="Invite"
+                text="Beta codes create new accounts."
+              />
+              <AccessSignal
+                icon={<MessageCircle data-icon="inline-start" />}
+                label="Draft"
+                text="Answers stay private first."
+              />
+              <AccessSignal
+                icon={<CheckCircle2 data-icon="inline-start" />}
+                label="Publish"
+                text="Threads appear by choice."
+              />
+            </div>
           </div>
         </section>
 
-        <LoginPanel auth={loaderData.auth} result={actionData?.login} />
+        <div className="flex w-full flex-col gap-4">
+          <LoginPanel auth={loaderData.auth} />
+          <Button asChild className="w-fit px-6" variant="outline">
+            <Link to="/">
+              Back to landing
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        </div>
       </div>
     </PublicShell>
   );
+}
+
+function AccessSignal({
+  icon,
+  label,
+  text,
+}: {
+  icon: ReactNode;
+  label: string;
+  text: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="flex items-center gap-1.5 font-mono text-[0.68rem] font-bold text-primary">
+        {icon}
+        {label}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
+    </div>
+  );
+}
+
+function getLoginToast(
+  result: LoginActionData["login"] | undefined,
+):
+  | {
+      message: string;
+      tone: ActionToastTone;
+      trigger: unknown;
+    }
+  | undefined {
+  if (result === undefined) {
+    return undefined;
+  }
+
+  return {
+    message: result.message,
+    tone: result.status === "magic_link_sent" ? "success" : "error",
+    trigger: result,
+  };
 }
 
 function getLoginIntent(formData: FormData): LoginIntent | undefined {
@@ -187,7 +287,6 @@ async function startGoogleSignIn({
   }
 
   try {
-    const { auth } = await import("~/features/auth/auth.server");
     const authResponse = await auth.api.signInSocial({
       body: {
         provider: "google",
@@ -268,7 +367,6 @@ async function sendMagicLinkSignIn({
   }
 
   try {
-    const { auth } = await import("~/features/auth/auth.server");
     const authResponse = await auth.api.signInMagicLink({
       body: {
         email: parsed.value.email,

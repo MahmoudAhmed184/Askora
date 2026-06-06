@@ -1,4 +1,5 @@
 import { PublicShell } from "~/components/app/public-shell";
+import { Badge } from "~/components/ui/badge";
 
 export function meta() {
   return [{ title: "Privacy | qna-platform" }];
@@ -7,8 +8,8 @@ export function meta() {
 export default function PrivacyRoute() {
   return (
     <PublicShell>
-      <div className="grid gap-8 py-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="flex flex-col gap-3 text-sm leading-6 text-muted-foreground">
+      <div className="mx-auto grid max-w-5xl gap-7 py-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="flex h-fit flex-col gap-4 rounded-3xl border bg-card p-6 text-sm leading-6 text-muted-foreground shadow-[var(--shadow-card)]">
           <p className="font-medium text-foreground">Beta policy</p>
           <p>
             A concise placeholder for the external beta privacy stance. Final
@@ -16,17 +17,18 @@ export default function PrivacyRoute() {
             the app.
           </p>
         </aside>
-        <article className="flex max-w-3xl flex-col gap-8">
-          <header className="flex flex-col gap-3">
-            <p className="text-sm font-medium text-muted-foreground">
-              Privacy stance
-            </p>
-            <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">
+        <article className="overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
+          <header className="border-b bg-secondary/70 p-6 sm:p-7">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Badge variant="outline">Privacy stance</Badge>
+              <Badge variant="secondary">Limited retention</Badge>
+            </div>
+            <h1 className="font-serif text-5xl font-extrabold leading-tight text-foreground">
               Privacy
             </h1>
           </header>
-          <div className="divide-y border-y text-sm leading-7">
-            <section className="flex flex-col gap-3 py-5">
+          <div className="divide-y text-sm leading-7">
+            <section className="flex flex-col gap-3 p-6 sm:p-7">
               <h2 className="text-base font-semibold text-foreground">
                 Anonymous to people
               </h2>
@@ -36,7 +38,7 @@ export default function PrivacyRoute() {
                 limited safety metadata to prevent abuse and support reports.
               </p>
             </section>
-            <section className="flex flex-col gap-3 py-5">
+            <section className="flex flex-col gap-3 p-6 sm:p-7">
               <h2 className="text-base font-semibold text-foreground">
                 Retention during beta
               </h2>
@@ -46,7 +48,7 @@ export default function PrivacyRoute() {
                 report-linked safety metadata for about 180 days during beta.
               </p>
             </section>
-            <section className="flex flex-col gap-3 py-5">
+            <section className="flex flex-col gap-3 p-6 sm:p-7">
               <h2 className="text-base font-semibold text-foreground">
                 Account deletion
               </h2>
@@ -58,7 +60,7 @@ export default function PrivacyRoute() {
                 abuse prevention.
               </p>
             </section>
-            <section className="flex flex-col gap-3 py-5">
+            <section className="flex flex-col gap-3 p-6 sm:p-7">
               <h2 className="text-base font-semibold text-foreground">
                 Reports and minors
               </h2>

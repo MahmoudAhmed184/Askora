@@ -26,11 +26,11 @@ describe("HomeRoute", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: /receive questions privately/i,
+        name: /one public link for questions worth answering/i,
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /log in or create profile/i }),
+      screen.getByRole("link", { name: /request or sign in/i }),
     ).toHaveAttribute("href", "/login");
     expect(
       screen.getByRole("form", { name: /request beta access/i }),
@@ -44,8 +44,10 @@ describe("HomeRoute", () => {
       emailMagicLinkConfigured: false,
     });
 
-    expect(screen.getByRole("textbox", { name: /request access/i })).toBeDisabled();
-    expect(screen.getByText(/waitlist storage is disabled/i)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /email/i })).toBeDisabled();
+    expect(
+      screen.queryByText(/waitlist storage is disabled/i),
+    ).not.toBeInTheDocument();
   });
 });
 

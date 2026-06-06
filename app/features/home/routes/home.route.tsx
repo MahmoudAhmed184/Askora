@@ -1,21 +1,27 @@
 import {
   ArrowRight,
-  CheckCircle2,
-  EyeOff,
   Mail,
-  Link2,
-  LockKeyhole,
   MessageCircle,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { data, Form, Link, useActionData } from "react-router";
+import {
+  data,
+  Form,
+  Link,
+  redirect,
+  useActionData,
+} from "react-router";
 
+import {
+  ActionToast,
+  type ActionToastTone,
+} from "~/components/app/action-toast";
 import { PublicShell } from "~/components/app/public-shell";
 import { PendingButton } from "~/components/app/pending-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
 import {
   Field,
   FieldDescription,
@@ -24,28 +30,11 @@ import {
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { getAuthProviderStatus } from "~/lib/config.server";
+import { getCurrentSessionSummaryFromContext } from "~/features/auth/auth.server";
 import { parseFormData } from "~/lib/zod-form";
 import { submitWaitlistEntry } from "~/features/home/waitlist.server";
 import { waitlistSubmissionSchema } from "~/features/home/waitlist.schema";
 import type { Route } from "./+types/home.route";
-
-const valueProps = [
-  {
-    icon: Link2,
-    title: "One profile link",
-    description: "A focused place to receive questions without public discovery.",
-  },
-  {
-    icon: LockKeyhole,
-    title: "Private by default",
-    description: "Questions stay out of public view unless the recipient answers.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Safety-aware",
-    description: "Anonymous to viewers, with platform-side controls planned.",
-  },
-];
 
 interface WaitlistActionData {
   waitlist:
@@ -64,7 +53,15 @@ interface WaitlistActionData {
       };
 }
 
-export function loader() {
+export function loader({ context }: Route.LoaderArgs) {
+  const session = getCurrentSessionSummaryFromContext(context);
+
+  if (session.status === "authenticated") {
+    return redirect(
+      session.profileStatus === "complete" ? "/dashboard/feed" : "/setup",
+    );
+  }
+
   return {
     auth: getAuthProviderStatus(),
   };
@@ -117,90 +114,201 @@ export function meta() {
 
 export default function HomeRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
+  const waitlistToast = getWaitlistToast({
+    databaseConfigured: loaderData.auth.databaseConfigured,
+    result: actionData?.waitlist,
+  });
 
   return (
     <PublicShell>
-      <div className="flex flex-col gap-12">
-        <section className="grid gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.68fr)] lg:items-center">
-          <div className="flex max-w-3xl flex-col gap-7">
+      <ActionToast
+        message={waitlistToast?.message}
+        tone={waitlistToast?.tone ?? "info"}
+        trigger={waitlistToast?.trigger}
+      />
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10">
+        <section className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1fr)] lg:items-center">
+          <div className="flex min-w-0 flex-col gap-6">
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">Invite-only beta</Badge>
-              <Badge variant="outline">No public discovery</Badge>
+              <Badge variant="outline">Private questions first</Badge>
             </div>
-            <div className="flex flex-col gap-5">
-              <h1 className="max-w-2xl text-4xl font-semibold leading-[1.04] text-foreground sm:text-6xl">
-                Receive questions privately. Publish only what you answer.
+            <div className="flex flex-col gap-4">
+              <h1 className="max-w-3xl font-serif text-4xl font-extrabold leading-tight text-foreground sm:text-5xl lg:text-[3.7rem]">
+                One public link for questions worth answering.
               </h1>
-              <p className="max-w-xl text-lg leading-8 text-muted-foreground">
-                A focused Q&A profile for creators and friend groups: share one
-                link, keep incoming questions private, and answer with intent.
+              <p className="max-w-2xl text-base leading-8 text-muted-foreground">
+                Receive questions privately, choose what becomes public, and
+                turn the best answers into readable threads without opening a
+                full social inbox.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg">
+              <Button asChild className="px-6">
                 <Link to="/login">
-                  Log in or create profile
+                  Request or sign in
                   <ArrowRight data-icon="inline-end" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
+              <Button asChild className="px-6" variant="outline">
                 <Link to="/privacy">Read privacy stance</Link>
               </Button>
             </div>
-            <WaitlistForm
-              disabled={!loaderData.auth.databaseConfigured}
-              result={actionData?.waitlist}
-            />
+            <FlowRail />
           </div>
 
-          <ProductPreview />
+          <LandingPreview />
         </section>
 
-        <section
-          aria-label="Product principles"
-          className="grid border-y sm:grid-cols-3"
-        >
-          {valueProps.map(({ description, icon: Icon, title }) => (
-            <div
-              className="flex gap-4 border-b py-5 last:border-b-0 sm:border-b-0 sm:border-r sm:px-5 sm:first:pl-0 sm:last:border-r-0 sm:last:pr-0"
-              key={title}
-            >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                <Icon aria-hidden="true" className="size-5" />
-              </span>
-              <div className="flex flex-col gap-1">
-                <h2 className="text-sm font-semibold">{title}</h2>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              </div>
-            </div>
-          ))}
+        <section className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] lg:items-start">
+          <div className="px-1 py-3 sm:px-0 lg:py-8">
+            <Badge variant="secondary">How it works</Badge>
+            <h2 className="mt-4 max-w-2xl font-serif text-3xl font-extrabold leading-tight text-foreground">
+              A profile, an inbox, and public threads only when you choose.
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
+              Q&A Platform keeps the intake small: no public discovery feed, no
+              anonymous identity reveal for visitors, and no published answer
+              unless the profile owner decides it should exist.
+            </p>
+          </div>
+
+          <WaitlistForm disabled={!loaderData.auth.databaseConfigured} />
         </section>
       </div>
     </PublicShell>
   );
 }
 
-function WaitlistForm({
-  disabled,
+function getWaitlistToast({
+  databaseConfigured,
   result,
 }: {
-  disabled: boolean;
+  databaseConfigured: boolean;
   result: WaitlistActionData["waitlist"] | undefined;
+}):
+  | {
+      message: string;
+      tone: ActionToastTone;
+      trigger: unknown;
+    }
+  | undefined {
+  if (result !== undefined) {
+    return {
+      message: result.message,
+      tone: result.status === "submitted" ? "success" : "error",
+      trigger: result,
+    };
+  }
+
+  if (!databaseConfigured) {
+    return {
+      message: "Waitlist storage is disabled until the database is configured.",
+      tone: "warning",
+      trigger: "waitlist-disabled",
+    };
+  }
+
+  return undefined;
+}
+
+function FlowRail() {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border bg-card/70 p-2 shadow-[0_6px_20px_oklch(0.17_0.035_292_/_0.05)] sm:w-fit sm:flex-row sm:rounded-full">
+      <FlowStep icon={<Sparkles data-icon="inline-start" />} label="Ask" />
+      <FlowStep icon={<ShieldCheck data-icon="inline-start" />} label="Review" />
+      <FlowStep icon={<MessageCircle data-icon="inline-start" />} label="Thread" />
+    </div>
+  );
+}
+
+function FlowStep({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-foreground">
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+function LandingPreview() {
+  return (
+    <div className="flex flex-col gap-4">
+      <section className="relative overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
+        <div
+          aria-hidden="true"
+          className="relative z-0 h-32 bg-[linear-gradient(135deg,oklch(0.70_0.13_310),oklch(0.50_0.15_295))] sm:h-40"
+        >
+          <div className="absolute inset-0 opacity-15 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px),linear-gradient(to_bottom,var(--primary)_1px,transparent_1px)] [background-size:20px_20px]" />
+        </div>
+        <div className="absolute left-6 top-32 z-20 flex size-24 -translate-y-1/2 items-center justify-center rounded-full border-4 border-card bg-secondary font-serif text-3xl font-extrabold text-primary shadow-[0_8px_22px_oklch(0.17_0.035_292_/_0.16)] sm:left-7 sm:top-40">
+          QA
+        </div>
+        <div className="relative z-10 p-6 pt-14 sm:p-7 sm:pt-16">
+          <div className="min-w-0 pl-28 sm:pl-32">
+            <h2 className="truncate font-serif text-3xl font-extrabold text-foreground">
+              Maya Chen
+            </h2>
+            <p className="font-mono text-xs text-muted-foreground">
+              @mayachen
+            </p>
+          </div>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
+            Notes on studying, quiet ambition, and internet life. Ask direct
+            questions. I answer the useful ones.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Badge variant="secondary">142 answers</Badge>
+            <Badge variant="secondary">2.4k followers</Badge>
+            <Badge variant="secondary">18k reactions</Badge>
+          </div>
+        </div>
+      </section>
+
+      <article className="rounded-3xl border bg-card p-5 text-card-foreground shadow-[var(--shadow-card)] sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <Badge variant="secondary">New question</Badge>
+          <span className="font-mono text-[0.68rem] text-muted-foreground">
+            private
+          </span>
+        </div>
+        <p className="mt-4 font-serif text-xl font-bold italic leading-8 text-foreground">
+          "What changed your mind recently?"
+        </p>
+        <div className="mt-5 border-t border-dashed pt-4">
+          <Button className="w-full justify-center">
+            <MessageCircle data-icon="inline-start" />
+            Answer privately
+          </Button>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function WaitlistForm({
+  disabled,
+}: {
+  disabled: boolean;
 }) {
   return (
     <Form
       aria-label="Request beta access"
-      className="max-w-xl border-y py-5"
+      className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7"
       method="post"
     >
+      <header className="mb-5 border-b pb-5">
+        <h2 className="text-base font-bold text-foreground">Request access</h2>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          The form records interest. It does not imply instant access.
+        </p>
+      </header>
       <FieldGroup>
         <Field data-disabled={disabled ? true : undefined}>
-          <FieldLabel htmlFor="waitlist-email">Request access</FieldLabel>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <FieldLabel htmlFor="waitlist-email">Email</FieldLabel>
+          <div className="flex flex-col gap-3">
             <Input
-              aria-describedby="waitlist-description waitlist-message"
+              aria-describedby="waitlist-description"
               disabled={disabled}
               id="waitlist-email"
               inputMode="email"
@@ -209,7 +317,7 @@ function WaitlistForm({
               type="email"
             />
             <PendingButton
-              className="sm:w-40"
+              className="w-full"
               disabled={disabled}
               pendingText="Requesting"
               type="submit"
@@ -222,123 +330,8 @@ function WaitlistForm({
             Invites are reviewed in batches. Joining the waitlist does not
             create an account or grant instant access.
           </FieldDescription>
-          <WaitlistMessage disabled={disabled} result={result} />
         </Field>
       </FieldGroup>
     </Form>
-  );
-}
-
-function WaitlistMessage({
-  disabled,
-  result,
-}: {
-  disabled: boolean;
-  result: WaitlistActionData["waitlist"] | undefined;
-}) {
-  if (disabled) {
-    return (
-      <p className="text-sm leading-6 text-muted-foreground" id="waitlist-message">
-        Waitlist storage is disabled until the database is configured.
-      </p>
-    );
-  }
-
-  if (result === undefined) {
-    return <span id="waitlist-message" />;
-  }
-
-  return (
-    <p
-      className={
-        result.status === "submitted"
-          ? "text-sm leading-6 text-foreground"
-          : "text-sm leading-6 text-destructive"
-      }
-      id="waitlist-message"
-      role="status"
-    >
-      {result.message}
-    </p>
-  );
-}
-
-function ProductPreview() {
-  return (
-    <aside aria-label="Q&A profile preview" className="lg:pl-6">
-      <Card className="overflow-hidden border-primary/10 bg-card shadow-sm">
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Public profile
-              </p>
-              <h2 className="text-2xl font-semibold leading-tight">
-                One link, private inbox
-              </h2>
-            </div>
-            <Badge variant="secondary">Beta</Badge>
-          </div>
-          <div className="mt-6 flex items-center gap-3 rounded-full border bg-background px-3 py-2">
-            <span className="flex size-8 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-              <Link2 aria-hidden="true" className="size-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">
-                Shareable profile
-              </p>
-              <p className="truncate text-sm font-semibold text-foreground">
-                /yourname
-              </p>
-            </div>
-          </div>
-          <div className="mt-5 divide-y">
-            <PreviewRow
-              icon={<MessageCircle aria-hidden="true" className="size-5" />}
-              label="Incoming questions"
-              value="Private until answered"
-            />
-            <PreviewRow
-              icon={<EyeOff aria-hidden="true" className="size-5" />}
-              label="Public feed"
-              value="Only chosen answers"
-            />
-            <PreviewRow
-              icon={<CheckCircle2 aria-hidden="true" className="size-5" />}
-              label="Beta access"
-              value="Invite controlled"
-            />
-          </div>
-          <div className="mt-5 flex items-center justify-between gap-4 text-sm">
-            <span className="font-medium text-foreground">
-              Built for intentional replies.
-            </span>
-            <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-              Safety first
-            </span>
-          </div>
-        </div>
-      </Card>
-    </aside>
-  );
-}
-
-function PreviewRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 py-4">
-      <span className="text-muted-foreground">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-sm text-muted-foreground">{value}</p>
-      </div>
-    </div>
   );
 }

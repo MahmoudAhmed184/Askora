@@ -3,11 +3,15 @@ import { expect, test } from "@playwright/test";
 test("public foundation routes render", async ({ page }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /receive questions privately/i }),
+    page.getByRole("heading", {
+      name: /one public link for questions worth answering/i,
+    }),
   ).toBeVisible();
 
   await page.goto("/login");
-  await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /sign in to continue/i }),
+  ).toBeVisible();
 
   await page.goto("/terms");
   await expect(page.getByRole("heading", { name: "Terms" })).toBeVisible();

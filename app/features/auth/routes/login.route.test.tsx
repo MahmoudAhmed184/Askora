@@ -24,7 +24,9 @@ describe("LoginRoute", () => {
       emailMagicLinkConfigured: false,
     });
 
-    expect(screen.getByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /sign in to continue/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/database not configured/i)).toBeInTheDocument();
     expect(screen.queryByText(/secret/i)).not.toBeInTheDocument();
   });
