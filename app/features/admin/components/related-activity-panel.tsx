@@ -14,6 +14,7 @@ import {
   reportStatusLabels,
 } from "~/features/admin/components/admin-labels";
 import type { AdminReportDetailViewData } from "~/features/admin/admin.loader.server";
+import { formatMediumDateTime } from "~/lib/date-format";
 
 interface RelatedActivityPanelProps {
   related: AdminReportDetailViewData["related"];
@@ -33,7 +34,7 @@ export function RelatedActivityPanel({ related }: RelatedActivityPanelProps) {
           ) : (
             <div className="flex flex-col gap-3">
               {related.sameTargetReports.map((report) => (
-                <div className="rounded-md border p-3" key={report.id}>
+                <div className="rounded-xl border bg-surface p-3" key={report.id}>
                   <div className="mb-2 flex flex-wrap gap-2">
                     <Badge variant="secondary">
                       {reportReasonLabels[report.reason]}
@@ -69,7 +70,7 @@ export function RelatedActivityPanel({ related }: RelatedActivityPanelProps) {
           ) : (
             <div className="flex flex-col gap-3">
               {related.previousAdminActions.map((action) => (
-                <div className="rounded-md border p-3" key={action.id}>
+                <div className="rounded-xl border bg-surface p-3" key={action.id}>
                   <Badge variant="secondary">
                     {adminActionLabels[action.actionType]}
                   </Badge>
@@ -122,7 +123,7 @@ export function RelatedActivityPanel({ related }: RelatedActivityPanelProps) {
 
 function CountRow({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md bg-surface px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-surface px-3 py-2">
       <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="text-sm font-semibold tabular-nums">{value}</dd>
     </div>
@@ -134,8 +135,5 @@ function EmptyLine({ children }: { children: string }) {
 }
 
 function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return formatMediumDateTime(value);
 }

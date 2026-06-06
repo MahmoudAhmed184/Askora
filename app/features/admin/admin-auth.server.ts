@@ -4,7 +4,9 @@ import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { authUsers } from "~/db/schema";
 import {
   requireAuthenticatedSession,
+  requireAuthenticatedSessionFromContext,
   type AuthenticatedSessionSummary,
+  type CurrentSessionContextReader,
 } from "~/features/auth/auth.server";
 
 export type AdminSession = AuthenticatedSessionSummary & {
@@ -19,6 +21,9 @@ export interface RequireAdminSessionOptions {
   getAuthenticatedSession?: (
     request: Request,
   ) => Promise<AuthenticatedSessionSummary | Response>;
+  getAuthenticatedSessionFromContext?: (
+    context: CurrentSessionContextReader,
+  ) => AuthenticatedSessionSummary | Response;
   store?: AdminAuthStore;
 }
 
@@ -30,6 +35,35 @@ export async function requireAdminSession(
     options.getAuthenticatedSession ?? requireAuthenticatedSession;
   const store = options.store ?? createDrizzleAdminAuthStore();
   const session = await getAuthenticatedSession(request);
+
+  if (session instanceof Response) {
+    return session;
+  }
+
+  const role = await store.findUserRole(session.user.id);
+
+  if (role !== "admin") {
+    return new Response("Forbidden", {
+      status: 403,
+      statusText: "Forbidden",
+    });
+  }
+
+  return {
+    ...session,
+    role,
+  };
+}
+
+export async function requireAdminSessionFromContext(
+  context: CurrentSessionContextReader,
+  options: RequireAdminSessionOptions = {},
+): Promise<AdminSession | Response> {
+  const getAuthenticatedSession =
+    options.getAuthenticatedSessionFromContext ??
+    requireAuthenticatedSessionFromContext;
+  const store = options.store ?? createDrizzleAdminAuthStore();
+  const session = getAuthenticatedSession(context);
 
   if (session instanceof Response) {
     return session;
