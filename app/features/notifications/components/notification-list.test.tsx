@@ -24,7 +24,10 @@ describe("NotificationList", () => {
       "href",
       "/liker",
     );
-    expect(screen.getByRole("button", { name: "Open" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark read" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open thread" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Secret private question")).not.toBeInTheDocument();
     expect(screen.queryByText("Secret private answer")).not.toBeInTheDocument();
     expect(screen.queryByText("ip_hash_secret")).not.toBeInTheDocument();

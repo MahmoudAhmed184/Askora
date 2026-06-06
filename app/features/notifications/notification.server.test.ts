@@ -4,6 +4,7 @@ import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server
 import {
   createNotificationExpiresAt,
   createQuestionAnsweredNotificationForQuestion,
+  getUnreadNotificationCount,
   handleNotificationAction,
   loadNotifications,
   type NotificationRow,
@@ -68,7 +69,7 @@ describe("notification helpers", () => {
 });
 
 describe("notification loading and actions", () => {
-  it("loads recipient notifications only and excludes expired rows from the list and unread count", async () => {
+  it("loads recipient notifications only and excludes expired rows from the list", async () => {
     const notifications = createNotificationStore({
       rows: [
         createNotificationRow({ id: "visible" }),
@@ -90,7 +91,6 @@ describe("notification loading and actions", () => {
         store: notifications.store,
       }),
     ).resolves.toMatchObject({
-      unreadCount: 1,
       notifications: [
         {
           id: "visible",
@@ -98,6 +98,13 @@ describe("notification loading and actions", () => {
         },
       ],
     });
+    await expect(
+      getUnreadNotificationCount({
+        now,
+        recipientUserId: completedSession.user.id,
+        store: notifications.store,
+      }),
+    ).resolves.toBe(1);
   });
 
   it("renders anonymous follow-up actors generically and links filtered follow-ups to filtered", async () => {
@@ -185,6 +192,32 @@ describe("notification loading and actions", () => {
       now,
     );
     expect(notifications.rows.find((row) => row.id === "theirs")?.readAt).toBeNull();
+  });
+
+  it("can mark one notification read and stay on notifications", async () => {
+    const notifications = createNotificationStore({
+      rows: [createNotificationRow({ id: "mine" })],
+    });
+
+    await expect(
+      handleNotificationAction({
+        formData: createActionFormData({
+          intent: "mark_read",
+          notificationId: "mine",
+          redirectTo: "notifications",
+        }),
+        now,
+        session: completedSession,
+        store: notifications.store,
+      }),
+    ).resolves.toEqual({
+      status: "marked_read",
+      redirectTo: "/dashboard/notifications",
+    });
+
+    expect(notifications.rows.find((row) => row.id === "mine")?.readAt).toBe(
+      now,
+    );
   });
 
   it("marks all current recipient unread unexpired notifications read", async () => {
@@ -342,7 +375,11 @@ function createNotificationRow(
 function createActionFormData(
   submission:
     | { intent: "mark_all_read" }
-    | { intent: "mark_read"; notificationId: string },
+    | {
+        intent: "mark_read";
+        notificationId: string;
+        redirectTo?: "notifications";
+      },
 ) {
   const formData = new FormData();
 
@@ -350,6 +387,9 @@ function createActionFormData(
 
   if (submission.intent === "mark_read") {
     formData.set("notificationId", submission.notificationId);
+    if (submission.redirectTo !== undefined) {
+      formData.set("redirectTo", submission.redirectTo);
+    }
   }
 
   return formData;

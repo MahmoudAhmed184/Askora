@@ -93,7 +93,6 @@ export interface NotificationView {
 
 export interface NotificationsPageData {
   notifications: NotificationView[];
-  unreadCount: number;
 }
 
 export interface NotificationRow {
@@ -372,21 +371,14 @@ export async function loadNotifications({
   store?: NotificationStore;
   now?: Date;
 }): Promise<NotificationsPageData> {
-  const [rows, unreadCount] = await Promise.all([
-    store.findNotificationsForRecipient({
-      limit: NOTIFICATION_LIST_LIMIT,
-      now,
-      recipientUserId: session.user.id,
-    }),
-    store.countUnreadNotifications({
-      now,
-      recipientUserId: session.user.id,
-    }),
-  ]);
+  const rows = await store.findNotificationsForRecipient({
+    limit: NOTIFICATION_LIST_LIMIT,
+    now,
+    recipientUserId: session.user.id,
+  });
 
   return {
     notifications: rows.map(toNotificationView),
-    unreadCount,
   };
 }
 
@@ -449,6 +441,13 @@ export async function handleNotificationAction({
     now,
     recipientUserId: session.user.id,
   });
+
+  if (parsed.value.redirectTo === "notifications") {
+    return {
+      status: "marked_read",
+      redirectTo: NOTIFICATIONS_ROUTE,
+    };
+  }
 
   return {
     status: "marked_read",
