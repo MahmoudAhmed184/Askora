@@ -12,14 +12,21 @@ import {
   threadItems,
   threads,
 } from "~/db/schema";
-import type { AnswerQuestionIdentity } from "~/features/answers/answer.server";
-import type { QuestionTextMode } from "~/features/answers/answer.schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
-import { getLikeControlState, type LikeControlState } from "~/features/social/social-controls";
+import type {
+  AnswerQuestionIdentity
+} from "~/features/answers/services/answer.service.server";;
+import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import {
+  getLikeControlState,
+  type LikeControlState,
+} from "~/features/social/social-controls";
 import {
   encodeFeedCursor,
   type FeedCursor,
-} from "~/features/social/social.schema";
+} from "~/features/social/validations/social.validations";
 
 export const SOCIAL_FEED_PAGE_SIZE = 20;
 

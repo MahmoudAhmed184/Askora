@@ -30,7 +30,7 @@ describe("social controls", () => {
       like: {
         status: "liked",
         threadItemPublicId: likeControl.threadItemPublicId,
-        redirectTo: "/dashboard/feed",
+        redirectTo: "/feed",
         notificationCreated: false,
       },
     });
@@ -49,7 +49,7 @@ describe("social controls", () => {
       follow: {
         status: "followed",
         username: followControl.username,
-        redirectTo: "/dashboard/feed",
+        redirectTo: "/feed",
       },
     });
 
@@ -91,13 +91,13 @@ function renderWithRouter(
         element,
       },
       {
-        path: "/dashboard/likes",
+        path: "/likes",
         action() {
           return actionData;
         },
       },
       {
-        path: "/dashboard/follows",
+        path: "/follows",
         action() {
           return actionData;
         },

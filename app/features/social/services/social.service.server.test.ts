@@ -1,24 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   handleFollowAction,
   type FollowActionStore,
   type FollowMutationParams,
-  type FollowTargetProfile,
-} from "~/features/social/follow.action.server";
+  type FollowTargetProfile
+} from "~/features/social/services/follow.service.server";;
 import {
   loadSocialFeed,
   type SocialFeedRow,
   type SocialFeedStore,
-} from "~/features/social/feed.loader.server";
+} from "~/features/social/queries/feed.queries.server";
 import {
   handleLikeAction,
   type LikeActionStore,
   type LikeMutationParams,
-  type LikeableAnswer,
-} from "~/features/social/like.action.server";
-import { decodeFeedCursor, type FeedCursor } from "~/features/social/social.schema";
+  type LikeableAnswer
+} from "~/features/social/services/like.service.server";;
+import { decodeFeedCursor, type FeedCursor } from "~/features/social/validations/social.validations";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

@@ -1,11 +1,11 @@
 import { Heart } from "lucide-react";
 import { useFetcher, useLocation } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { ToastResultInput } from "~/components/app/toast-result-input";
-import { Button } from "~/components/ui/button";
-import type { LikeActionResult } from "~/features/social/like.action.server";
-import type { LikeControlState } from "~/features/social/social-controls";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { ToastResultInput } from "~/components/shared/toast-result/toast-result-input";
+import { Button } from "~/components/ui/button/button";
+import type { LikeActionResult } from "~/features/social/types/social.types";
+import type { LikeControlState } from "~/features/social/types/social.types";
 
 interface LikeButtonProps {
   like: LikeControlState;
@@ -31,7 +31,7 @@ export function LikeButton({ like }: LikeButtonProps) {
   const toastCopy = getLikeToastCopy(result);
 
   return (
-    <fetcher.Form action="/dashboard/likes" method="post">
+    <fetcher.Form action="/likes" method="post">
       <ActionToast
         message={toastCopy.message}
         tone={toastCopy.tone}

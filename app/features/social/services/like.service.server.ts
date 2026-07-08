@@ -12,15 +12,17 @@ import {
   threadItems,
   threads,
 } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   getSafeReturnTo,
   likeActionSchema,
   likeIntentValues,
   type LikeActionSubmission,
   type LikeIntent,
-} from "~/features/social/social.schema";
-import { createAnswerLikedNotification } from "~/features/notifications/notification.server";
+} from "~/features/social/validations/social.validations";
+import { createAnswerLikedNotification } from "~/features/notifications/services/notification.service.server";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 

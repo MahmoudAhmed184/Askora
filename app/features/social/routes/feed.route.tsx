@@ -1,13 +1,22 @@
 import { MessageCircle } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import {
+  Link,
+  type ShouldRevalidateFunctionArgs,
+  useLocation,
+} from "react-router";
 
-import { EmptyState } from "~/components/app/empty-state";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
+import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
+import { getAvatarImageSource } from "~/features/profiles/avatar-url";
 import { LikeButton } from "~/features/social/components/like-button";
-import { loadSocialFeed } from "~/features/social/feed.loader.server";
-import { decodeFeedCursor } from "~/features/social/social.schema";
+import { loadSocialFeed } from "~/features/social/queries/feed.queries.server";
+import { decodeFeedCursor } from "~/features/social/validations/social.validations";
+import {
+  createThreadModalLink,
+  isThreadModalOnlySearchParamChange,
+} from "~/features/threads/thread-modal";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 import type { Route } from "./+types/feed.route";
@@ -30,6 +39,18 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 
 export function meta() {
   return [{ title: "Feed | qna-platform" }];
+}
+
+export function shouldRevalidate({
+  currentUrl,
+  defaultShouldRevalidate,
+  nextUrl,
+}: ShouldRevalidateFunctionArgs) {
+  if (isThreadModalOnlySearchParamChange(currentUrl, nextUrl)) {
+    return false;
+  }
+
+  return defaultShouldRevalidate;
 }
 
 export default function FeedRoute({ loaderData }: Route.ComponentProps) {
@@ -66,7 +87,7 @@ export default function FeedRoute({ loaderData }: Route.ComponentProps) {
         <div className="flex justify-center pt-2">
           <Button asChild variant="outline">
             <Link
-              to={`/dashboard/feed?cursor=${encodeURIComponent(
+              to={`/feed?cursor=${encodeURIComponent(
                 feed.nextCursor,
               )}`}
             >
@@ -139,7 +160,11 @@ function FeedItemArticle({
           <LikeButton like={item.like} />
           <Link
             className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_4px_14px_var(--accent-glow)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-            to={threadHref}
+            defaultShouldRevalidate={false}
+            mask={threadHref.mask}
+            prefetch="intent"
+            preventScrollReset
+            to={threadHref.to}
           >
             <MessageCircle data-icon="inline-start" />
             Thread
@@ -162,7 +187,7 @@ function FeedAvatar({
         className="size-11 shrink-0 rounded-full border bg-muted object-cover"
         decoding="async"
         loading="lazy"
-        src={item.owner.avatarUrl}
+        src={getAvatarImageSource(item.owner.avatarUrl)}
       />
     );
   }
@@ -191,8 +216,9 @@ function createThreadHref({
   ownerUsername: string;
   threadPublicId: string;
 }) {
-  const returnTo = `${location.pathname}${location.search}${location.hash}`;
-  const params = new URLSearchParams({ returnTo });
-
-  return `/${ownerUsername}/a/${threadPublicId}?${params.toString()}`;
+  return createThreadModalLink({
+    location,
+    threadPublicId,
+    username: ownerUsername,
+  });
 }

@@ -1,11 +1,11 @@
 import { data, redirect } from "react-router";
 
-import { wantsToastResult } from "~/components/app/toast-result";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
+import { wantsToastResult } from "~/components/shared/toast-result/toast-result";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
 import {
   handleLikeAction,
   type LikeActionResult,
-} from "~/features/social/like.action.server";
+} from "~/features/social/services/like.service.server";
 
 import type { Route } from "./+types/like.action.route";
 
@@ -14,7 +14,7 @@ interface LikeActionRouteData {
 }
 
 export function loader() {
-  return redirect("/dashboard/feed");
+  return redirect("/feed");
 }
 
 export async function action({ context, request }: Route.ActionArgs) {

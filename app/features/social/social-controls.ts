@@ -1,4 +1,4 @@
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import type { CurrentSessionSummary } from "~/features/auth/types/auth.types";
 
 export interface FollowControlTarget {
   id: string;

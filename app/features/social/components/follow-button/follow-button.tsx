@@ -1,11 +1,11 @@
 import { UserCheck, UserPlus } from "lucide-react";
 import { useFetcher, useLocation } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { ToastResultInput } from "~/components/app/toast-result-input";
-import { Button } from "~/components/ui/button";
-import type { FollowActionResult } from "~/features/social/follow.action.server";
-import type { FollowControlState } from "~/features/social/social-controls";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { ToastResultInput } from "~/components/shared/toast-result/toast-result-input";
+import { Button } from "~/components/ui/button/button";
+import type { FollowActionResult } from "~/features/social/types/social.types";
+import type { FollowControlState } from "~/features/social/types/social.types";
 
 interface FollowButtonProps {
   follow: FollowControlState;
@@ -35,7 +35,7 @@ export function FollowButton({ follow }: FollowButtonProps) {
   const toastCopy = getFollowToastCopy(result);
 
   return (
-    <fetcher.Form action="/dashboard/follows" method="post">
+    <fetcher.Form action="/follows" method="post">
       <ActionToast
         message={toastCopy.message}
         tone={toastCopy.tone}

@@ -2,15 +2,17 @@ import { and, eq, or } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { authUsers, blocks, follows, notifications, profiles } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
-import { createProfileFollowedNotification } from "~/features/notifications/notification.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import { createProfileFollowedNotification } from "~/features/notifications/services/notification.service.server";
 import {
   followActionSchema,
   followIntentValues,
   getSafeReturnTo,
   type FollowActionSubmission,
   type FollowIntent,
-} from "~/features/social/social.schema";
+} from "~/features/social/validations/social.validations";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 import type { ZodError } from "zod";

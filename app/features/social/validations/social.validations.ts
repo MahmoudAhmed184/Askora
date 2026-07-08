@@ -60,7 +60,7 @@ export function decodeFeedCursor(value: string | undefined) {
 
 export function getSafeReturnTo(
   returnTo: string | undefined,
-  fallback = "/dashboard/feed",
+  fallback = "/feed",
 ) {
   if (
     returnTo === undefined ||
