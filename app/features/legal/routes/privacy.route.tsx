@@ -1,5 +1,5 @@
-import { PublicShell } from "~/components/app/public-shell";
-import { Badge } from "~/components/ui/badge";
+import { PublicShell } from "~/components/layout/public-shell/public-shell";
+import { Badge } from "~/components/ui/badge/badge";
 
 export function meta() {
   return [{ title: "Privacy | qna-platform" }];
