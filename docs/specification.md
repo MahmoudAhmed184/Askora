@@ -5,7 +5,7 @@ Date: 2026-05-30
 
 ## Product Summary
 
-This is a modern creator-owned Q/A platform inspired by the dead CuriousCat / ask.fm category, but scoped around shareable profiles instead of public discovery.
+This is a modern social Q/A platform scoped around shareable profiles, private inbox intake, and externally shared profile links instead of public discovery.
 
 The core loop is:
 
@@ -153,7 +153,7 @@ MVP includes:
 - Public username/profile system.
 - Profile deactivation and account deletion flow.
 - Creator-level moderation controls.
-- Minimal admin moderation dashboard.
+- Minimal admin moderation console.
 - Static curated starter prompts in the authenticated app.
 - Minimal internal event logging.
 - Noindex beta configuration.
@@ -163,7 +163,7 @@ MVP excludes:
 
 - Public discovery.
 - Comments.
-- Full analytics dashboard.
+- Full analytics workspace.
 - AI-generated questions.
 - Private profiles.
 - Full-text search.
@@ -209,13 +209,11 @@ Design implementation:
   should port its styling through `app/app.css`, shared UI primitives, app
   shells, and feature-owned components while preserving route URLs and
   loader/action contracts.
-- The inbox workflow keeps `/dashboard/inbox`, `/dashboard/drafts`, and
-  `/dashboard/filtered` as direct URLs, presented as one route-aware workflow in
-  the signed-in app UI.
-- The signed-in product must not expose "Dashboard" as visible product
-  language. Feed, Inbox, Notifications, Profile, and Settings are the primary
-  app areas, reached through the floating pill nav while `/dashboard/**` remains
-  the stable URL namespace.
+- The signed-in app uses top-level product URLs: `/feed`, `/inbox`, `/drafts`,
+  `/filtered`, `/prompts`, `/notifications`, `/answer/:questionId`,
+  `/answers/:threadItemPublicId/actions`, and `/settings/*`.
+- Feed, Inbox, Notifications, Profile, and Settings are the primary app areas,
+  reached through the floating pill navigation.
 
 ## Auth And Identity
 
@@ -258,7 +256,7 @@ Username rules:
 - Usernames that were active, high-risk, or reported may be reserved longer.
 - Recently released usernames should not be instantly claimable by others.
 - Username redirects preserve externally shared links.
-- System route names are reserved and cannot be claimed as usernames, for example `login`, `dashboard`, `admin`, `setup`, `api`, `settings`, `reports`, and `logout`.
+- System route names are reserved and cannot be claimed as usernames, for example `login`, `admin`, `setup`, `api`, `settings`, `reports`, and `logout`.
 
 Profile limits:
 
@@ -671,9 +669,9 @@ Reported public content:
 - Later severe-abuse automation may auto-hide content, but not in MVP.
 - Avoid single-report takedowns to reduce brigading risk.
 
-Admin dashboard:
+Admin moderation console:
 
-- Include a minimal admin dashboard from day one.
+- Include a minimal admin moderation console from day one.
 - Admin role lives in database, for example `users.role = user | admin`.
 - No role-management UI in MVP.
 - Admins can be promoted manually in DB or via seed script.
@@ -829,7 +827,7 @@ Open Graph:
 
 ## Internal Event Logging
 
-No creator analytics dashboard in MVP.
+No creator analytics workspace in MVP.
 
 Still log minimal internal first-party events so the beta is measurable:
 
@@ -1109,42 +1107,50 @@ Recommended route map:
 - `GET /setup/share`
   - Post-setup share screen.
 
-- `GET /dashboard`
-  - Preserved route that redirects completed users to `/dashboard/feed`.
-  - Do not render a visible Dashboard concept.
-
-- `GET /dashboard/inbox`
-  - Private incoming questions.
-
-- `GET /dashboard/drafts`
-  - Drafted answers.
-
-- `GET /dashboard/filtered`
-  - Filtered questions.
-
-- `GET /dashboard/prompts`
-  - Static starter prompt categories.
-
-- `GET /dashboard/feed`
+- `GET /feed`
   - Following feed.
 
-- `GET /dashboard/notifications`
+- `GET /inbox`
+  - Private incoming questions.
+
+- `GET /drafts`
+  - Drafted answers.
+
+- `GET /filtered`
+  - Filtered questions.
+
+- `GET /prompts`
+  - Static starter prompt categories.
+
+- `GET /notifications`
   - In-app notifications.
 
-- `GET /dashboard/settings/profile`
+- `GET /answer/:questionId`
+  - Private answer editor for an incoming question or starter prompt.
+
+- `POST /answers/:threadItemPublicId/actions`
+  - Published answer owner actions such as edit, pin, unpin, unpublish, and delete.
+
+- `POST /likes`
+  - Logged-in like/unlike action for published answers.
+
+- `POST /follows`
+  - Logged-in follow/unfollow action for profiles.
+
+- `GET /settings/profile`
   - Display name, avatar, bio, username.
 
-- `GET /dashboard/settings/privacy`
+- `GET /settings/privacy`
   - Anonymous questions, ask permissions, follow-up defaults, count visibility.
 
-- `GET /dashboard/settings/safety`
+- `GET /settings/safety`
   - Blocks, muted phrases, accepting questions.
 
-- `GET /dashboard/settings/account`
+- `GET /settings/account`
   - Deactivation, deletion request, and account lifecycle controls.
 
 - `GET /admin`
-  - Minimal admin moderation dashboard.
+  - Minimal admin moderation console.
   - Guard every admin loader/action by database role.
 
 ## Permission Matrix
@@ -1236,7 +1242,7 @@ Phase 4: Safety layer
 - Muted phrases.
 - Filtered folder.
 - Reports.
-- Admin dashboard.
+- Admin moderation console.
 - Suspension/hide actions.
 - Rate limits.
 
@@ -1341,7 +1347,7 @@ First-week beta review:
 Postponed until after the platform is working:
 
 - AI-generated question prompts.
-- Creator analytics dashboard.
+- Creator analytics workspace.
 - Email notifications beyond auth magic links.
 - Comments under answers.
 - Public discovery.

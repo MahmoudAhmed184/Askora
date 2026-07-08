@@ -103,33 +103,36 @@ Current redesign QA evidence:
 
 - Prototype screenshots: `design/prototype/screenshots/`.
 - Real app screenshots: `screenshots/redesign-20260601-port/`.
-- `/dashboard` capture must finish at `/dashboard/feed`.
+- Completed-profile app captures should start from `/feed`.
 - Mobile and desktop captures should report zero horizontal overflow and no
   console/page/server errors after any dev-server warm-up recapture.
 
 ## Cleanup Notes
 
-Legacy production UI cleanup removed confirmed-unreferenced files:
+The production app is organized around feature slices:
 
-- `app/components/app/access-profile-header.tsx`
-- `app/features/profiles/components/public-thread-preview.tsx`
-- `app/features/notifications/components/notification-bell.tsx`
+- Route modules live in `routes/`.
+- Feature-local UI lives in `components/`.
+- Read helpers live in `queries/`.
+- Server mutations and domain workflows live in `services/`.
+- Shared DTO exports live in `types/`.
+- Zod schemas live in `validations/`.
 
-`app/features/profiles/asker-regret.server.ts` and
-`app/features/profiles/asker-regret.server.test.ts` are intentionally retained.
-They cover tested server logic for future asker anonymize/delete controls, but
-no route or action is wired yet.
+Shared production UI now lives in `app/components/layout`,
+`app/components/shared`, and primitive-specific folders under
+`app/components/ui`.
+
+Signed-in app routes are top-level product URLs such as `/feed`, `/inbox`,
+`/prompts`, `/notifications`, and `/settings/profile`.
 
 `design/prototype` remains the visual source artifact for the redesign. Its
 local prototype components are not production route code.
 
-Cleanup verification on June 3, 2026:
+Cleanup verification should include:
 
-- Static reachability checks: no production imports or symbol references remain
-  for the removed files.
-- `npm run typecheck`: passed.
-- `npm run lint`: passed.
-- `npm run test`: passed, 60 test files and 287 tests.
-- `npm run build`: passed.
-- `npm run test:e2e`: skipped because `DATABASE_URL` was not available in the
-  local shell for DB-backed Playwright smoke coverage.
+- Static reachability checks for removed files and old route names.
+- `npm run typecheck`.
+- `npm run lint`.
+- `npm run test`.
+- `npm run build`.
+- `npm run test:e2e` when `DATABASE_URL` is available for DB-backed smoke coverage.
