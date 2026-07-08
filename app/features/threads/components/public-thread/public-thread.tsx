@@ -1,12 +1,11 @@
-import type { ReactNode } from "react";
-import { LockKeyhole, MessageCircle, Pin, Send, X } from "lucide-react";
+import { LockKeyhole, MessageCircle, Pin, Send } from "lucide-react";
 import { Link } from "react-router";
 
-import type { AppShellData } from "~/components/app/app-shell-data";
-import { DashboardShell } from "~/components/app/dashboard-shell";
-import { PublicShell } from "~/components/app/public-shell";
-import { Button } from "~/components/ui/button";
-import { Textarea } from "~/components/ui/textarea";
+import type { AppShellData } from "~/types/app-shell-data";
+import { AppShell } from "~/components/layout/app-shell/app-shell";
+import { PublicShell } from "~/components/layout/public-shell/public-shell";
+import { Button } from "~/components/ui/button/button";
+import { Textarea } from "~/components/ui/textarea/textarea";
 import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
 import { BetaNoindexBadge } from "~/features/profiles/components/profile-header";
 import { FollowButton } from "~/features/social/components/follow-button";
@@ -17,39 +16,55 @@ import type {
   PublicThreadPageData,
   PublicThreadProfileView,
   PublicThreadRemovedItem,
-} from "~/features/threads/public-thread.loader.server";
+} from "~/features/threads/types/threads.types";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 interface PublicThreadProps {
   betaNoindex: boolean;
-  closeHref: string;
   page: PublicThreadPageData;
   shell?: AppShellData | undefined;
 }
 
 export function PublicThread({
   betaNoindex,
-  closeHref,
   page,
   shell,
 }: PublicThreadProps) {
-  if (page.status === "unavailable") {
-    return (
-      <ThreadShell closeHref={closeHref} shell={shell}>
-        <UnavailablePublicThread page={page} />
-      </ThreadShell>
-    );
+  const content = (
+    <PublicThreadPageContent betaNoindex={betaNoindex} page={page} />
+  );
+
+  if (shell !== undefined) {
+    return <AppShell shell={shell}>{content}</AppShell>;
   }
 
-  return (
-    <ThreadShell closeHref={closeHref} shell={shell}>
-      {shell === undefined ? (
-        <PublicThreadPage betaNoindex={betaNoindex} page={page} />
-      ) : (
-        <PublicThreadCard closeHref={closeHref} page={page} />
-      )}
-    </ThreadShell>
-  );
+  return <PublicShell>{content}</PublicShell>;
+}
+
+export function PublicThreadModalContent({
+  page,
+}: {
+  page: PublicThreadPageData;
+}) {
+  if (page.status === "unavailable") {
+    return <UnavailablePublicThread page={page} />;
+  }
+
+  return <PublicThreadCard page={page} />;
+}
+
+function PublicThreadPageContent({
+  betaNoindex,
+  page,
+}: {
+  betaNoindex: boolean;
+  page: PublicThreadPageData;
+}) {
+  if (page.status === "unavailable") {
+    return <UnavailablePublicThread page={page} />;
+  }
+
+  return <PublicThreadPage betaNoindex={betaNoindex} page={page} />;
 }
 
 function PublicThreadPage({
@@ -82,16 +97,13 @@ function PublicThreadPage({
 }
 
 function PublicThreadCard({
-  closeHref,
   page,
 }: {
-  closeHref?: string | undefined;
   page: Extract<PublicThreadPageData, { status: "available" }>;
 }) {
   return (
     <section className="overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
       <PublicThreadHeader
-        closeHref={closeHref}
         follow={page.follow}
         itemCount={page.items.length}
         profile={page.profile}
@@ -123,40 +135,6 @@ function PublicThreadCard({
       />
     </section>
   );
-}
-
-function ThreadShell({
-  children,
-  closeHref,
-  shell,
-}: {
-  children: ReactNode;
-  closeHref: string;
-  shell?: AppShellData | undefined;
-}) {
-  if (shell !== undefined) {
-    return (
-      <DashboardShell shell={shell}>
-        <div className="fixed inset-0 z-40 flex items-center justify-center overflow-hidden px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:pb-28 sm:pt-10">
-          <Link
-            aria-label="Dismiss thread"
-            className="absolute inset-0 bg-background/92"
-            to={closeHref}
-          />
-          <div
-            aria-label="Thread"
-            aria-modal="true"
-            className="relative z-10 max-h-[calc(100svh_-_9rem_-_env(safe-area-inset-bottom))] w-full max-w-3xl overflow-y-auto rounded-3xl sm:max-h-[calc(100svh_-_9rem)]"
-            role="dialog"
-          >
-            {children}
-          </div>
-        </div>
-      </DashboardShell>
-    );
-  }
-
-  return <PublicShell>{children}</PublicShell>;
 }
 
 function PublicThreadFollowUpPanel({
@@ -246,7 +224,6 @@ function UnavailablePublicThread({
 }
 
 function PublicThreadHeader({
-  closeHref,
   follow,
   itemCount,
   profile,
@@ -254,7 +231,6 @@ function PublicThreadHeader({
   threadPublicId,
   title,
 }: {
-  closeHref?: string | undefined;
   follow: Extract<PublicThreadPageData, { status: "available" }>["follow"];
   itemCount: number;
   profile: PublicThreadProfileView;
@@ -282,18 +258,6 @@ function PublicThreadHeader({
           >
             {formatDate(publishedAt)}
           </time>
-          {closeHref === undefined ? null : (
-            <Button
-              aria-label="Close thread"
-              asChild
-              size="icon"
-              variant="ghost"
-            >
-              <Link to={closeHref}>
-                <X data-icon="inline-start" />
-              </Link>
-            </Button>
-          )}
           <FollowButton follow={follow} />
         </div>
       </div>

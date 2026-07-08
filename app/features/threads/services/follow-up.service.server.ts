@@ -12,39 +12,43 @@ import {
   threadItems,
   threads,
 } from "~/db/schema";
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   createFollowUpAskedNotification,
   type FollowUpAskedNotification,
-} from "~/features/notifications/notification.server";
-import type { QuestionIdentityMode } from "~/features/profiles/ask-permissions.server";
+} from "~/features/notifications/services/notification.service.server";
+import type {
+  QuestionIdentityMode
+} from "~/features/profiles/services/ask-permissions.service.server";;
 import {
   ASK_MINIMUM_SUBMIT_MILLISECONDS,
   ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS,
   type AskTimingTokenDecision,
-} from "~/features/profiles/ask-friction.server";
+} from "~/features/profiles/services/ask-friction.service.server";
 import {
   decideQuestionSafety,
   type PublicQuestionSafetyInput,
   type QuestionSafetyDecision,
-} from "~/features/profiles/ask-question.action.server";
+} from "~/features/profiles/services/ask-question.service.server";
 import {
   publicQuestionIdentityValues,
   publicQuestionSubmissionSchema,
   type PublicQuestionIdentity,
-} from "~/features/profiles/profile.schema";
-import type { FollowUpPermission } from "~/features/settings/settings.schema";
+} from "~/features/profiles/validations/profile.validations";
+import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
 import {
   createPublicThreadItems,
   type PublicThreadAnswerItem,
   type PublicThreadItemRow,
-} from "~/features/threads/public-thread.loader.server";
+} from "~/features/threads/queries/public-thread.queries.server";
 import {
   evaluateThreadFollowUpPermission,
   getPublicThreadFollowUpState,
   type PublicThreadFollowUpState,
   type ThreadFollowUpTarget,
-} from "~/features/threads/thread-permissions.server";
+} from "~/features/threads/services/thread-permissions.service.server";
 import {
   hashWithHmacSha256,
   sealJsonForCookie,

@@ -11,14 +11,18 @@ import {
   threadItems,
   threads,
 } from "~/db/schema";
-import type { AnswerQuestionIdentity } from "~/features/answers/answer.server";
+import type {
+  AnswerQuestionIdentity
+} from "~/features/answers/services/answer.service.server";;
 import {
   getPublishedAnswerControlState,
   type PublishedAnswerControlState,
-} from "~/features/answers/published-answer-controls.server";
-import type { QuestionTextMode } from "~/features/answers/answer.schema";
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
-import { findThreadItemLikeSummaries } from "~/features/social/social-data.server";
+} from "~/features/answers/services/published-answer-controls.service.server";
+import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
+import type {
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import { findThreadItemLikeSummaries } from "~/features/social/services/social-data.service.server";
 import {
   getFollowControlState,
   getLikeControlState,
@@ -28,8 +32,8 @@ import {
 import {
   getPublicThreadFollowUpState,
   type PublicThreadFollowUpState,
-} from "~/features/threads/thread-permissions.server";
-import type { FollowUpPermission } from "~/features/settings/settings.schema";
+} from "~/features/threads/services/thread-permissions.service.server";
+import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
 
 type ThreadStatus = "draft" | "published" | "unpublished" | "deleted";
 type ThreadItemStatus = "draft" | "published" | "unpublished" | "deleted";

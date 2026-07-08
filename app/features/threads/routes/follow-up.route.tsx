@@ -2,12 +2,13 @@ import type { ReactNode } from "react";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { data, Link, redirect } from "react-router";
 
-import type { AppShellData } from "~/components/app/app-shell-data";
-import { DashboardShell } from "~/components/app/dashboard-shell";
-import { PublicShell } from "~/components/app/public-shell";
-import { Button } from "~/components/ui/button";
-import { getCurrentSessionSummaryFromContext } from "~/features/auth/auth.server";
-import { loadAppShellData } from "~/features/dashboard/app-shell.server";
+import type { AppShellData } from "~/types/app-shell-data";
+import { AppShell } from "~/components/layout/app-shell/app-shell";
+import { PublicShell } from "~/components/layout/public-shell/public-shell";
+import { Button } from "~/components/ui/button/button";
+import { getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
+import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
+import { getAvatarImageSource } from "~/features/profiles/avatar-url";
 import { FollowUpComposer } from "~/features/threads/components/follow-up-composer";
 import { ThreadContextPreview } from "~/features/threads/components/thread-context-preview";
 import {
@@ -19,8 +20,10 @@ import {
   readFollowUpFlashFromRequest,
   submitThreadFollowUp,
   type FollowUpPageData,
-} from "~/features/threads/follow-up.server";
-import type { PublicThreadFollowUpState } from "~/features/threads/thread-permissions.server";
+} from "~/features/threads/services/follow-up.service.server";
+import type {
+  PublicThreadFollowUpState
+} from "~/features/threads/services/thread-permissions.service.server";;
 import { getPublicAppConfig } from "~/lib/config.server";
 import { noindexHeaders } from "~/lib/response.server";
 
@@ -202,7 +205,7 @@ function FollowUpShell({
   shell: AppShellData | undefined;
 }) {
   if (shell) {
-    return <DashboardShell shell={shell}>{children}</DashboardShell>;
+    return <AppShell shell={shell}>{children}</AppShell>;
   }
 
   return <PublicShell>{children}</PublicShell>;
@@ -271,7 +274,7 @@ function ProfileAvatar({
       <img
         alt=""
         className="size-14 shrink-0 rounded-full border bg-muted object-cover"
-        src={profile.avatarUrl}
+        src={getAvatarImageSource(profile.avatarUrl)}
       />
     );
   }

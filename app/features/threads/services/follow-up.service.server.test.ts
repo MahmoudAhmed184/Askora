@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   createFollowUpTimingToken,
   loadFollowUpPage,
@@ -8,9 +10,11 @@ import {
   type FollowUpStore,
   type FollowUpThreadRecord,
   type NewFollowUpNotification,
-  type NewFollowUpQuestion,
-} from "~/features/threads/follow-up.server";
-import type { PublicThreadItemRow } from "~/features/threads/public-thread.loader.server";
+  type NewFollowUpQuestion
+} from "~/features/threads/services/follow-up.service.server";;
+import type {
+  PublicThreadItemRow
+} from "~/features/threads/queries/public-thread.queries.server";;
 import type {
   RateLimitDecision,
   RateLimitOptions,

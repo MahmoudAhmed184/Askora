@@ -1,9 +1,9 @@
 import { data, redirect } from "react-router";
 
-import { getCurrentSessionSummaryFromContext } from "~/features/auth/auth.server";
-import { loadAppShellData } from "~/features/dashboard/app-shell.server";
+import { getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
+import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
 import { PublicThread } from "~/features/threads/components/public-thread";
-import { loadPublicThreadPage } from "~/features/threads/public-thread.loader.server";
+import { loadPublicThreadPage } from "~/features/threads/queries/public-thread.queries.server";
 import {
   createPublicThreadHeaders,
   createPublicThreadMeta,
@@ -13,7 +13,7 @@ import { noindexHeaders } from "~/lib/response.server";
 
 import type { Route } from "./+types/public-thread.route";
 
-export async function loader({ context, params, request }: Route.LoaderArgs) {
+export async function loader({ context, params }: Route.LoaderArgs) {
   const username = params.username;
   const threadPublicId = params.threadPublicId;
   const session = getCurrentSessionSummaryFromContext(context);
@@ -44,7 +44,6 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
   return data(
     {
       app: getPublicAppConfig(),
-      closeHref: getThreadPopupCloseHref(request),
       page: result.page,
       shell: await shellPromise,
     },
@@ -70,23 +69,8 @@ export default function PublicThreadRoute({ loaderData }: Route.ComponentProps) 
   return (
     <PublicThread
       betaNoindex={loaderData.app.betaNoindex}
-      closeHref={loaderData.closeHref}
       page={loaderData.page}
       shell={loaderData.shell}
     />
   );
-}
-
-function getThreadPopupCloseHref(request: Request) {
-  const returnTo = new URL(request.url).searchParams.get("returnTo");
-
-  if (
-    returnTo === null ||
-    !returnTo.startsWith("/") ||
-    returnTo.startsWith("//")
-  ) {
-    return "/dashboard/feed";
-  }
-
-  return returnTo;
 }

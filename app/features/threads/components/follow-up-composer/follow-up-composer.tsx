@@ -1,17 +1,17 @@
 import { Send } from "lucide-react";
 import { Form } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { PendingButton } from "~/components/app/pending-button";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Textarea } from "~/components/ui/textarea";
-import type { PublicThreadFollowUpState } from "~/features/threads/thread-permissions.server";
-import type { FollowUpFlash } from "~/features/threads/follow-up.server";
+} from "~/components/ui/field/field";
+import { Textarea } from "~/components/ui/textarea/textarea";
+import type { PublicThreadFollowUpState } from "~/features/threads/types/threads.types";
+import type { FollowUpFlash } from "~/features/threads/types/threads.types";
 
 interface FollowUpComposerProps {
   flash: FollowUpFlash | undefined;

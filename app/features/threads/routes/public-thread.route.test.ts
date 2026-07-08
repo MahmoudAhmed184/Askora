@@ -4,8 +4,10 @@ import {
   createPublicThreadHeaders,
   createPublicThreadMeta,
 } from "~/features/threads/public-thread-meta";
-import type { PublicThreadPageData } from "~/features/threads/public-thread.loader.server";
-import type { PublicAppConfig } from "~/lib/config.server";
+import type {
+  PublicThreadPageData
+} from "~/features/threads/queries/public-thread.queries.server";;
+import type { PublicAppConfig } from "~/lib/config.types";
 
 describe("public thread route metadata", () => {
   it("uses public answer text without hidden question text in meta or OG tags", () => {

@@ -1,7 +1,11 @@
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
-import type { PublicQuestionIdentity } from "~/features/profiles/profile.schema";
-import type { QuestionIdentityMode } from "~/features/profiles/ask-permissions.server";
-import type { FollowUpPermission } from "~/features/settings/settings.schema";
+import type {
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import type { PublicQuestionIdentity } from "~/features/profiles/validations/profile.validations";
+import type {
+  QuestionIdentityMode
+} from "~/features/profiles/services/ask-permissions.service.server";;
+import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
 
 export const MAX_PUBLISHED_THREAD_ITEMS = 20;
 

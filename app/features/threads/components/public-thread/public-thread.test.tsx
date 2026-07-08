@@ -3,7 +3,9 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { PublicThread } from "~/features/threads/components/public-thread";
-import type { PublicThreadPageData } from "~/features/threads/public-thread.loader.server";
+import type {
+  PublicThreadPageData
+} from "~/features/threads/queries/public-thread.queries.server";;
 
 describe("PublicThread", () => {
   beforeAll(() => {
@@ -162,7 +164,7 @@ describe("PublicThread", () => {
     expect(screen.getByText("This thread is unavailable")).toBeInTheDocument();
   });
 
-  it("renders a dismiss target in app-shell popup mode", () => {
+  it("renders an app-shell thread visit as a full page", () => {
     renderPublicThread(createAvailablePage(), {
       session: {
         profile: {
@@ -174,10 +176,13 @@ describe("PublicThread", () => {
       unreadNotificationCount: 0,
     });
 
-    expect(screen.getByRole("link", { name: "Dismiss thread" })).toHaveAttribute(
-      "href",
-      "/dashboard/feed",
-    );
+    expect(
+      screen.getByRole("heading", { name: /public thread/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Dismiss thread" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 
@@ -201,7 +206,6 @@ function renderPublicThread(
         element: (
           <PublicThread
             betaNoindex={false}
-            closeHref="/dashboard/feed"
             page={page}
             shell={shell}
           />

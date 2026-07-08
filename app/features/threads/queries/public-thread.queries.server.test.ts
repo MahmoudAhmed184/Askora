@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   loadPublicThreadPage,
   type PublicThreadItemRow,
   type PublicThreadRecord,
-  type PublicThreadStore,
-} from "~/features/threads/public-thread.loader.server";
+  type PublicThreadStore
+} from "~/features/threads/queries/public-thread.queries.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

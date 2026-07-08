@@ -1,6 +1,6 @@
 import type {
   CompactThreadContextPreview,
-} from "~/features/threads/follow-up.server";
+} from "~/features/threads/types/threads.types";
 
 interface ThreadContextPreviewProps {
   context: CompactThreadContextPreview;

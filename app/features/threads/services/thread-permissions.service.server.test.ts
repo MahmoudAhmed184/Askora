@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   evaluateThreadFollowUpPermission,
   MAX_PUBLISHED_THREAD_ITEMS,
-  type ThreadFollowUpTarget,
-} from "~/features/threads/thread-permissions.server";
+  type ThreadFollowUpTarget
+} from "~/features/threads/services/thread-permissions.service.server";;
 
 describe("evaluateThreadFollowUpPermission", () => {
   it("allows anyone follow-ups for guests when anonymous questions are enabled", () => {

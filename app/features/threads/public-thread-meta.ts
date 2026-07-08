@@ -1,9 +1,9 @@
-import type { PublicAppConfig } from "~/lib/config.server";
+import type { PublicAppConfig } from "~/lib/config.types";
 import type {
   PublicThreadAnswerItem,
   PublicThreadItem,
   PublicThreadPageData,
-} from "~/features/threads/public-thread.loader.server";
+} from "~/features/threads/types/threads.types";
 
 const publicNoindexHeaders = {
   "X-Robots-Tag": "noindex, nofollow",
