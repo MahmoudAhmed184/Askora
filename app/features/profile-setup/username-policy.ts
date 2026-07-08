@@ -2,7 +2,6 @@ export const USERNAME_PATTERN = /^[a-z0-9_]{3,30}$/;
 
 export const RESERVED_USERNAMES = [
   "login",
-  "dashboard",
   "admin",
   "setup",
   "api",
@@ -11,6 +10,16 @@ export const RESERVED_USERNAMES = [
   "logout",
   "terms",
   "privacy",
+  "feed",
+  "inbox",
+  "notifications",
+  "drafts",
+  "filtered",
+  "prompts",
+  "likes",
+  "follows",
+  "answer",
+  "answers",
 ] as const;
 
 const reservedUsernameSet = new Set<string>(RESERVED_USERNAMES);

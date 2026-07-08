@@ -1,5 +1,6 @@
 import {
   index,
+  layout,
   route,
   type RouteConfig,
 } from "@react-router/dev/routes";
@@ -9,8 +10,7 @@ export default [
   route("login", "features/auth/routes/login.route.tsx"),
   route("setup", "features/profile-setup/routes/setup.route.tsx"),
   route("setup/share", "features/profile-setup/routes/setup.share.route.tsx"),
-  route("dashboard", "features/dashboard/routes/dashboard-layout.route.tsx", [
-    index("features/inbox/routes/dashboard.route.tsx"),
+  layout("features/app-shell/routes/app-layout.route.tsx", [
     route("feed", "features/social/routes/feed.route.tsx"),
     route("inbox", "features/inbox/routes/inbox.route.tsx"),
     route("prompts", "features/prompts/routes/prompts.route.tsx"),
@@ -38,6 +38,7 @@ export default [
   ),
   route("terms", "features/legal/routes/terms.route.tsx"),
   route("privacy", "features/legal/routes/privacy.route.tsx"),
+  route("api/avatar", "features/profiles/routes/avatar.route.ts"),
   route("api/auth/*", "features/auth/routes/auth.$.route.ts"),
   route(
     ":username/a/:threadPublicId/follow-ups",

@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { Pool } from "@neondatabase/serverless";
+import { Pool } from "pg";
 
 import { betaFixture, createBetaSessionCookie, seedBetaFixtures } from "../../scripts/seed-beta.mjs";
 
@@ -84,11 +84,11 @@ test.describe("beta seeded smoke", () => {
   test("owner can open inbox and filtered folders", async ({ context, page }) => {
     await signInAs(context, betaFixture.users.owner);
 
-    await page.goto("/dashboard/inbox");
+    await page.goto("/inbox");
     await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
     await expect(page.getByText(betaFixture.questions.inbox.text)).toBeVisible();
 
-    await page.goto("/dashboard/filtered");
+    await page.goto("/filtered");
     await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Filtered/ })).toHaveAttribute(
       "aria-current",
@@ -103,14 +103,14 @@ test.describe("beta seeded smoke", () => {
   }) => {
     await signInAs(context, betaFixture.users.owner);
 
-    await page.goto("/dashboard/prompts");
+    await page.goto("/prompts");
     await expect(page.getByTestId("starter-prompt-picker")).toBeVisible();
     await page
       .getByRole("button", {
         name: "Use starter prompt: What has been taking up most of your attention lately?",
       })
       .click();
-    await expect(page).toHaveURL(/\/dashboard\/answer\/qst_/);
+    await expect(page).toHaveURL(/\/answer\/qst_/);
 
     await page
       .getByRole("textbox", { name: "Answer" })
@@ -173,7 +173,7 @@ test.describe("beta seeded smoke", () => {
   }) => {
     await signInAs(context, betaFixture.users.owner);
 
-    await page.goto("/dashboard/notifications");
+    await page.goto("/notifications");
     await page.getByRole("button", { name: "Mark all read" }).click();
 
     await expectToast(page, "All notifications marked read.");
@@ -183,7 +183,7 @@ test.describe("beta seeded smoke", () => {
   test("owner can create a report from inbox", async ({ context, page }) => {
     await signInAs(context, betaFixture.users.owner);
 
-    await page.goto("/dashboard/inbox");
+    await page.goto("/inbox");
     await page.getByRole("button", { name: "Question actions" }).first().click();
     await page.getByRole("button", { name: "Report" }).first().click();
     await page.getByLabel("Reason").selectOption("other");
@@ -218,7 +218,7 @@ test.describe("beta seeded smoke", () => {
     test.skip(testInfo.project.name !== "mobile-chrome", "Mobile-only smoke.");
     await signInAs(context, betaFixture.users.owner);
 
-    await page.goto("/dashboard/inbox");
+    await page.goto("/inbox");
 
     await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
     await expect(page.getByText(betaFixture.questions.inbox.text)).toBeVisible();
