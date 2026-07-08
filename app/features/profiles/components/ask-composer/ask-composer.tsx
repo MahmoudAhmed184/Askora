@@ -2,19 +2,19 @@ import { Mail, Send } from "lucide-react";
 import { useRef } from "react";
 import { Form } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { PendingButton } from "~/components/app/pending-button";
-import { Button } from "~/components/ui/button";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
+import { Button } from "~/components/ui/button/button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Textarea } from "~/components/ui/textarea";
-import type { PublicAskStateAllowed } from "~/features/profiles/ask-permissions.server";
-import type { PublicAskFlash } from "~/features/profiles/ask-friction.server";
-import type { PublicProfileView } from "~/features/profiles/profile.loader.server";
+} from "~/components/ui/field/field";
+import { Textarea } from "~/components/ui/textarea/textarea";
+import type { PublicAskStateAllowed } from "~/features/profiles/types/profiles.types";
+import type { PublicAskFlash } from "~/features/profiles/types/profiles.types";
+import type { PublicProfileView } from "~/features/profiles/types/profiles.types";
 import { cn } from "~/lib/utils";
 
 interface AskComposerProps {

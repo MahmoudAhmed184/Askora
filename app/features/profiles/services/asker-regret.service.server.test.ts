@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { AuthenticatedSessionSummary } from "~/features/auth/auth.server";
+import type {
+  AuthenticatedSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   anonymizeOwnQuestion,
   deleteOwnQuestion,
   type AskerRegretStore,
   type RegretQuestion,
-} from "~/features/profiles/asker-regret.server";
+} from "~/features/profiles/services/asker-regret.service.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

@@ -1,14 +1,15 @@
 import { MessageCircle, Pin } from "lucide-react";
 import { Link, useLocation } from "react-router";
 
-import { EmptyState } from "~/components/app/empty-state";
-import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
+import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import type { PublicPublishedAnswer } from "~/features/answers/types/answers.types";
 import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
 import {
   hiddenPublishedAnswerControls,
   type PublishedAnswerControlState,
 } from "~/features/answers/published-answer-controls";
 import { LikeButton } from "~/features/social/components/like-button";
+import { createThreadModalLink } from "~/features/threads/thread-modal";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 interface PublicAnswerListProps {
@@ -132,7 +133,11 @@ function PublicAnswerArticle({
           <LikeButton like={answer.like} />
           <Link
             className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_4px_14px_var(--accent-glow)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-            to={threadHref}
+            defaultShouldRevalidate={false}
+            mask={threadHref.mask}
+            prefetch="intent"
+            preventScrollReset
+            to={threadHref.to}
           >
             <MessageCircle data-icon="inline-start" />
             Thread
@@ -160,8 +165,9 @@ function createThreadHref({
   profileUsername: string;
   threadPublicId: string;
 }) {
-  const returnTo = `${location.pathname}${location.search}${location.hash}`;
-  const params = new URLSearchParams({ returnTo });
-
-  return `/${profileUsername}/a/${threadPublicId}?${params.toString()}`;
+  return createThreadModalLink({
+    location,
+    threadPublicId,
+    username: profileUsername,
+  });
 }

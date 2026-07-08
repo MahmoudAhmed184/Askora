@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
-  createAskTimingToken,
-} from "~/features/profiles/ask-friction.server";
+  createAskTimingToken
+} from "~/features/profiles/services/ask-friction.service.server";;
 import {
   decideQuestionSafety,
   submitPublicQuestion,
@@ -11,13 +13,13 @@ import {
   type PublicQuestionSafetyInput,
   type PublicQuestionSafetyStore,
   type PublicQuestionStore,
-} from "~/features/profiles/ask-question.action.server";
-import type { PublicQuestionIdentity } from "~/features/profiles/profile.schema";
+} from "~/features/profiles/services/ask-question.service.server";
+import type { PublicQuestionIdentity } from "~/features/profiles/validations/profile.validations";
 import type {
   PublicProfile,
   PublicProfileStore,
-  PublicUsernameReservation,
-} from "~/features/profiles/profile.loader.server";
+  PublicUsernameReservation
+} from "~/features/profiles/queries/profile.queries.server";;
 import type {
   RateLimitDecision,
   RateLimitOptions,

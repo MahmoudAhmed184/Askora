@@ -2,8 +2,12 @@ import { eq } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { questions } from "~/db/schema";
-import type { AuthenticatedSessionSummary } from "~/features/auth/auth.server";
-import type { QuestionIdentityMode } from "~/features/profiles/ask-permissions.server";
+import type {
+  AuthenticatedSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import type {
+  QuestionIdentityMode
+} from "~/features/profiles/services/ask-permissions.service.server";;
 
 export interface RegretQuestion {
   id: string;

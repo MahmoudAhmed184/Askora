@@ -3,26 +3,28 @@ import { and, eq, or, type SQL } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { blocks, mutedPhrases, questions } from "~/db/schema";
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
-import { normalizeMutedPhrase } from "~/features/moderation/moderation.schema";
+import type {
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import { normalizeMutedPhrase } from "~/features/moderation/validations/moderation.validations";
 import {
   evaluateAskPermission,
   type QuestionIdentityMode,
-} from "~/features/profiles/ask-permissions.server";
+} from "~/features/profiles/services/ask-permissions.service.server";
 import {
   validateAskTimingToken,
   type AskTimingTokenDecision,
-} from "~/features/profiles/ask-friction.server";
+} from "~/features/profiles/services/ask-friction.service.server";
 import {
   publicQuestionIdentityValues,
   publicQuestionSubmissionSchema,
   type PublicQuestionIdentity,
-} from "~/features/profiles/profile.schema";
+} from "~/features/profiles/validations/profile.validations";
 import {
   resolvePublicProfile,
   type PublicProfile,
   type PublicProfileStore,
-} from "~/features/profiles/profile.loader.server";
+} from "~/features/profiles/queries/profile.queries.server";
 import { hashWithHmacSha256 } from "~/lib/crypto.server";
 import { createDatabaseId, createPublicId } from "~/lib/ids.server";
 import { checkRateLimit } from "~/lib/rate-limit.server";

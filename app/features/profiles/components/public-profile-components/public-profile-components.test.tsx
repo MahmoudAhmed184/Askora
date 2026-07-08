@@ -11,10 +11,18 @@ import { PermissionState } from "~/features/profiles/components/permission-state
 import { ProfileSideRail } from "~/features/profiles/components/profile-side-rail";
 import { PublicAnswerList } from "~/features/profiles/components/public-answer-list";
 import { UnavailableProfile } from "~/features/profiles/components/unavailable-profile";
-import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
-import type { PublicAskStateAllowed } from "~/features/profiles/ask-permissions.server";
-import type { PublicAskFlash } from "~/features/profiles/ask-friction.server";
-import type { PublicProfileView } from "~/features/profiles/profile.loader.server";
+import type {
+  PublicPublishedAnswer
+} from "~/features/answers/services/answer.service.server";;
+import type {
+  PublicAskStateAllowed
+} from "~/features/profiles/services/ask-permissions.service.server";;
+import type {
+  PublicAskFlash
+} from "~/features/profiles/services/ask-friction.service.server";;
+import type {
+  PublicProfileView
+} from "~/features/profiles/queries/profile.queries.server";;
 
 vi.mock("sonner", () => ({
   toast: {
@@ -153,8 +161,8 @@ describe("public profile components", () => {
     expect(screen.getByText("This profile is unavailable")).toBeInTheDocument();
   });
 
-  it("renders public answers as escaped plain text with preserved line breaks", () => {
-    const { container } = renderWithRouter(
+  it("renders public answers as escaped plain text with preserved line breaks", async () => {
+    const { container, router } = renderWithRouter(
       <PublicAnswerList
         answers={[
           createPublishedAnswer({
@@ -171,10 +179,18 @@ describe("public profile components", () => {
       "break-words",
     );
     expect(screen.getByText(/<script>alert/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Thread" })).toHaveAttribute(
-      "href",
-      "/person/a/thr_1?returnTo=%2F",
+    const threadLink = screen.getByRole("link", { name: "Thread" });
+
+    expect(threadLink).toHaveAttribute("href", "/person/a/thr_1");
+    fireEvent.click(threadLink);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/");
+    });
+    expect(router.state.location.search).toBe(
+      "?threadUsername=person&threadPublicId=thr_1",
     );
+    expect(router.state.location.mask?.pathname).toBe("/person/a/thr_1");
     expect(screen.queryByRole("link", { name: "View thread" })).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /like answer \(0\)/i }),
@@ -224,7 +240,7 @@ describe("public profile components", () => {
     expect(screen.getByRole("button", { name: "Save answer" })).toBeEnabled();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Close edit published answer" }),
+      screen.getByRole("button", { name: "Cancel" }),
     );
     openPublishedAnswerMenu();
     fireEvent.click(screen.getByRole("menuitem", { name: "Unpublish" }));
@@ -289,10 +305,7 @@ describe("public profile components", () => {
     expect(screen.getByText("Pinned Threads")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /what changed your mind recently/i }),
-    ).toHaveAttribute(
-      "href",
-      "/person/a/thr_1?returnTo=%2F",
-    );
+    ).toHaveAttribute("href", "/person/a/thr_1");
   });
 });
 
@@ -309,7 +322,10 @@ function renderWithRouter(element: React.ReactNode) {
     },
   );
 
-  return render(<RouterProvider router={router} />);
+  return {
+    router,
+    ...render(<RouterProvider router={router} />),
+  };
 }
 
 function openPublishedAnswerMenu() {

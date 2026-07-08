@@ -1,11 +1,15 @@
-import { data, redirect } from "react-router";
+import {
+  data,
+  redirect,
+  type ShouldRevalidateFunctionArgs,
+} from "react-router";
 
-import { DashboardShell } from "~/components/app/dashboard-shell";
-import { PublicShell } from "~/components/app/public-shell";
+import { AppShell } from "~/components/layout/app-shell/app-shell";
+import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import {
   getCurrentSessionSummaryFromContext,
   type CurrentSessionSummary,
-} from "~/features/auth/auth.server";
+} from "~/features/auth/services/auth.service.server";
 import {
   AskComposer,
 } from "~/features/profiles/components/ask-composer";
@@ -17,23 +21,24 @@ import {
 import { ProfileSideRail } from "~/features/profiles/components/profile-side-rail";
 import { PublicAnswerList } from "~/features/profiles/components/public-answer-list";
 import { UnavailableProfile } from "~/features/profiles/components/unavailable-profile";
-import { findPublishedAnswersForProfile } from "~/features/answers/answer.server";
+import { findPublishedAnswersForProfile } from "~/features/answers/services/answer.service.server";
 import {
   clearPublicAskFlashCookieHeader,
   hasPublicAskFlashCookie,
   readPublicAskFlashFromRequest,
-} from "~/features/profiles/ask-friction.server";
+} from "~/features/profiles/services/ask-friction.service.server";
 import {
   createPublicProfilePageData,
   resolvePublicProfile,
-} from "~/features/profiles/profile.loader.server";
-import { getPublishedAnswerControlState } from "~/features/answers/published-answer-controls.server";
-import { findPublicProfileSocialStats } from "~/features/social/social-data.server";
-import { loadAppShellData } from "~/features/dashboard/app-shell.server";
+} from "~/features/profiles/queries/profile.queries.server";
+import { getPublishedAnswerControlState } from "~/features/answers/services/published-answer-controls.service.server";
+import { findPublicProfileSocialStats } from "~/features/social/services/social-data.service.server";
+import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
 import {
   createPublicNoindexHeaders,
   createRobotsMetaTag,
 } from "~/features/threads/public-thread-meta";
+import { isThreadModalOnlySearchParamChange } from "~/features/threads/thread-modal";
 import { getPublicAppConfig } from "~/lib/config.server";
 
 import type { Route } from "./+types/public-profile.route";
@@ -185,12 +190,24 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return tags;
 }
 
+export function shouldRevalidate({
+  currentUrl,
+  defaultShouldRevalidate,
+  nextUrl,
+}: ShouldRevalidateFunctionArgs) {
+  if (isThreadModalOnlySearchParamChange(currentUrl, nextUrl)) {
+    return false;
+  }
+
+  return defaultShouldRevalidate;
+}
+
 export default function PublicProfileRoute({ loaderData }: Route.ComponentProps) {
   if (loaderData.page.status === "unavailable") {
     const content = <UnavailableProfile username={loaderData.page.username} />;
 
     if (loaderData.shell !== undefined) {
-      return <DashboardShell shell={loaderData.shell}>{content}</DashboardShell>;
+      return <AppShell shell={loaderData.shell}>{content}</AppShell>;
     }
 
     return <PublicShell>{content}</PublicShell>;
@@ -241,7 +258,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
   );
 
   if (loaderData.shell !== undefined) {
-    return <DashboardShell shell={loaderData.shell}>{content}</DashboardShell>;
+    return <AppShell shell={loaderData.shell}>{content}</AppShell>;
   }
 
   return (

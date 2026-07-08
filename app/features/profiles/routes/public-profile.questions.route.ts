@@ -1,11 +1,11 @@
 import { redirect } from "react-router";
 
-import { getCurrentSessionSummaryFromContext } from "~/features/auth/auth.server";
-import { createPublicAskFlashCookieHeader } from "~/features/profiles/ask-friction.server";
+import { getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
+import { createPublicAskFlashCookieHeader } from "~/features/profiles/services/ask-friction.service.server";
 import {
   getPublicAskFlashForResult,
   submitPublicQuestion,
-} from "~/features/profiles/ask-question.action.server";
+} from "~/features/profiles/services/ask-question.service.server";
 
 import type { Route } from "./+types/public-profile.questions.route";
 

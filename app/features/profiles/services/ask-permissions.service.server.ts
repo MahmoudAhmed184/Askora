@@ -1,8 +1,8 @@
 import type {
   CurrentSessionSummary,
-  PublicSessionSummary,
-} from "~/features/auth/auth.server";
-import type { PublicQuestionIdentity } from "~/features/profiles/profile.schema";
+  PublicSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import type { PublicQuestionIdentity } from "~/features/profiles/validations/profile.validations";
 
 export type QuestionIdentityMode =
   | "guest_anonymous"

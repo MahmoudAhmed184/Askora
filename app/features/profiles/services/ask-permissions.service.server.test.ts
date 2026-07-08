@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CurrentSessionSummary,
-} from "~/features/auth/auth.server";
+} from "~/features/auth/services/auth.service.server";
 import {
   evaluateAskPermission,
   getPublicAskState,
   type AskPermissionTarget,
-} from "~/features/profiles/ask-permissions.server";
+} from "~/features/profiles/services/ask-permissions.service.server";
 
 describe("evaluateAskPermission", () => {
   it("allows guest anonymous asks when everyone and anonymous are enabled", () => {

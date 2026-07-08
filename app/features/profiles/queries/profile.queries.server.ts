@@ -6,15 +6,17 @@ import {
   getPublicAskState,
   type AskPermission,
   type PublicAskState,
-} from "~/features/profiles/ask-permissions.server";
+} from "~/features/profiles/services/ask-permissions.service.server";
 import {
   createAskTimingToken,
   type PublicAskFlash,
-} from "~/features/profiles/ask-friction.server";
+} from "~/features/profiles/services/ask-friction.service.server";
 import type {
-  CurrentSessionSummary,
-} from "~/features/auth/auth.server";
-import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import type {
+  PublicPublishedAnswer
+} from "~/features/answers/services/answer.service.server";;
 import {
   hiddenPublishedAnswerControls,
   type PublishedAnswerControlState,
@@ -23,7 +25,7 @@ import {
   getFollowControlState,
   type FollowControlState,
 } from "~/features/social/social-controls";
-import type { PublicProfileSocialStats } from "~/features/social/social-data.server";
+import type { PublicProfileSocialStats } from "~/features/social/services/social-data.service.server";
 
 export interface PublicProfile {
   id: string;

@@ -5,15 +5,17 @@ import {
   resolvePublicProfile,
   type PublicProfile,
   type PublicProfileStore,
-  type PublicUsernameReservation,
-} from "~/features/profiles/profile.loader.server";
-import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
-import { getPublishedAnswerControlState } from "~/features/answers/published-answer-controls.server";
+  type PublicUsernameReservation
+} from "~/features/profiles/queries/profile.queries.server";;
+import type {
+  PublicPublishedAnswer
+} from "~/features/answers/services/answer.service.server";;
+import { getPublishedAnswerControlState } from "~/features/answers/services/published-answer-controls.service.server";
 import type {
   CompletedProfileSessionSummary,
   CurrentSessionSummary,
-  PublicSessionSummary,
-} from "~/features/auth/auth.server";
+  PublicSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

@@ -1,8 +1,8 @@
 import { LockKeyhole } from "lucide-react";
 import { Link } from "react-router";
 
-import { Button } from "~/components/ui/button";
-import type { PublicAskState } from "~/features/profiles/ask-permissions.server";
+import { Button } from "~/components/ui/button/button";
+import type { PublicAskState } from "~/features/profiles/types/profiles.types";
 
 interface PermissionStateProps {
   ask: Extract<PublicAskState, { status: "denied" }>;

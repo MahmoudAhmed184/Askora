@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { meta } from "~/features/profiles/routes/public-profile.route";
-import type { PublicProfilePageData } from "~/features/profiles/profile.loader.server";
-import type { PublicAppConfig } from "~/lib/config.server";
+import type {
+  PublicProfilePageData
+} from "~/features/profiles/queries/profile.queries.server";;
+import type { PublicAppConfig } from "~/lib/config.types";
 
 describe("public profile route metadata", () => {
   it("marks unavailable profiles noindex with generic copy", () => {

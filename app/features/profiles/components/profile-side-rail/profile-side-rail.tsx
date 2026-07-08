@@ -1,8 +1,9 @@
 import { Pin } from "lucide-react";
 import { Link, useLocation } from "react-router";
 
-import type { PublicPublishedAnswer } from "~/features/answers/answer.server";
-import type { PublicProfileView } from "~/features/profiles/profile.loader.server";
+import type { PublicPublishedAnswer } from "~/features/answers/types/answers.types";
+import type { PublicProfileView } from "~/features/profiles/types/profiles.types";
+import { createThreadModalLink } from "~/features/threads/thread-modal";
 
 interface ProfileSideRailProps {
   answers: PublicPublishedAnswer[];
@@ -53,26 +54,45 @@ function PinnedThreadsPanel({
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           {answers.map((answer) => (
-            <Link
-              className="group rounded-xl border border-transparent p-1.5 transition-[border-color,background-color] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-border hover:bg-secondary/70"
+            <PinnedThreadLink
+              answer={answer}
               key={answer.publicId}
-              to={createThreadHref({
+              link={createThreadHref({
                 location,
                 profileUsername: profile.username,
                 threadPublicId: answer.threadPublicId,
               })}
-            >
-              <h3 className="line-clamp-2 text-sm font-bold leading-5 text-primary group-hover:underline">
-                {getPinnedThreadTitle(answer)}
-              </h3>
-              <p className="mt-1 font-mono text-[0.68rem] text-muted-foreground">
-                {formatPinnedThreadMeta(answer)}
-              </p>
-            </Link>
+            />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+function PinnedThreadLink({
+  answer,
+  link,
+}: {
+  answer: PublicPublishedAnswer;
+  link: ReturnType<typeof createThreadHref>;
+}) {
+  return (
+    <Link
+      className="group rounded-xl border border-transparent p-1.5 transition-[border-color,background-color] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-border hover:bg-secondary/70"
+      defaultShouldRevalidate={false}
+      mask={link.mask}
+      prefetch="intent"
+      preventScrollReset
+      to={link.to}
+    >
+      <h3 className="line-clamp-2 text-sm font-bold leading-5 text-primary group-hover:underline">
+        {getPinnedThreadTitle(answer)}
+      </h3>
+      <p className="mt-1 font-mono text-[0.68rem] text-muted-foreground">
+        {formatPinnedThreadMeta(answer)}
+      </p>
+    </Link>
   );
 }
 
@@ -120,8 +140,9 @@ function createThreadHref({
   profileUsername: string;
   threadPublicId: string;
 }) {
-  const returnTo = `${location.pathname}${location.search}${location.hash}`;
-  const params = new URLSearchParams({ returnTo });
-
-  return `/${profileUsername}/a/${threadPublicId}?${params.toString()}`;
+  return createThreadModalLink({
+    location,
+    threadPublicId,
+    username: profileUsername,
+  });
 }
