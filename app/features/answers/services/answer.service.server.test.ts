@@ -10,12 +10,16 @@ import {
   type AnswerWorkflowQuestion,
   type PublicPublishedAnswerRow,
   type StoredAnswerDraftItem,
-  type StoredDraftAnswerQuestion,
-} from "~/features/answers/answer.server";
-import type { QuestionTextMode } from "~/features/answers/answer.schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
-import type { FollowUpPermission } from "~/features/settings/settings.schema";
-import type { PublicThreadItemRow } from "~/features/threads/public-thread.loader.server";
+  type StoredDraftAnswerQuestion
+} from "~/features/answers/services/answer.service.server";;
+import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
+import type {
+  PublicThreadItemRow
+} from "~/features/threads/queries/public-thread.queries.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

@@ -1,33 +1,33 @@
-import { Eye, EyeOff, PencilLine, Send, Save, X } from "lucide-react";
+import { Eye, EyeOff, PencilLine, Send, Save } from "lucide-react";
 import { useId, useState } from "react";
-import { Form, Link } from "react-router";
+import { Form } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { PendingButton } from "~/components/app/pending-button";
-import { Button } from "~/components/ui/button";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
+
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Textarea } from "~/components/ui/textarea";
+} from "~/components/ui/field/field";
+import { Textarea } from "~/components/ui/textarea/textarea";
 import type {
   AnswerActionResult,
   AnswerEditorViewData,
   AnswerFieldErrors,
   AnswerFormValues,
-} from "~/features/answers/answer.server";
-import type { QuestionTextMode } from "~/features/answers/answer.schema";
+} from "~/features/answers/types/answers.types";
+import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
 import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
-import type { FollowUpPermission } from "~/features/settings/settings.schema";
+import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
 import { ThreadContextPreview } from "~/features/threads/components/thread-context-preview";
 import { formatMediumDateTime } from "~/lib/date-format";
 import { cn } from "~/lib/utils";
 
 interface AnswerEditorProps {
   actionResult: AnswerActionResult | undefined;
-  closeHref: string;
+
   disabled: boolean;
   editor: AnswerEditorViewData;
 }
@@ -64,7 +64,7 @@ const answerCharacterLimit = 3_000;
 
 export function AnswerEditor({
   actionResult,
-  closeHref,
+
   disabled,
   editor,
 }: AnswerEditorProps) {
@@ -112,16 +112,6 @@ export function AnswerEditor({
           </div>
           <div className="flex items-start gap-3 sm:min-w-80 sm:justify-end">
             <QuestionSender question={editor.question} />
-            <Button
-              aria-label="Close answer editor"
-              asChild
-              size="icon"
-              variant="ghost"
-            >
-              <Link to={closeHref}>
-                <X data-icon="inline-start" />
-              </Link>
-            </Button>
           </div>
         </div>
       </header>
@@ -315,7 +305,7 @@ export function AnswerEditor({
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex flex-wrap gap-2">
             <QuestionModerationControls
-              action="/dashboard/inbox"
+              action="/inbox"
               disabled={disabled}
               questionPublicId={editor.question.publicId}
               variant="inline"

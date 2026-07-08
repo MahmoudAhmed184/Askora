@@ -5,14 +5,13 @@ import {
   PinOff,
   Save,
   Trash2,
-  X,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useFetcher } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { ToastResultInput } from "~/components/app/toast-result-input";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { ToastResultInput } from "~/components/shared/toast-result/toast-result-input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,9 +21,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import { Button } from "~/components/ui/button";
-import { buttonVariants } from "~/components/ui/button-variants";
+} from "~/components/ui/alert-dialog/alert-dialog";
+import { Button } from "~/components/ui/button/button";
+import { buttonVariants } from "~/components/ui/button/button-variants";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,11 +32,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { Textarea } from "~/components/ui/textarea";
-import type { PublishedAnswerActionIntent } from "~/features/answers/answer.schema";
-import type { PublishedAnswerActionResult } from "~/features/answers/manage-published-answer.server";
-import type { PublishedAnswerControlState } from "~/features/answers/published-answer-controls";
+} from "~/components/ui/dropdown-menu/dropdown-menu";
+import { Textarea } from "~/components/ui/textarea/textarea";
+import type { PublishedAnswerActionIntent } from "~/features/answers/validations/answer.validations";
+import type { PublishedAnswerActionResult } from "~/features/answers/types/answers.types";
+import type { PublishedAnswerControlState } from "~/features/answers/types/answers.types";
 
 export interface PublishedAnswerOwnerControlAnswer {
   publicId: string;
@@ -75,7 +74,7 @@ export function PublishedAnswerOwnerControls({
   const [confirmIntent, setConfirmIntent] = useState<ConfirmIntent | null>(null);
   const fetcher = useFetcher<PublishedAnswerActionFetcherData>();
   const disabled = controls.disabled || fetcher.state !== "idle";
-  const action = `/dashboard/answers/${answer.publicId}/actions`;
+  const action = `/answers/${answer.publicId}/actions`;
   const result = fetcher.data?.publishedAnswer;
 
   return (
@@ -193,10 +192,11 @@ function EditPublishedAnswerPanel({
   fetcher: PublishedAnswerActionFetcher;
   onClose: () => void;
 }) {
+  // TODO: Migrate this inline editor, the answer editor overlay, and moderation panels to the shared Dialog primitive after their fetcher/route lifecycles are split.
   return (
     <div
       aria-label="Edit published answer"
-      className="fixed inset-x-4 bottom-24 z-50 mx-auto flex max-h-[min(34rem,calc(100vh-7rem))] max-w-md flex-col gap-3 overflow-auto rounded-2xl border bg-card p-4 text-card-foreground shadow-[var(--shadow-card-hover)] sm:inset-x-auto sm:left-1/2 sm:w-[28rem] sm:-translate-x-1/2"
+      className="fixed inset-x-4 bottom-24 z-[70] mx-auto flex max-h-[min(34rem,calc(100vh-7rem))] max-w-md flex-col gap-3 overflow-auto rounded-2xl border bg-card p-4 text-card-foreground shadow-[var(--shadow-card-hover)] sm:inset-x-auto sm:left-1/2 sm:w-[28rem] sm:-translate-x-1/2"
       role="dialog"
     >
       <div className="flex items-start justify-between gap-3">
@@ -206,16 +206,6 @@ function EditPublishedAnswerPanel({
             Update the answer without notifying followers or thread participants.
           </p>
         </div>
-        <Button
-          aria-label="Close edit published answer"
-          disabled={disabled}
-          onClick={onClose}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <X data-icon="inline-start" />
-        </Button>
       </div>
 
       <fetcher.Form

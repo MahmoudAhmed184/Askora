@@ -1,11 +1,11 @@
 import { data, redirect } from "react-router";
 
-import { wantsToastResult } from "~/components/app/toast-result";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
+import { wantsToastResult } from "~/components/shared/toast-result/toast-result";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
 import {
   handlePublishedAnswerAction,
   type PublishedAnswerActionResult,
-} from "~/features/answers/manage-published-answer.server";
+} from "~/features/answers/services/manage-published-answer.service.server";
 
 import type { Route } from "./+types/published-answer-actions.route";
 
@@ -14,7 +14,7 @@ interface PublishedAnswerActionRouteData {
 }
 
 export function loader() {
-  return redirect("/dashboard");
+  return redirect("/feed");
 }
 
 export async function action({ context, params, request }: Route.ActionArgs) {

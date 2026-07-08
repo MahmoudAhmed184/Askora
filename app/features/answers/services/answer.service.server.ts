@@ -18,27 +18,27 @@ import {
   type AnswerIntent,
   type AnswerSubmission,
   type QuestionTextMode,
-} from "~/features/answers/answer.schema";
+} from "~/features/answers/validations/answer.validations";
 import type {
   CompletedProfileSessionSummary,
-  CurrentSessionSummary,
-} from "~/features/auth/auth.server";
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   createFollowUpAnsweredNotification,
   createQuestionAnsweredNotificationForQuestion,
-} from "~/features/notifications/notification.server";
-import { findThreadItemLikeSummaries } from "~/features/social/social-data.server";
+} from "~/features/notifications/services/notification.service.server";
+import { findThreadItemLikeSummaries } from "~/features/social/services/social-data.service.server";
 import {
   getLikeControlState,
   type LikeControlState,
 } from "~/features/social/social-controls";
-import type { FollowUpPermission } from "~/features/settings/settings.schema";
+import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
 import {
   createCompactThreadContextPreview,
   type CompactThreadContextPreview,
-} from "~/features/threads/follow-up.server";
-import type { PublicThreadItemRow } from "~/features/threads/public-thread.loader.server";
-import { MAX_PUBLISHED_THREAD_ITEMS } from "~/features/threads/thread-permissions.server";
+} from "~/features/threads/services/follow-up.service.server";
+import type { PublicThreadItemRow } from "~/features/threads/queries/public-thread.queries.server";
+import { MAX_PUBLISHED_THREAD_ITEMS } from "~/features/threads/services/thread-permissions.service.server";
 import { createDatabaseId, createPublicId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 

@@ -8,8 +8,10 @@ import {
   publishedAnswerActionSchema,
   type PublishedAnswerActionIntent,
   type PublishedAnswerActionSubmission,
-} from "~/features/answers/answer.schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+} from "~/features/answers/validations/answer.validations";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import { parseFormData } from "~/lib/zod-form";
 
 const pinnedAnswerPositionValues = [1, 2, 3] as const;

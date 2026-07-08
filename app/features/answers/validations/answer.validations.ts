@@ -4,7 +4,7 @@ import { questionTextModeValues } from "~/db/schema";
 import {
   followUpPermissionValues,
   type FollowUpPermission,
-} from "~/features/settings/settings.schema";
+} from "~/features/settings/validations/settings.validations";
 
 export const answerIntentValues = ["save_draft", "publish"] as const;
 export const publishedAnswerActionIntentValues = [

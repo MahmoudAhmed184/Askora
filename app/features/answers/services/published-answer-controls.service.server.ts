@@ -1,4 +1,6 @@
-import type { CurrentSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CurrentSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   hiddenPublishedAnswerControls,
   type PublishedAnswerControlState,

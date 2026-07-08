@@ -1,16 +1,16 @@
 import { data, Link, redirect, useActionData } from "react-router";
 
-import { Badge } from "~/components/ui/badge";
+import { Badge } from "~/components/ui/badge/badge";
 import { AnswerEditor } from "~/features/answers/components/answer-editor";
 import {
   handleAnswerSubmission,
   loadAnswerEditor,
   type AnswerActionResult,
-} from "~/features/answers/answer.server";
+} from "~/features/answers/services/answer.service.server";
 import {
   isSessionSuspended,
   requireCompletedProfileSessionFromContext,
-} from "~/features/auth/auth.server";
+} from "~/features/auth/services/auth.service.server";
 
 import type { Route } from "./+types/answer.route";
 
@@ -92,7 +92,7 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center overflow-hidden px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:pb-28 sm:pt-10">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:pb-28 sm:pt-10">
       <Link
         aria-label="Dismiss answer editor"
         className="absolute inset-0 bg-background/92"
@@ -101,7 +101,6 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
       <div className="relative z-10 flex max-h-[calc(100svh_-_9rem_-_env(safe-area-inset-bottom))] w-full max-w-[53rem] sm:max-h-[calc(100svh_-_9rem)]">
         <AnswerEditor
           actionResult={actionData?.answer}
-          closeHref={loaderData.closeHref}
           disabled={loaderData.isSuspended}
           editor={loaderData.editor}
           key={loaderData.editor.question.publicId}
@@ -119,7 +118,7 @@ function getAnswerEditorCloseHref(request: Request) {
     !returnTo.startsWith("/") ||
     returnTo.startsWith("//")
   ) {
-    return "/dashboard/inbox";
+    return "/inbox";
   }
 
   return returnTo;

@@ -1,9 +1,9 @@
 import { FileText, PencilLine } from "lucide-react";
 import { Link, useLocation } from "react-router";
 
-import { EmptyState } from "~/components/app/empty-state";
-import { Button } from "~/components/ui/button";
-import type { DraftAnswerView } from "~/features/answers/answer.server";
+import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import { Button } from "~/components/ui/button/button";
+import type { DraftAnswerView } from "~/features/answers/types/answers.types";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 interface DraftsListProps {
@@ -18,7 +18,7 @@ export function DraftsList({ drafts }: DraftsListProps) {
       <EmptyState
         action={
           <Button asChild variant="outline">
-            <Link to="/dashboard/inbox">Open inbox</Link>
+            <Link to="/inbox">Open inbox</Link>
           </Button>
         }
         description="Saved answer drafts will appear here."
@@ -86,5 +86,5 @@ function createAnswerHref({
   const returnTo = `${location.pathname}${location.search}${location.hash}`;
   const params = new URLSearchParams({ returnTo });
 
-  return `/dashboard/answer/${questionPublicId}?${params.toString()}`;
+  return `/answer/${questionPublicId}?${params.toString()}`;
 }

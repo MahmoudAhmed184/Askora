@@ -1,9 +1,9 @@
 import { DraftsList } from "~/features/answers/components/drafts-list";
-import { loadDraftAnswers } from "~/features/answers/answer.server";
+import { loadDraftAnswers } from "~/features/answers/services/answer.service.server";
 import {
   isSessionSuspended,
   requireCompletedProfileSessionFromContext,
-} from "~/features/auth/auth.server";
+} from "~/features/auth/services/auth.service.server";
 import { InboxWorkflowShell } from "~/features/inbox/components/inbox-workflow-nav";
 
 import type { Route } from "./+types/drafts.route";

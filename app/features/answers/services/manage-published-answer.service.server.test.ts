@@ -4,10 +4,12 @@ import {
   handlePublishedAnswerAction,
   type ManagedPublishedAnswer,
   type PublishedAnswerManagementStore,
-  type PublishedAnswerMutationParams,
-} from "~/features/answers/manage-published-answer.server";
-import type { PublishedAnswerActionIntent } from "~/features/answers/answer.schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+  type PublishedAnswerMutationParams
+} from "~/features/answers/services/manage-published-answer.service.server";;
+import type { PublishedAnswerActionIntent } from "~/features/answers/validations/answer.validations";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 const publishedAt = new Date("2026-05-30T12:00:00.000Z");
