@@ -12,13 +12,15 @@ import {
   threads,
 } from "~/db/schema";
 import type { notificationTypeValues } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
-import { notificationActionSchema } from "~/features/notifications/notification.schema";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import { notificationActionSchema } from "~/features/notifications/validations/notification.validations";
 import { parseFormData } from "~/lib/zod-form";
 
 const NOTIFICATION_RETENTION_DAYS = 180;
 const NOTIFICATION_LIST_LIMIT = 50;
-const NOTIFICATIONS_ROUTE = "/dashboard/notifications";
+const NOTIFICATIONS_ROUTE = "/notifications";
 
 export type NotificationType = (typeof notificationTypeValues)[number];
 
@@ -663,11 +665,11 @@ function getFollowUpAskedHref(row: NotificationRow) {
   }
 
   if (row.questionStatus === "inbox" || row.questionStatus === "draft") {
-    return `/dashboard/answer/${row.questionPublicId}`;
+    return `/answer/${row.questionPublicId}`;
   }
 
   if (row.questionStatus === "filtered") {
-    return "/dashboard/filtered";
+    return "/filtered";
   }
 
   return undefined;

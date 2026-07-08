@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   createNotificationExpiresAt,
   createQuestionAnsweredNotificationForQuestion,
@@ -8,8 +10,8 @@ import {
   handleNotificationAction,
   loadNotifications,
   type NotificationRow,
-  type NotificationStore,
-} from "~/features/notifications/notification.server";
+  type NotificationStore
+} from "~/features/notifications/services/notification.service.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -147,11 +149,11 @@ describe("notification loading and actions", () => {
         id: "anonymous_follow_up",
         actor: undefined,
         message: "You received a follow-up.",
-        targetHref: "/dashboard/answer/qst_1",
+        targetHref: "/answer/qst_1",
       }),
       expect.objectContaining({
         id: "filtered_follow_up",
-        targetHref: "/dashboard/filtered",
+        targetHref: "/filtered",
       }),
     ]);
   });
@@ -212,7 +214,7 @@ describe("notification loading and actions", () => {
       }),
     ).resolves.toEqual({
       status: "marked_read",
-      redirectTo: "/dashboard/notifications",
+      redirectTo: "/notifications",
     });
 
     expect(notifications.rows.find((row) => row.id === "mine")?.readAt).toBe(
@@ -248,7 +250,7 @@ describe("notification loading and actions", () => {
       }),
     ).resolves.toEqual({
       status: "marked_all_read",
-      redirectTo: "/dashboard/notifications",
+      redirectTo: "/notifications",
     });
 
     expect(

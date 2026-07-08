@@ -7,14 +7,16 @@ import {
   UserPlus,
   type LucideIcon,
 } from "lucide-react";
-import { Form, Link } from "react-router";
+import { Form, Link, useFetcher, useLocation } from "react-router";
 
-import { ToastResultInput } from "~/components/app/toast-result-input";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { ToastResultInput } from "~/components/shared/toast-result/toast-result-input";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
+import { getAvatarImageSource } from "~/features/profiles/avatar-url";
+import { createThreadModalLink } from "~/features/threads/thread-modal";
 import { formatMediumDateTime } from "~/lib/date-format";
 import { cn } from "~/lib/utils";
-import type { NotificationView } from "~/features/notifications/notification.server";
+import type { NotificationView } from "~/features/notifications/types/notifications.types";
 
 interface NotificationListProps {
   notifications: NotificationView[];
@@ -75,9 +77,18 @@ function NotificationTimelineItem({
   isLast: boolean;
   notification: NotificationView;
 }) {
+  const fetcher = useFetcher();
+  const location = useLocation();
   const unread = notification.readAt === null;
   const hasAction = notification.targetHref !== undefined || unread;
   const Icon = notificationIcons[notification.type];
+  const targetLink =
+    notification.targetHref === undefined
+      ? undefined
+      : createNotificationTargetLink({
+          href: notification.targetHref,
+          location,
+        });
 
   return (
     <article className="relative flex gap-4">
@@ -161,18 +172,21 @@ function NotificationTimelineItem({
                   Mark read
                 </Button>
               )}
-              {notification.targetHref === undefined ? null : (
-                <Form className="sm:w-full" method="post">
-                  <input name="intent" type="hidden" value="mark_read" />
-                  <input
-                    name="notificationId"
-                    type="hidden"
-                    value={notification.id}
-                  />
-                  <Button className="w-full" size="sm" type="submit">
+              {targetLink === undefined ? null : (
+                <Button asChild className="w-full" size="sm">
+                  <Link
+                    onClick={() => {
+                      if (unread) {
+                        markNotificationRead({ fetcher, notification });
+                      }
+                    }}
+                    prefetch="intent"
+                    to={targetLink.to}
+                    {...getMaskedTargetLinkProps(targetLink)}
+                  >
                     {getNotificationActionLabel(notification.type)}
-                  </Button>
-                </Form>
+                  </Link>
+                </Button>
               )}
             </div>
           ) : null}
@@ -180,6 +194,83 @@ function NotificationTimelineItem({
       </div>
     </article>
   );
+}
+
+function markNotificationRead({
+  fetcher,
+  notification,
+}: {
+  fetcher: ReturnType<typeof useFetcher>;
+  notification: NotificationView;
+}) {
+  const formData = new FormData();
+
+  formData.set("intent", "mark_read");
+  formData.set("notificationId", notification.id);
+  formData.set("redirectTo", "notifications");
+
+  void fetcher.submit(formData, { method: "post" });
+}
+
+function createNotificationTargetLink({
+  href,
+  location,
+}: {
+  href: string;
+  location: {
+    hash: string;
+    pathname: string;
+    search: string;
+  };
+}) {
+  const threadTarget = parsePublicThreadHref(href);
+
+  if (threadTarget !== undefined) {
+    return createThreadModalLink({
+      canonicalHash: threadTarget.hash,
+      location,
+      threadPublicId: threadTarget.threadPublicId,
+      username: threadTarget.username,
+    });
+  }
+
+  return {
+    mask: undefined,
+    to: href,
+  };
+}
+
+function getMaskedTargetLinkProps({
+  mask,
+}: ReturnType<typeof createNotificationTargetLink>) {
+  if (mask === undefined) {
+    return {};
+  }
+
+  return {
+    defaultShouldRevalidate: false,
+    mask,
+    preventScrollReset: true,
+  };
+}
+
+function parsePublicThreadHref(href: string) {
+  if (!href.startsWith("/")) {
+    return undefined;
+  }
+
+  const url = new URL(href, "https://qna.local");
+  const match = /^\/([^/]+)\/a\/([^/]+)$/.exec(url.pathname);
+
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    hash: url.hash,
+    threadPublicId: decodeURIComponent(match[2] ?? ""),
+    username: decodeURIComponent(match[1] ?? ""),
+  };
 }
 
 function ActorAvatar({
@@ -194,7 +285,7 @@ function ActorAvatar({
         className="size-6 shrink-0 rounded-full border bg-muted object-cover"
         decoding="async"
         loading="lazy"
-        src={actor.avatarUrl}
+        src={getAvatarImageSource(actor.avatarUrl)}
       />
     );
   }

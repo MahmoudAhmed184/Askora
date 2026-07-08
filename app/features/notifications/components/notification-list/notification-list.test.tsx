@@ -1,9 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { NotificationList } from "~/features/notifications/components/notification-list";
-import type { NotificationView } from "~/features/notifications/notification.server";
+import type {
+  NotificationView
+} from "~/features/notifications/services/notification.service.server";;
 
 describe("NotificationList", () => {
   it("renders safe labels and links without private notification target text", () => {
@@ -25,9 +27,10 @@ describe("NotificationList", () => {
       "/liker",
     );
     expect(screen.getByRole("button", { name: "Mark read" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Open thread" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open thread" })).toHaveAttribute(
+      "href",
+      "/person/a/thread_public_1#item-item_public_1",
+    );
     expect(screen.queryByText("Secret private question")).not.toBeInTheDocument();
     expect(screen.queryByText("Secret private answer")).not.toBeInTheDocument();
     expect(screen.queryByText("ip_hash_secret")).not.toBeInTheDocument();
@@ -49,6 +52,29 @@ describe("NotificationList", () => {
     expect(screen.getByRole("button", { name: "Mark read" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /liker/i })).not.toBeInTheDocument();
   });
+
+  it("opens thread notifications with contextual modal params", async () => {
+    const { router } = renderNotificationList({
+      notifications: [
+        createNotificationView({
+          readAt: "2026-05-31T12:05:00.000Z",
+        }),
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("link", { name: "Open thread" }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toBe(
+        "?threadUsername=person&threadPublicId=thread_public_1",
+      );
+    });
+    expect(router.state.location.pathname).toBe("/");
+    expect(router.state.location.mask?.pathname).toBe(
+      "/person/a/thread_public_1",
+    );
+    expect(router.state.location.mask?.hash).toBe("#item-item_public_1");
+  });
 });
 
 function renderNotificationList({
@@ -68,7 +94,10 @@ function renderNotificationList({
     },
   );
 
-  render(<RouterProvider router={router} />);
+  return {
+    router,
+    ...render(<RouterProvider router={router} />),
+  };
 }
 
 function createNotificationView(

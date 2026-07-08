@@ -8,19 +8,19 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/notifications.route";
-import { ActionToast } from "~/components/app/action-toast";
-import type { AppShellData } from "~/components/app/app-shell-data";
-import { ToastResultInput } from "~/components/app/toast-result-input";
-import { wantsToastResult } from "~/components/app/toast-result";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import type { AppShellData } from "~/types/app-shell-data";
+import { ToastResultInput } from "~/components/shared/toast-result/toast-result-input";
+import { wantsToastResult } from "~/components/shared/toast-result/toast-result";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
 import { NotificationList } from "~/features/notifications/components/notification-list";
 import {
   handleNotificationAction,
   loadNotifications,
   type NotificationActionResult,
-} from "~/features/notifications/notification.server";
+} from "~/features/notifications/services/notification.service.server";
 
 interface NotificationsRouteActionData {
   notification: NotificationActionResult;
