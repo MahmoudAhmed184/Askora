@@ -17,23 +17,23 @@ import {
 import {
   ActionToast,
   type ActionToastTone,
-} from "~/components/app/action-toast";
-import { PublicShell } from "~/components/app/public-shell";
-import { PendingButton } from "~/components/app/pending-button";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+} from "~/components/shared/action-toast/action-toast";
+import { PublicShell } from "~/components/layout/public-shell/public-shell";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
+} from "~/components/ui/field/field";
+import { Input } from "~/components/ui/input/input";
 import { getAuthProviderStatus } from "~/lib/config.server";
-import { getCurrentSessionSummaryFromContext } from "~/features/auth/auth.server";
+import { getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
 import { parseFormData } from "~/lib/zod-form";
-import { submitWaitlistEntry } from "~/features/home/waitlist.server";
-import { waitlistSubmissionSchema } from "~/features/home/waitlist.schema";
+import { submitWaitlistEntry } from "~/features/home/services/waitlist.service.server";
+import { waitlistSubmissionSchema } from "~/features/home/validations/waitlist.validations";
 import type { Route } from "./+types/home.route";
 
 interface WaitlistActionData {
@@ -58,7 +58,7 @@ export function loader({ context }: Route.LoaderArgs) {
 
   if (session.status === "authenticated") {
     return redirect(
-      session.profileStatus === "complete" ? "/dashboard/feed" : "/setup",
+      session.profileStatus === "complete" ? "/feed" : "/setup",
     );
   }
 

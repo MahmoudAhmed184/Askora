@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   submitWaitlistEntry,
   type WaitlistStore,
-} from "~/features/home/waitlist.server";
-import { waitlistSubmissionSchema } from "~/features/home/waitlist.schema";
+} from "~/features/home/services/waitlist.service.server";
+import { waitlistSubmissionSchema } from "~/features/home/validations/waitlist.validations";
 import type { RateLimitDecision, RateLimitOptions } from "~/lib/rate-limit.server";
 
 describe("waitlistSubmissionSchema", () => {

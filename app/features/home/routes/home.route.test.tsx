@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import HomeRoute from "~/features/home/routes/home.route";
-import type { AuthProviderStatus } from "~/lib/config.server";
+import type { AuthProviderStatus } from "~/lib/config.types";
 
 interface HomeRouteProps {
   loaderData: {
