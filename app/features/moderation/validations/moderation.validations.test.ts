@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   mutedPhraseSubmissionSchema,
   normalizeMutedPhrase,
-} from "~/features/moderation/moderation.schema";
+} from "~/features/moderation/validations/moderation.validations";
 
 describe("muted phrase normalization", () => {
   it("normalizes Unicode text and spacing", () => {
