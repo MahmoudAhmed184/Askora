@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   ACCOUNT_DELETION_GRACE_DAYS,
   loadAccountSettings,
@@ -9,8 +11,8 @@ import {
   type AccountMutationParams,
   type AccountMutationStoreResult,
   type AccountSettingsStore,
-  type StoredAccountSettings,
-} from "~/features/settings/account-settings.server";
+  type StoredAccountSettings
+} from "~/features/settings/services/account-settings.service.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

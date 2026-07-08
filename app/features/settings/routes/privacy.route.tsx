@@ -1,13 +1,13 @@
 import { data, useActionData, useOutletContext } from "react-router";
 
 import type { Route } from "./+types/privacy.route";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
 import { PrivacySettingsForm } from "~/features/settings/components/privacy-settings-form";
 import {
   submitPrivacySettings,
   type PrivacySettingsSubmissionResult,
-} from "~/features/settings/privacy-settings.server";
-import type { SettingsRouteContext } from "~/features/settings/settings-route-context";
+} from "~/features/settings/services/privacy-settings.service.server";
+import type { SettingsRouteContext } from "~/features/settings/types/settings.types";
 
 interface PrivacySettingsActionData {
   privacy: PrivacySettingsSubmissionResult;

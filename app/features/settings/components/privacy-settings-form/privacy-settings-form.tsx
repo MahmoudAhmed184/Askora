@@ -2,23 +2,23 @@ import { AlertTriangle, Eye, MessageCircle, Save } from "lucide-react";
 import { useState } from "react";
 import { Form } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { PendingButton } from "~/components/app/pending-button";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import {
-  type PrivacySettingsFieldErrors,
-  type PrivacySettingsFormValues,
-  type PrivacySettingsSubmissionResult,
-} from "~/features/settings/privacy-settings.server";
+} from "~/components/ui/field/field";
+import type {
+  PrivacySettingsFieldErrors,
+  PrivacySettingsFormValues,
+  PrivacySettingsSubmissionResult,
+} from "~/features/settings/types/settings.types";
 import type {
   AskPermission,
   FollowUpPermission,
-} from "~/features/settings/settings.schema";
+} from "~/features/settings/validations/settings.validations";
 import { cn } from "~/lib/utils";
 
 interface PrivacySettingsFormProps {

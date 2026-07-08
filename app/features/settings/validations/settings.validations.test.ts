@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   privacySettingsSubmissionSchema,
   profileSettingsSubmissionSchema,
-} from "~/features/settings/settings.schema";
+} from "~/features/settings/validations/settings.validations";
 
 describe("profileSettingsSubmissionSchema", () => {
   it("trims profile fields and accepts explicit avatar sources", () => {

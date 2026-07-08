@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   loadProfileSettings,
   submitProfileSettings,
@@ -10,8 +12,8 @@ import {
   type ProfileSettingsStore,
   type ProfileUsernameChange,
   type ProfileUsernameChangeStoreResult,
-  type StoredProfileSettings,
-} from "~/features/settings/profile-settings.server";
+  type StoredProfileSettings
+} from "~/features/settings/services/profile-settings.service.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

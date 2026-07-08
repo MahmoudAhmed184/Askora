@@ -3,7 +3,9 @@ import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { profiles } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   askPermissionValues,
   followUpPermissionValues,
@@ -11,7 +13,7 @@ import {
   type AskPermission,
   type FollowUpPermission,
   type PrivacySettingsSubmission,
-} from "~/features/settings/settings.schema";
+} from "~/features/settings/validations/settings.validations";
 import { parseFormData } from "~/lib/zod-form";
 
 export interface PrivacySettingsFormValues {

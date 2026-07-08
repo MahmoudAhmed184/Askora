@@ -6,7 +6,7 @@ import { ProfileSettingsForm } from "~/features/settings/components/profile-sett
 import type {
   ProfileSettingsSubmissionResult,
   ProfileSettingsViewData,
-} from "~/features/settings/profile-settings.server";
+} from "~/features/settings/services/profile-settings.service.server";
 
 describe("ProfileSettingsForm", () => {
   it("shows server validation messages", () => {

@@ -1,13 +1,13 @@
 import { data, useActionData, useOutletContext } from "react-router";
 
 import type { Route } from "./+types/account.route";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
 import { AccountSettingsForm } from "~/features/settings/components/account-settings-form";
 import {
   submitAccountSettings,
   type AccountSettingsSubmissionResult,
-} from "~/features/settings/account-settings.server";
-import type { SettingsRouteContext } from "~/features/settings/settings-route-context";
+} from "~/features/settings/services/account-settings.service.server";
+import type { SettingsRouteContext } from "~/features/settings/types/settings.types";
 
 interface AccountSettingsActionData {
   account: AccountSettingsSubmissionResult;

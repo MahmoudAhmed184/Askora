@@ -6,7 +6,7 @@ import { SafetySettingsForm } from "~/features/settings/components/safety-settin
 import type {
   SafetySettingsSubmissionResult,
   SafetySettingsViewData,
-} from "~/features/settings/safety-settings.server";
+} from "~/features/settings/services/safety-settings.service.server";
 
 describe("SafetySettingsForm", () => {
   it("renders muted phrases and creator-safe block rows", () => {

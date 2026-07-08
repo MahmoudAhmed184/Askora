@@ -10,22 +10,22 @@ import {
 import { useState } from "react";
 import { Form } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { PendingButton } from "~/components/app/pending-button";
-import { Badge } from "~/components/ui/badge";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
+import { Badge } from "~/components/ui/badge/badge";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import {
-  type SafetyBlockView,
-  type SafetySettingsFieldErrors,
-  type SafetySettingsSubmissionResult,
-  type SafetySettingsViewData,
-} from "~/features/settings/safety-settings.server";
+} from "~/components/ui/field/field";
+import { Input } from "~/components/ui/input/input";
+import type {
+  SafetyBlockView,
+  SafetySettingsFieldErrors,
+  SafetySettingsSubmissionResult,
+  SafetySettingsViewData,
+} from "~/features/settings/types/settings.types";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 type SafetySettingsSuccessResult = Extract<

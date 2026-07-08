@@ -10,22 +10,23 @@ import {
 import { useState } from "react";
 import { Form } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { PendingButton } from "~/components/app/pending-button";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import { Textarea } from "~/components/ui/textarea";
+} from "~/components/ui/field/field";
+import { Input } from "~/components/ui/input/input";
+import { Textarea } from "~/components/ui/textarea/textarea";
+import { getAvatarImageSource } from "~/features/profiles/avatar-url";
 import {
   type ProfileSettingsFieldErrors,
   type ProfileSettingsSubmissionResult,
   type ProfileSettingsViewData,
-} from "~/features/settings/profile-settings.server";
-import type { AvatarSource } from "~/features/settings/settings.schema";
+} from "~/features/settings/types/settings.types";
+import type { AvatarSource } from "~/features/settings/validations/settings.validations";
 import { getUsernamePolicyIssue } from "~/features/profile-setup/username-policy";
 import { cn } from "~/lib/utils";
 
@@ -273,7 +274,11 @@ function AvatarSourceOption({
           {imageUrl === undefined ? (
             <Image aria-hidden="true" className="size-4" />
           ) : (
-            <img alt="" className="size-full object-cover" src={imageUrl} />
+            <img
+              alt=""
+              className="size-full object-cover"
+              src={getAvatarImageSource(imageUrl)}
+            />
           )}
         </span>
         <span className="min-w-0">

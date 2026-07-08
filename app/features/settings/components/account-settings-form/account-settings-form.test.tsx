@@ -6,7 +6,7 @@ import { AccountSettingsForm } from "~/features/settings/components/account-sett
 import type {
   AccountSettingsSubmissionResult,
   AccountSettingsViewData,
-} from "~/features/settings/account-settings.server";
+} from "~/features/settings/services/account-settings.service.server";
 
 describe("AccountSettingsForm", () => {
   it("requires typed confirmations before enabling destructive actions", () => {

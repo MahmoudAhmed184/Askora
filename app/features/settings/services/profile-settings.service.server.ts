@@ -3,13 +3,15 @@ import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { profiles, usernameReservations } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   avatarSourceValues,
   profileSettingsSubmissionSchema,
   type AvatarSource,
   type ProfileSettingsSubmission,
-} from "~/features/settings/settings.schema";
+} from "~/features/settings/validations/settings.validations";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 

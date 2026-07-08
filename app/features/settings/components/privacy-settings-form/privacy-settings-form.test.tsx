@@ -6,7 +6,7 @@ import { PrivacySettingsForm } from "~/features/settings/components/privacy-sett
 import type {
   PrivacySettingsFormValues,
   PrivacySettingsSubmissionResult,
-} from "~/features/settings/privacy-settings.server";
+} from "~/features/settings/services/privacy-settings.service.server";
 
 describe("PrivacySettingsForm", () => {
   it("shows server validation messages", () => {

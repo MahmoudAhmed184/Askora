@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router";
 
-import { Badge } from "~/components/ui/badge";
+import { Badge } from "~/components/ui/badge/badge";
 import { cn } from "~/lib/utils";
 
 interface SettingsShellProps {
@@ -18,28 +18,28 @@ interface SettingsShellProps {
 
 const settingsLinks = [
   {
-    to: "/dashboard/settings/profile",
+    to: "/settings/profile",
     label: "Profile",
     icon: UserRound,
     description:
       "Manage your public identity, avatar source, and reserved username.",
   },
   {
-    to: "/dashboard/settings/privacy",
+    to: "/settings/privacy",
     label: "Privacy",
     icon: LockKeyhole,
     description:
       "Control question intake, follow-up permissions, and public count visibility.",
   },
   {
-    to: "/dashboard/settings/safety",
+    to: "/settings/safety",
     label: "Safety",
     icon: ShieldCheck,
     description:
       "Pause intake, filter phrases, and review sender blocks created from private-question moderation.",
   },
   {
-    to: "/dashboard/settings/account",
+    to: "/settings/account",
     label: "Account",
     icon: Settings2,
     description: "Manage profile availability and account deletion requests.",

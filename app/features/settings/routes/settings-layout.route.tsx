@@ -3,13 +3,13 @@ import { Outlet, type ShouldRevalidateFunctionArgs } from "react-router";
 import {
   isSessionSuspended,
   requireCompletedProfileSessionFromContext,
-} from "~/features/auth/auth.server";
-import { loadAccountSettings } from "~/features/settings/account-settings.server";
+} from "~/features/auth/services/auth.service.server";
+import { loadAccountSettings } from "~/features/settings/services/account-settings.service.server";
 import { SettingsShell } from "~/features/settings/components/settings-shell";
-import { loadPrivacySettings } from "~/features/settings/privacy-settings.server";
-import { loadProfileSettings } from "~/features/settings/profile-settings.server";
-import { loadSafetySettings } from "~/features/settings/safety-settings.server";
-import type { SettingsRouteContext } from "~/features/settings/settings-route-context";
+import { loadPrivacySettings } from "~/features/settings/services/privacy-settings.service.server";
+import { loadProfileSettings } from "~/features/settings/services/profile-settings.service.server";
+import { loadSafetySettings } from "~/features/settings/services/safety-settings.service.server";
+import type { SettingsRouteContext } from "~/features/settings/types/settings.types";
 
 import type { Route } from "./+types/settings-layout.route";
 
@@ -69,7 +69,7 @@ function isSettingsMutation(formAction: string | undefined) {
     return false;
   }
 
-  return getPathname(formAction).startsWith("/dashboard/settings/");
+  return getPathname(formAction).startsWith("/settings/");
 }
 
 function getPathname(value: string) {

@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   loadPrivacySettings,
   submitPrivacySettings,
   type PrivacySettingsStore,
   type PrivacySettingsUpdate,
-  type StoredPrivacySettings,
-} from "~/features/settings/privacy-settings.server";
+  type StoredPrivacySettings
+} from "~/features/settings/services/privacy-settings.service.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

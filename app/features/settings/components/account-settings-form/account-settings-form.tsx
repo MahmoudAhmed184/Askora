@@ -8,8 +8,8 @@ import {
 import { useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Form, useNavigation } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { PendingButton } from "~/components/app/pending-button";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,22 +19,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import { Button } from "~/components/ui/button";
-import { buttonVariants } from "~/components/ui/button-variants";
+} from "~/components/ui/alert-dialog/alert-dialog";
+import { Button } from "~/components/ui/button/button";
+import { buttonVariants } from "~/components/ui/button/button-variants";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
+} from "~/components/ui/field/field";
+import { Input } from "~/components/ui/input/input";
 import {
   type AccountSettingsFieldErrors,
   type AccountSettingsSubmissionResult,
   type AccountSettingsViewData,
-} from "~/features/settings/account-settings.server";
-import type { AccountAction } from "~/features/settings/settings.schema";
+} from "~/features/settings/types/settings.types";
+import type { AccountAction } from "~/features/settings/validations/settings.validations";
 import { cn } from "~/lib/utils";
 
 interface AccountSettingsFormProps {

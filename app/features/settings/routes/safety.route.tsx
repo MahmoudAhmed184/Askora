@@ -1,13 +1,13 @@
 import { data, useActionData, useOutletContext } from "react-router";
 
 import type { Route } from "./+types/safety.route";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
 import { SafetySettingsForm } from "~/features/settings/components/safety-settings-form";
 import {
   submitSafetySettings,
   type SafetySettingsSubmissionResult,
-} from "~/features/settings/safety-settings.server";
-import type { SettingsRouteContext } from "~/features/settings/settings-route-context";
+} from "~/features/settings/services/safety-settings.service.server";
+import type { SettingsRouteContext } from "~/features/settings/types/settings.types";
 
 interface SafetySettingsActionData {
   safety: SafetySettingsSubmissionResult;

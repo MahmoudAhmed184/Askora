@@ -5,12 +5,14 @@ import { z } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { blocks, mutedPhrases, profiles } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   checkboxBooleanSchema,
   mutedPhraseSubmissionSchema,
   type MutedPhraseSubmission,
-} from "~/features/moderation/moderation.schema";
+} from "~/features/moderation/validations/moderation.validations";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 

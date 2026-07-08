@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   MAX_MUTED_PHRASES_PER_PROFILE,
   loadSafetySettings,
@@ -8,8 +10,8 @@ import {
   type AcceptingQuestionsUpdate,
   type NewMutedPhrase,
   type SafetySettingsStore,
-  type StoredSafetySettings,
-} from "~/features/settings/safety-settings.server";
+  type StoredSafetySettings
+} from "~/features/settings/services/safety-settings.service.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

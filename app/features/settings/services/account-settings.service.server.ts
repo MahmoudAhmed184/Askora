@@ -3,13 +3,15 @@ import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { authUsers, profiles } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   accountSettingsSubmissionSchema,
   accountActionValues,
   type AccountAction,
   type AccountSettingsSubmission,
-} from "~/features/settings/settings.schema";
+} from "~/features/settings/validations/settings.validations";
 import { parseFormData } from "~/lib/zod-form";
 
 export const ACCOUNT_DELETION_GRACE_DAYS = 14;
