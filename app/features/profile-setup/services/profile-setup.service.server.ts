@@ -3,8 +3,10 @@ import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { events, profiles, usernameReservations } from "~/db/schema";
-import type { IncompleteProfileSessionSummary } from "~/features/auth/auth.server";
-import { profileSetupSubmissionSchema } from "~/features/profile-setup/profile-setup.schema";
+import type {
+  IncompleteProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
+import { profileSetupSubmissionSchema } from "~/features/profile-setup/validations/profile-setup.validations";
 import { isAllowedUsername } from "~/features/profile-setup/username-policy";
 import { createDatabaseId } from "~/lib/ids.server";
 import { ok, type Result } from "~/lib/result";

@@ -2,20 +2,20 @@ import { AtSign, CheckCircle2, IdCard, MessageSquareText } from "lucide-react";
 import { useState } from "react";
 import { Form } from "react-router";
 
-import { PendingButton } from "~/components/app/pending-button";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import { Textarea } from "~/components/ui/textarea";
+} from "~/components/ui/field/field";
+import { Input } from "~/components/ui/input/input";
+import { Textarea } from "~/components/ui/textarea/textarea";
 import type {
   ProfileSetupFieldErrors,
   ProfileSetupFormResult,
   ProfileSetupFormValues,
-} from "~/features/profile-setup/profile-setup.server";
+} from "~/features/profile-setup/types/profile-setup.types";
 import { getUsernamePolicyIssue } from "~/features/profile-setup/username-policy";
 
 interface SetupFormProps {

@@ -2,21 +2,21 @@ import { AlertTriangle, ArrowRight, Link2, ShieldCheck } from "lucide-react";
 import { data, Link, redirect, useActionData } from "react-router";
 
 import type { Route } from "./+types/setup.route";
-import { ActionToast } from "~/components/app/action-toast";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import {
   isSessionSuspended,
   requireIncompleteProfileSessionFromContext,
-} from "~/features/auth/auth.server";
+} from "~/features/auth/services/auth.service.server";
 import { OnboardingShell } from "~/features/profile-setup/components/onboarding-shell";
 import { SetupForm } from "~/features/profile-setup/components/setup-form";
 import {
   getProfileSetupDefaults,
   submitProfileSetup,
   type ProfileSetupFormResult,
-} from "~/features/profile-setup/profile-setup.server";
-import { createSetupShareAccessCookieHeader } from "~/features/profile-setup/setup-share-access.server";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+} from "~/features/profile-setup/services/profile-setup.service.server";
+import { createSetupShareAccessCookieHeader } from "~/features/profile-setup/services/setup-share-access.service.server";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
 
 interface SetupActionData {
   setup: ProfileSetupFormResult;

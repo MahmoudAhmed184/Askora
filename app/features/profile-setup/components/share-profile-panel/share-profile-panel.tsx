@@ -2,9 +2,9 @@ import { Check, Clipboard, Share2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
+import { Input } from "~/components/ui/input/input";
 
 interface ShareProfilePanelProps {
   canonicalUrl: string;

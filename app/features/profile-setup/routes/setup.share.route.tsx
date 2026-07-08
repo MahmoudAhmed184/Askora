@@ -2,15 +2,15 @@ import { ArrowRight, Link2 } from "lucide-react";
 import { data, Link, redirect } from "react-router";
 
 import type { Route } from "./+types/setup.share.route";
-import { Button } from "~/components/ui/button";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/auth.server";
+import { Button } from "~/components/ui/button/button";
+import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
 import { OnboardingShell } from "~/features/profile-setup/components/onboarding-shell";
 import { ShareProfilePanel } from "~/features/profile-setup/components/share-profile-panel";
-import { createCanonicalProfileUrl } from "~/features/profile-setup/profile-setup.server";
+import { createCanonicalProfileUrl } from "~/features/profile-setup/services/profile-setup.service.server";
 import {
   clearSetupShareAccessCookieHeader,
   hasSetupShareAccess,
-} from "~/features/profile-setup/setup-share-access.server";
+} from "~/features/profile-setup/services/setup-share-access.service.server";
 import { getPublicAppConfig } from "~/lib/config.server";
 
 export function loader({ context, request }: Route.LoaderArgs) {
@@ -26,7 +26,7 @@ export function loader({ context, request }: Route.LoaderArgs) {
       request,
     })
   ) {
-    return redirect("/dashboard/feed");
+    return redirect("/feed");
   }
 
   return data(
@@ -87,7 +87,7 @@ export default function SetupShareRoute({ loaderData }: Route.ComponentProps) {
               </Link>
             </Button>
             <Button asChild>
-              <Link to="/dashboard/feed">
+              <Link to="/feed">
                 Continue to Feed
                 <ArrowRight data-icon="inline-end" />
               </Link>

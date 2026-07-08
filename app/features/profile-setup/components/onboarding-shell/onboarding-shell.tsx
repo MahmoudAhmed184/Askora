@@ -2,7 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
-import { Badge } from "~/components/ui/badge";
+import { Badge } from "~/components/ui/badge/badge";
 import {
   SetupProgress,
   type SetupStep,

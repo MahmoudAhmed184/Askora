@@ -3,7 +3,9 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { SetupForm } from "~/features/profile-setup/components/setup-form";
-import type { ProfileSetupFormResult } from "~/features/profile-setup/profile-setup.server";
+import type {
+  ProfileSetupFormResult
+} from "~/features/profile-setup/services/profile-setup.service.server";;
 
 describe("SetupForm", () => {
   it("shows local username policy feedback", () => {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { IncompleteProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  IncompleteProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   createCanonicalProfileUrl,
   getProfileSetupDefaults,
@@ -8,8 +10,8 @@ import {
   type ExistingProfile,
   type ExistingUsernameReservation,
   type NewProfileSetup,
-  type ProfileSetupStore,
-} from "~/features/profile-setup/profile-setup.server";
+  type ProfileSetupStore
+} from "~/features/profile-setup/services/profile-setup.service.server";;
 
 describe("submitProfileSetup", () => {
   it("blocks suspended incomplete-profile users", async () => {

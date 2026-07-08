@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { profileSetupSubmissionSchema } from "~/features/profile-setup/profile-setup.schema";
+import { profileSetupSubmissionSchema } from "~/features/profile-setup/validations/profile-setup.validations";
 
 describe("profileSetupSubmissionSchema", () => {
   it("trims username, display name, and bio without lowercasing username", () => {
