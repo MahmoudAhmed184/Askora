@@ -1,22 +1,22 @@
 import { ExternalLink } from "lucide-react";
 import { Link } from "react-router";
 
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card";
+} from "~/components/ui/card/card";
 import {
   adminActionLabels,
   reportReasonLabels,
   reportStatusLabels,
   targetTypeLabels,
 } from "~/features/admin/components/admin-labels";
-import type { AdminReportDetailViewData } from "~/features/admin/admin.loader.server";
+import type { AdminReportDetailViewData } from "~/features/admin/types/admin.types";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 interface ReportDetailProps {

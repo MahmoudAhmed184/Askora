@@ -7,7 +7,7 @@ import {
   requireAuthenticatedSessionFromContext,
   type AuthenticatedSessionSummary,
   type CurrentSessionContextReader,
-} from "~/features/auth/auth.server";
+} from "~/features/auth/services/auth.service.server";
 
 export type AdminSession = AuthenticatedSessionSummary & {
   role: "admin";

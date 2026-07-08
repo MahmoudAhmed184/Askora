@@ -2,7 +2,7 @@ import { ShieldCheck } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { Form, useNavigation } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,20 +12,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import { Button } from "~/components/ui/button";
-import { buttonVariants } from "~/components/ui/button-variants";
+} from "~/components/ui/alert-dialog/alert-dialog";
+import { Button } from "~/components/ui/button/button";
+import { buttonVariants } from "~/components/ui/button/button-variants";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card";
-import { Textarea } from "~/components/ui/textarea";
-import type { AdminActionType } from "~/features/admin/admin.schema";
-import { requiresAdminActionNotes } from "~/features/admin/admin.schema";
-import type { AdminReportActionResult } from "~/features/admin/admin-actions.server";
+} from "~/components/ui/card/card";
+import { Textarea } from "~/components/ui/textarea/textarea";
+import type { AdminActionType } from "~/features/admin/validations/admin.validations";
+import { requiresAdminActionNotes } from "~/features/admin/validations/admin.validations";
+import type { AdminReportActionResult } from "~/features/admin/types/admin.types";
 import { adminActionLabels } from "~/features/admin/components/admin-labels";
 import { cn } from "~/lib/utils";
 

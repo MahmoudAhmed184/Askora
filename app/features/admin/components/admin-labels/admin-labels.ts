@@ -1,9 +1,9 @@
-import type { AdminActionType } from "~/features/admin/admin.schema";
+import type { AdminActionType } from "~/features/admin/validations/admin.validations";
 import type {
   AdminReportReason,
   AdminReportStatus,
   AdminReportTargetType,
-} from "~/features/admin/admin.loader.server";
+} from "~/features/admin/types/admin.types";
 
 export const adminActionLabels: Record<AdminActionType, string> = {
   dismiss: "Dismiss report",

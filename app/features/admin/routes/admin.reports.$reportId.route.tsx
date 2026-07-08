@@ -1,9 +1,9 @@
 import { ArrowLeft } from "lucide-react";
 import { Link, useActionData } from "react-router";
 
-import { AdminShell } from "~/components/app/admin-shell";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { AdminShell } from "~/features/admin/components/admin-shell/admin-shell";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
 import { AdminActionForm } from "~/features/admin/components/admin-action-form";
 import { AdminHero } from "~/features/admin/components/admin-hero";
 import {
@@ -13,11 +13,13 @@ import {
 } from "~/features/admin/components/admin-labels";
 import { RelatedActivityPanel } from "~/features/admin/components/related-activity-panel";
 import { ReportDetail } from "~/features/admin/components/report-detail";
-import type { AdminReportDetailViewData } from "~/features/admin/admin.loader.server";
+import type {
+  AdminReportDetailViewData
+} from "~/features/admin/queries/admin.queries.server";;
 import {
   handleAdminReportActionRoute,
   loadAdminReportDetailRoute,
-} from "~/features/admin/routes/admin-route-handlers.server";
+} from "~/features/admin/services/admin-route-handlers.service.server";
 
 import type { Route } from "./+types/admin.reports.$reportId.route";
 

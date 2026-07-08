@@ -6,7 +6,7 @@ import {
   type AdminReportLoaderStore,
   type StoredAdminReport,
   type StoredReportRelatedActivity,
-} from "~/features/admin/admin.loader.server";
+} from "~/features/admin/queries/admin.queries.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

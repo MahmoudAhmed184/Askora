@@ -1,24 +1,26 @@
 import { data } from "react-router";
 
-import type { AppShellData } from "~/components/app/app-shell-data";
+import type { AppShellData } from "~/types/app-shell-data";
 import {
   handleAdminReportAction,
   type AdminReportActionResult,
   type AdminReportActionStore,
-} from "~/features/admin/admin-actions.server";
+} from "~/features/admin/services/admin-actions.service.server";
 import {
   requireAdminSession,
   requireAdminSessionFromContext,
   type AdminSession,
-} from "~/features/admin/admin-auth.server";
+} from "~/features/admin/services/admin-auth.service.server";
 import {
   loadAdminReportDetail,
   loadAdminReportQueue,
   type AdminReportLoaderStore,
-} from "~/features/admin/admin.loader.server";
-import { parseAdminQueueStatus } from "~/features/admin/admin.schema";
-import type { CurrentSessionContextReader } from "~/features/auth/auth.server";
-import { loadAppShellData } from "~/features/dashboard/app-shell.server";
+} from "~/features/admin/queries/admin.queries.server";
+import { parseAdminQueueStatus } from "~/features/admin/validations/admin.validations";
+import type {
+  CurrentSessionContextReader
+} from "~/features/auth/services/auth.service.server";;
+import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
 
 export interface AdminReportActionRouteData {
   adminAction: AdminReportActionResult;

@@ -8,14 +8,14 @@ import {
   adminActionValues,
   type AdminActionSubmission,
   type AdminActionType,
-} from "~/features/admin/admin.schema";
-import type { AdminSession } from "~/features/admin/admin-auth.server";
+} from "~/features/admin/validations/admin.validations";
+import type { AdminSession } from "~/features/admin/services/admin-auth.service.server";
 import {
   createDrizzleAdminReportLoaderStore,
   getAdminActionTargetReferences,
   getAvailableAdminActions,
   type StoredAdminReport,
-} from "~/features/admin/admin.loader.server";
+} from "~/features/admin/queries/admin.queries.server";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 

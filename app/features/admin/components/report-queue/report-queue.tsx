@@ -1,15 +1,15 @@
 import { AlertTriangle, Inbox, Search } from "lucide-react";
 import { Link } from "react-router";
 
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import { adminQueueStatusValues } from "~/features/admin/admin.schema";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
+import { adminQueueStatusValues } from "~/features/admin/validations/admin.validations";
 import {
   reportReasonLabels,
   reportStatusLabels,
   targetTypeLabels,
 } from "~/features/admin/components/admin-labels";
-import type { AdminReportQueueViewData } from "~/features/admin/admin.loader.server";
+import type { AdminReportQueueViewData } from "~/features/admin/types/admin.types";
 import { formatMediumDateTime } from "~/lib/date-format";
 import { cn } from "~/lib/utils";
 

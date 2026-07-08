@@ -1,19 +1,19 @@
 import { Link } from "react-router";
 
-import { Badge } from "~/components/ui/badge";
+import { Badge } from "~/components/ui/badge/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card";
+} from "~/components/ui/card/card";
 import {
   adminActionLabels,
   reportReasonLabels,
   reportStatusLabels,
 } from "~/features/admin/components/admin-labels";
-import type { AdminReportDetailViewData } from "~/features/admin/admin.loader.server";
+import type { AdminReportDetailViewData } from "~/features/admin/types/admin.types";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 interface RelatedActivityPanelProps {

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   handleAdminReportActionRoute,
   loadAdminIndexRoute,
-} from "~/features/admin/routes/admin-route-handlers.server";
+} from "~/features/admin/services/admin-route-handlers.service.server";
 
 describe("admin route guards", () => {
   it("returns 403 from the /admin loader for non-admin sessions", async () => {

@@ -20,7 +20,7 @@ import {
   adminActionValues,
   type AdminActionType,
   type AdminQueueStatus,
-} from "~/features/admin/admin.schema";
+} from "~/features/admin/validations/admin.validations";
 
 export type AdminReportTargetType =
   (typeof moderationReportTargetTypeValues)[number];

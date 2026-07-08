@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   requireAdminSession,
   type AdminAuthStore,
-} from "~/features/admin/admin-auth.server";
-import type { AuthenticatedSessionSummary } from "~/features/auth/auth.server";
+} from "~/features/admin/services/admin-auth.service.server";
+import type {
+  AuthenticatedSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 
 describe("requireAdminSession", () => {
   it("re-queries the database-backed user role before allowing admins", async () => {
