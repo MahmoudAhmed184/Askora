@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: qna-platform-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: qna_platform
+      POSTGRES_USER: qna_platform
+      POSTGRES_PASSWORD: qna_platform_local
+    ports:
+      - "5433:5432"
+    volumes:
+      - qna_platform_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qna_platform -d qna_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  qna_platform_postgres_data:

@@ -1,7 +1,10 @@
 import "dotenv/config";
 
-import { Pool } from "@neondatabase/serverless";
 import { pathToFileURL } from "node:url";
+
+import pg from "pg";
+
+const { Pool } = pg;
 
 const DEFAULT_LIMIT = 100;
 

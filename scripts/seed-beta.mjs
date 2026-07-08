@@ -3,7 +3,9 @@ import "dotenv/config";
 import { createHmac } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
-import { Pool } from "@neondatabase/serverless";
+import pg from "pg";
+
+const { Pool } = pg;
 
 const DEVELOPMENT_AUTH_SECRET =
   "development-only-better-auth-secret-change-before-production";

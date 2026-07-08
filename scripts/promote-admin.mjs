@@ -1,6 +1,8 @@
 import "dotenv/config";
 
-import { Pool } from "@neondatabase/serverless";
+import pg from "pg";
+
+const { Pool } = pg;
 
 const email = process.argv[2]?.trim();
 const databaseUrl = process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL;

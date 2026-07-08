@@ -9,6 +9,7 @@ const serverOnlyDependencies = [
   "better-auth",
   "drizzle-orm",
   "kysely",
+  "pg",
 ];
 
 export default defineConfig({

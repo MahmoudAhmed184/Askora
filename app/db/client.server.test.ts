@@ -1,10 +1,12 @@
-import { Pool } from "@neondatabase/serverless";
+import { Pool as NeonPool } from "@neondatabase/serverless";
+import { Pool as NodePostgresPool } from "pg";
 import { describe, expect, it } from "vitest";
 
 import {
   createRuntimeDatabase,
   getMigrationDatabaseUrl,
   getRuntimeDatabaseUrl,
+  isNeonDatabaseUrl,
 } from "~/db/client.server";
 
 const pooledUrl =
@@ -20,10 +22,30 @@ describe("database URL selection", () => {
   it("creates a transaction-capable Neon WebSocket database for runtime workloads", async () => {
     const database = createRuntimeDatabase(pooledUrl);
 
-    expect(database.$client).toBeInstanceOf(Pool);
+    expect(database.$client).toBeInstanceOf(NeonPool);
     expect(typeof database.transaction).toBe("function");
 
     await database.$client.end();
+  });
+
+  it("creates a standard Postgres database for local workloads", async () => {
+    const database = createRuntimeDatabase(
+      "postgres://qna_platform:qna_platform_local@localhost:5432/qna_platform?sslmode=disable",
+    );
+
+    expect(database.$client).toBeInstanceOf(NodePostgresPool);
+    expect(typeof database.transaction).toBe("function");
+
+    await database.$client.end();
+  });
+
+  it("detects Neon URLs by hostname", () => {
+    expect(isNeonDatabaseUrl(pooledUrl)).toBe(true);
+    expect(
+      isNeonDatabaseUrl(
+        "postgres://qna_platform:qna_platform_local@localhost:5432/qna_platform?sslmode=disable",
+      ),
+    ).toBe(false);
   });
 
   it("uses the direct URL for migrations when present", () => {

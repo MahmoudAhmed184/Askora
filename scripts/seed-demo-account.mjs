@@ -3,7 +3,9 @@ import "dotenv/config";
 import { createHash, createHmac } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
-import { Pool } from "@neondatabase/serverless";
+import pg from "pg";
+
+const { Pool } = pg;
 
 const DEFAULT_TARGET_EMAIL = "mahmoudbahnasawy820@gmail.com";
 const DEVELOPMENT_AUTH_SECRET =
@@ -21,7 +23,7 @@ const demoUsers = {
     sessionId: "demo_session_curator",
     sessionToken: "demo_session_curator_token",
     magicToken: "demo_magic_curator_token_for_local_testing",
-    callbackPath: "/dashboard/feed",
+    callbackPath: "/feed",
   },
   researcher: {
     id: "demo_user_researcher",
@@ -34,7 +36,7 @@ const demoUsers = {
     sessionId: "demo_session_researcher",
     sessionToken: "demo_session_researcher_token",
     magicToken: "demo_magic_researcher_token_for_local_testing",
-    callbackPath: "/dashboard/feed",
+    callbackPath: "/feed",
   },
   asker: {
     id: "demo_user_asker",
@@ -47,7 +49,7 @@ const demoUsers = {
     sessionId: "demo_session_asker",
     sessionToken: "demo_session_asker_token",
     magicToken: "demo_magic_asker_token_for_local_testing",
-    callbackPath: "/dashboard/feed",
+    callbackPath: "/feed",
   },
   private: {
     id: "demo_user_private",
@@ -60,7 +62,7 @@ const demoUsers = {
     sessionId: "demo_session_private",
     sessionToken: "demo_session_private_token",
     magicToken: "demo_magic_private_token_for_local_testing",
-    callbackPath: "/dashboard/feed",
+    callbackPath: "/feed",
   },
   admin: {
     id: "demo_user_admin",
@@ -86,7 +88,7 @@ const demoUsers = {
     sessionId: "demo_session_suspended",
     sessionToken: "demo_session_suspended_token",
     magicToken: "demo_magic_suspended_token_for_local_testing",
-    callbackPath: "/dashboard/feed",
+    callbackPath: "/feed",
     suspensionStatus: "suspended",
   },
   incomplete: {
@@ -105,7 +107,7 @@ const targetSession = {
   id: "demo_session_target",
   token: "demo_session_target_token",
   magicToken: "demo_magic_target_token_for_local_testing",
-  callbackPath: "/dashboard/feed",
+  callbackPath: "/feed",
 };
 
 export function assertDemoSeedAllowed(environment = process.env) {
@@ -1176,12 +1178,12 @@ function getSeedSummary({ appUrl, secret, target }) {
     targetAccount,
     accounts,
     routes: {
-      feed: `${appUrl}/dashboard/feed`,
-      inbox: `${appUrl}/dashboard/inbox`,
-      filtered: `${appUrl}/dashboard/filtered`,
-      drafts: `${appUrl}/dashboard/drafts`,
-      notifications: `${appUrl}/dashboard/notifications`,
-      settings: `${appUrl}/dashboard/settings/profile`,
+      feed: `${appUrl}/feed`,
+      inbox: `${appUrl}/inbox`,
+      filtered: `${appUrl}/filtered`,
+      drafts: `${appUrl}/drafts`,
+      notifications: `${appUrl}/notifications`,
+      settings: `${appUrl}/settings/profile`,
       publicProfile: `${appUrl}/${target.username}`,
       targetThread: `${appUrl}/${target.username}/a/demo_thr_target_operating_notes`,
       adminReport: `${appUrl}/admin/reports/demo_report_researcher_answer`,

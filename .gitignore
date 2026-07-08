@@ -3,6 +3,7 @@ build
 dist
 .react-router
 .cache
+.local
 playwright-report
 test-results
 .env

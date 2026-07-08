@@ -1,4 +1,4 @@
-import type { Pool } from "@neondatabase/serverless";
+import type { Pool } from "pg";
 
 export interface BetaUserFixture {
   id: string;
