@@ -1,16 +1,16 @@
 import { data, redirect, useActionData } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { Badge } from "~/components/ui/badge";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { Badge } from "~/components/ui/badge/badge";
 import {
   isSessionSuspended,
   requireCompletedProfileSessionFromContext,
-} from "~/features/auth/auth.server";
+} from "~/features/auth/services/auth.service.server";
 import { StarterPromptPicker } from "~/features/prompts/components/starter-prompt-picker";
 import {
   createStarterPromptQuestion,
   type StarterPromptActionResult,
-} from "~/features/prompts/starter-prompts.server";
+} from "~/features/prompts/services/starter-prompts.service.server";
 import { starterPromptCategories } from "~/features/prompts/starter-prompts";
 
 import type { Route } from "./+types/prompts.route";
@@ -45,7 +45,7 @@ export async function action({ context, request }: Route.ActionArgs) {
   });
 
   if (result.status === "created") {
-    return redirect(`/dashboard/answer/${result.questionPublicId}`);
+    return redirect(`/answer/${result.questionPublicId}`);
   }
 
   return data<StarterPromptRouteActionData>(

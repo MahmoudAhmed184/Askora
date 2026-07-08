@@ -3,7 +3,9 @@ import { z } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { questions } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import { findStarterPrompt } from "~/features/prompts/starter-prompts";
 import { hashWithHmacSha256 } from "~/lib/crypto.server";
 import { createDatabaseId, createPublicId } from "~/lib/ids.server";

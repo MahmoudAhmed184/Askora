@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   createStarterPromptQuestion,
   type StarterPromptQuestion,
   type StarterPromptStore,
-} from "~/features/prompts/starter-prompts.server";
+} from "~/features/prompts/services/starter-prompts.service.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

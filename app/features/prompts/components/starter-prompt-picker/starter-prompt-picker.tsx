@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { Form } from "react-router";
 
-import { Button } from "~/components/ui/button";
+import { Button } from "~/components/ui/button/button";
 import type { StarterPromptCategory } from "~/features/prompts/starter-prompts";
 import { cn } from "~/lib/utils";
 
