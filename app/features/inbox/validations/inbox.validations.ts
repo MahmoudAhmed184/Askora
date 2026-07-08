@@ -2,16 +2,16 @@ import { z } from "zod";
 
 import {
   questionReportFieldsSchema,
-} from "~/features/moderation/moderation.schema";
+} from "~/features/moderation/validations/moderation.validations";
 export {
   mutedPhraseSubmissionSchema,
   normalizeMutedPhrase,
   reportReasonValues,
-} from "~/features/moderation/moderation.schema";
+} from "~/features/moderation/validations/moderation.validations";
 export type {
   MutedPhraseSubmission,
   ReportReason,
-} from "~/features/moderation/moderation.schema";
+} from "~/features/moderation/validations/moderation.validations";
 
 export const inboxActionIntentValues = [
   "delete",

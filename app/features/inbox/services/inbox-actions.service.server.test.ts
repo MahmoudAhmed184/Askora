@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   handleInboxAction,
   type InboxActionQuestion,
   type InboxActionStore,
   type NewQuestionReport,
-  type NewSenderBlock,
-} from "~/features/inbox/inbox-actions.server";
+  type NewSenderBlock
+} from "~/features/inbox/services/inbox-actions.service.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 

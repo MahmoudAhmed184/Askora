@@ -1,22 +1,22 @@
-import { Ban, Flag, MoreHorizontal, Send, X } from "lucide-react";
+import { Ban, Flag, MoreHorizontal, Send } from "lucide-react";
 import { useId, useState } from "react";
 import { useFetcher } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { Button } from "~/components/ui/button";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { Button } from "~/components/ui/button/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { Textarea } from "~/components/ui/textarea";
+} from "~/components/ui/dropdown-menu/dropdown-menu";
+import { Textarea } from "~/components/ui/textarea/textarea";
 import {
   moderationReportReasonValues,
   type ModerationReportReason,
 } from "~/db/schema/moderation-values";
-import type { InboxActionResult } from "~/features/inbox/inbox-actions.server";
+import type { InboxActionResult } from "~/features/inbox/types/inbox.types";
 
 interface QuestionModerationControlsProps {
   questionPublicId: string;
@@ -250,8 +250,6 @@ function BlockPanel({
       <PanelHeader
         descriptionId={descriptionId}
         description="Future private questions from this sender will be handled by the safety filter."
-        isPending={isPending}
-        onClose={onClose}
         title="Block sender?"
         titleId={titleId}
       />
@@ -311,8 +309,6 @@ function ReportPanel({
       <PanelHeader
         descriptionId={descriptionId}
         description="Reports stay private and are only available for moderation review."
-        isPending={isPending}
-        onClose={onClose}
         title="Report question"
         titleId={titleId}
       />
@@ -389,15 +385,11 @@ function ReportPanel({
 function PanelHeader({
   description,
   descriptionId,
-  isPending,
-  onClose,
   title,
   titleId,
 }: {
   description: string;
   descriptionId: string;
-  isPending: boolean;
-  onClose: () => void;
   title: string;
   titleId: string;
 }) {
@@ -411,16 +403,6 @@ function PanelHeader({
           {description}
         </p>
       </div>
-      <Button
-        aria-label={`Close ${title.toLowerCase()}`}
-        disabled={isPending}
-        onClick={onClose}
-        size="icon"
-        type="button"
-        variant="ghost"
-      >
-        <X />
-      </Button>
     </div>
   );
 }

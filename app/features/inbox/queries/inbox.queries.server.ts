@@ -2,7 +2,9 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { questions } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 
 export const inboxFolderValues = ["inbox", "filtered"] as const;
 

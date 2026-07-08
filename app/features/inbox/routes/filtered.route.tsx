@@ -1,18 +1,18 @@
 import { data, useActionData } from "react-router";
 
 import type { Route } from "./+types/filtered.route";
-import { ActionToast } from "~/components/app/action-toast";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import {
   isSessionSuspended,
   requireCompletedProfileSessionFromContext,
-} from "~/features/auth/auth.server";
+} from "~/features/auth/services/auth.service.server";
 import { InboxList } from "~/features/inbox/components/inbox-list";
 import { InboxWorkflowShell } from "~/features/inbox/components/inbox-workflow-nav";
 import {
   handleInboxAction,
   type InboxActionResult,
-} from "~/features/inbox/inbox-actions.server";
-import { loadInboxFolder } from "~/features/inbox/inbox.loader.server";
+} from "~/features/inbox/services/inbox-actions.service.server";
+import { loadInboxFolder } from "~/features/inbox/queries/inbox.queries.server";
 
 interface FilteredRouteActionData {
   inbox: InboxActionResult;

@@ -6,7 +6,7 @@ import { InboxList } from "~/features/inbox/components/inbox-list";
 import type {
   InboxFolder,
   InboxQuestionView,
-} from "~/features/inbox/inbox.loader.server";
+} from "~/features/inbox/queries/inbox.queries.server";
 
 describe("InboxList", () => {
   it("renders question cards without safety metadata", () => {
@@ -46,7 +46,7 @@ describe("InboxList", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /answer/i })).toHaveAttribute(
       "href",
-      "/dashboard/answer/qst_1?returnTo=%2F",
+      "/answer/qst_1?returnTo=%2F",
     );
     expect(screen.queryByRole("button", { name: /report/i })).not.toBeInTheDocument();
     openActionsMenu();

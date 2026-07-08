@@ -3,14 +3,16 @@ import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { blocks, questions, reports } from "~/db/schema";
-import type { CompletedProfileSessionSummary } from "~/features/auth/auth.server";
+import type {
+  CompletedProfileSessionSummary
+} from "~/features/auth/services/auth.service.server";;
 import {
   inboxActionFormSchema,
   reportReasonValues,
   type InboxActionFormSubmission,
   type InboxActionIntent,
   type ReportReason,
-} from "~/features/inbox/inbox.schema";
+} from "~/features/inbox/validations/inbox.validations";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 

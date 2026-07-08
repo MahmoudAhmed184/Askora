@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   mutedPhraseSubmissionSchema,
   normalizeMutedPhrase,
-} from "~/features/inbox/inbox.schema";
+} from "~/features/inbox/validations/inbox.validations";
 
 describe("inbox moderation schema exports", () => {
   it("re-exports muted phrase validation from moderation", () => {

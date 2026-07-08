@@ -2,11 +2,11 @@ import { PencilLine, RotateCcw, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, useFetcher, useLocation } from "react-router";
 
-import { ActionToast } from "~/components/app/action-toast";
-import { Button } from "~/components/ui/button";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { Button } from "~/components/ui/button/button";
 import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
-import type { InboxActionResult } from "~/features/inbox/inbox-actions.server";
-import type { InboxQuestionView } from "~/features/inbox/inbox.loader.server";
+import type { InboxActionResult } from "~/features/inbox/types/inbox.types";
+import type { InboxQuestionView } from "~/features/inbox/types/inbox.types";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 interface QuestionCardProps {
@@ -220,5 +220,5 @@ function createAnswerHref({
   const returnTo = `${location.pathname}${location.search}${location.hash}`;
   const params = new URLSearchParams({ returnTo });
 
-  return `/dashboard/answer/${questionPublicId}?${params.toString()}`;
+  return `/answer/${questionPublicId}?${params.toString()}`;
 }

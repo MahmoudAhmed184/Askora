@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
-import { Badge } from "~/components/ui/badge";
+import { Badge } from "~/components/ui/badge/badge";
 import { cn } from "~/lib/utils";
 
 export type InboxWorkflowFolder = "inbox" | "drafts" | "filtered";
@@ -23,19 +23,19 @@ const inboxWorkflowLinks = [
   {
     id: "inbox",
     label: "All Questions",
-    to: "/dashboard/inbox",
+    to: "/inbox",
     icon: Inbox,
   },
   {
     id: "drafts",
     label: "Drafts",
-    to: "/dashboard/drafts",
+    to: "/drafts",
     icon: FileText,
   },
   {
     id: "filtered",
     label: "Filtered",
-    to: "/dashboard/filtered",
+    to: "/filtered",
     icon: Filter,
   },
 ] as const satisfies readonly {

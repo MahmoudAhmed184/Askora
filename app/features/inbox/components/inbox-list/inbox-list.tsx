@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 
-import { EmptyState } from "~/components/app/empty-state";
-import { Button } from "~/components/ui/button";
+import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import { Button } from "~/components/ui/button/button";
 import {
   FilteredQuestionCard,
   QuestionCard,
@@ -9,7 +9,7 @@ import {
 import type {
   InboxFolder,
   InboxQuestionView,
-} from "~/features/inbox/inbox.loader.server";
+} from "~/features/inbox/types/inbox.types";
 
 interface InboxListProps {
   disabled: boolean;
@@ -49,7 +49,7 @@ function InboxEmptyState({ folder }: { folder: InboxFolder }) {
       <EmptyState
         action={
           <Button asChild variant="outline">
-            <Link to="/dashboard/inbox">Open inbox</Link>
+            <Link to="/inbox">Open inbox</Link>
           </Button>
         }
         description="Filtered questions from muted phrases and safety checks will appear here."
@@ -62,7 +62,7 @@ function InboxEmptyState({ folder }: { folder: InboxFolder }) {
     <EmptyState
       action={
         <Button asChild variant="outline">
-          <Link to="/dashboard/filtered">Open filtered</Link>
+          <Link to="/filtered">Open filtered</Link>
         </Button>
       }
       description="New private questions that need attention will appear here."
