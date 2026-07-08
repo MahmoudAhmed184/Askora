@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
 import { useLocation, useNavigation } from "react-router";
 
-import type { AppShellData } from "~/components/app/app-shell-data";
+import type { AppShellData } from "~/types/app-shell-data";
 import {
   FloatingPillNav,
   type FloatingPillNavItem,
-} from "~/components/app/floating-pill-nav";
+} from "~/components/layout/floating-pill-nav/floating-pill-nav";
 import { cn } from "~/lib/utils";
 
-interface DashboardShellProps {
+interface AppShellProps {
   shell: AppShellData;
   children: ReactNode;
 }
 
-export function DashboardShell({ children, shell }: DashboardShellProps) {
+export function AppShell({ children, shell }: AppShellProps) {
   const location = useLocation();
   const navigation = useNavigation();
   const navigationLocation = navigation.location as
@@ -53,7 +53,7 @@ export function DashboardShell({ children, shell }: DashboardShellProps) {
       </main>
       <div
         aria-hidden="true"
-        className="app-nav-scrim pointer-events-none fixed inset-x-0 bottom-0 z-40 h-[calc(5.5rem+env(safe-area-inset-bottom))] sm:hidden"
+        className="app-nav-scrim pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[calc(5.5rem+env(safe-area-inset-bottom))] sm:hidden"
       />
       <FloatingPillNav
         activeValue={activeValue}
@@ -75,17 +75,17 @@ function getAppNavigation({
   profileHref,
 }: AppNavigationInput): readonly FloatingPillNavItem[] {
   return [
-    { value: "feed", to: "/dashboard/feed", label: "Feed" },
-    { value: "inbox", to: "/dashboard/inbox", label: "Inbox" },
+    { value: "feed", to: "/feed", label: "Feed" },
+    { value: "inbox", to: "/inbox", label: "Inbox" },
     {
       value: "notifications",
-      to: "/dashboard/notifications",
+      to: "/notifications",
       label: "Notifications",
       mobileLabel: "Notifications",
       hasIndicator: hasUnreadNotifications,
     },
     { value: "profile", to: profileHref, label: "Profile" },
-    { value: "settings", to: "/dashboard/settings/profile", label: "Settings" },
+    { value: "settings", to: "/settings/profile", label: "Settings" },
   ] as const;
 }
 
@@ -97,23 +97,23 @@ function getActiveNavigationValue({
   profileHref: string;
 }) {
   if (
-    pathname === "/dashboard/inbox" ||
-    pathname === "/dashboard/drafts" ||
-    pathname === "/dashboard/filtered" ||
-    pathname.startsWith("/dashboard/answer/")
+    pathname === "/inbox" ||
+    pathname === "/drafts" ||
+    pathname === "/filtered" ||
+    pathname.startsWith("/answer/")
   ) {
     return "inbox";
   }
 
-  if (pathname === "/dashboard/notifications") {
+  if (pathname === "/notifications") {
     return "notifications";
   }
 
-  if (pathname.startsWith("/dashboard/settings")) {
+  if (pathname.startsWith("/settings")) {
     return "settings";
   }
 
-  if (profileHref !== "/dashboard/settings/profile" && pathname === profileHref) {
+  if (profileHref !== "/settings/profile" && pathname === profileHref) {
     return "profile";
   }
 

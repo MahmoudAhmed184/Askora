@@ -17,7 +17,7 @@ vi.mock("react-router", async () => {
   };
 });
 
-import { PendingButton } from "~/components/app/pending-button";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
 
 describe("PendingButton", () => {
   it("does not spin or disable during route loading", () => {

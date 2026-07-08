@@ -2,7 +2,7 @@ import * as React from "react";
 import { LoaderCircle } from "lucide-react";
 import { useNavigation } from "react-router";
 
-import { Button } from "~/components/ui/button";
+import { Button } from "~/components/ui/button/button";
 
 interface PendingButtonProps extends React.ComponentProps<typeof Button> {
   pendingName?: string;

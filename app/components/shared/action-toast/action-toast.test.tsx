@@ -3,7 +3,7 @@ import { StrictMode } from "react";
 import { toast } from "sonner";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ActionToast } from "~/components/app/action-toast";
+import { ActionToast } from "~/components/shared/action-toast/action-toast";
 
 vi.mock("sonner", () => ({
   toast: {

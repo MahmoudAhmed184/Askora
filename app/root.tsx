@@ -7,21 +7,29 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  type ShouldRevalidateFunctionArgs,
   useRouteError,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
 
-import { Toaster } from "~/components/ui/sonner";
+import { Toaster } from "~/components/ui/sonner/sonner";
 import { currentSessionContext } from "~/features/auth/auth.context";
 import {
   getCurrentSessionSummary,
   getCurrentSessionSummaryFromContext,
   toPublicSessionSummary,
   type PublicSessionSummary,
-} from "~/features/auth/auth.server";
-import { getPublicAppConfig, type PublicAppConfig } from "~/lib/config.server";
+} from "~/features/auth/services/auth.service.server";
+import { ThreadModalHost } from "~/features/threads/components/thread-modal-host";
+import { loadThreadModalData } from "~/features/threads/services/thread-modal.service.server";
+import {
+  hasThreadModalSearchParamChange,
+  type ThreadModalData,
+} from "~/features/threads/thread-modal";
+import { getPublicAppConfig } from "~/lib/config.server";
+import type { PublicAppConfig } from "~/lib/config.types";
 import {
   createDocumentHeaders,
   mergeNoindexHeaders,
@@ -30,6 +38,7 @@ import {
 export interface RootLoaderData {
   app: PublicAppConfig;
   session: PublicSessionSummary;
+  threadModal: ThreadModalData | undefined;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -42,12 +51,13 @@ export const middleware: Route.MiddlewareFunction[] = [
   },
 ];
 
-export function loader({ context, request }: Route.LoaderArgs) {
+export async function loader({ context, request }: Route.LoaderArgs) {
   const session = getCurrentSessionSummaryFromContext(context);
 
   const loaderData: RootLoaderData = {
     app: getPublicAppConfig(),
     session: toPublicSessionSummary(session),
+    threadModal: await loadThreadModalData({ request, session }),
   };
 
   return data(loaderData, {
@@ -56,6 +66,18 @@ export function loader({ context, request }: Route.LoaderArgs) {
       isAuthenticated: session.status === "authenticated",
     }),
   });
+}
+
+export function shouldRevalidate({
+  currentUrl,
+  defaultShouldRevalidate,
+  nextUrl,
+}: ShouldRevalidateFunctionArgs) {
+  if (hasThreadModalSearchParamChange(currentUrl, nextUrl)) {
+    return true;
+  }
+
+  return defaultShouldRevalidate;
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
@@ -99,10 +121,11 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
-export default function App() {
+export default function App({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <Outlet />
+      <ThreadModalHost modal={loaderData.threadModal} />
       <Toaster />
     </>
   );

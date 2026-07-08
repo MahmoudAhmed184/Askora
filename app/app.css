@@ -125,7 +125,10 @@ button,
 input,
 textarea,
 select {
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 button:not(:disabled),
@@ -279,6 +282,7 @@ li {
   left: 50% !important;
   right: auto !important;
   width: min(calc(100vw - 2rem), 35rem) !important;
+  z-index: 90 !important;
   transform: translateX(-50%) !important;
 }
 

@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { VariantProps } from "class-variance-authority";
 
-import { badgeVariants } from "~/components/ui/badge-variants";
+import { badgeVariants } from "~/components/ui/badge/badge-variants";
 import { cn } from "~/lib/utils";
 
 interface BadgeProps

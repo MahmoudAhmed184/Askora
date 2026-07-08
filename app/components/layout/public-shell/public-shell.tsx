@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { ArrowRight, UserRound } from "lucide-react";
 import { Link, useRouteLoaderData } from "react-router";
 
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
 import type { loader as rootLoader, RootLoaderData } from "~/root";
 
 interface PublicShellProps {

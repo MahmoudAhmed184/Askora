@@ -2,10 +2,10 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AppShellData } from "~/components/app/app-shell-data";
+import type { AppShellData } from "~/types/app-shell-data";
 
 const routerState = vi.hoisted(() => ({
-  locationPathname: "/dashboard/feed",
+  locationPathname: "/feed",
   navigationPathname: undefined as string | undefined,
 }));
 
@@ -37,17 +37,17 @@ vi.mock("react-router", async () => {
   };
 });
 
-import { DashboardShell } from "~/components/app/dashboard-shell";
+import { AppShell } from "~/components/layout/app-shell/app-shell";
 
-describe("DashboardShell navigation", () => {
+describe("AppShell navigation", () => {
   it("keeps the rendered page active while marking the pending destination", () => {
-    routerState.locationPathname = "/dashboard/feed";
-    routerState.navigationPathname = "/dashboard/notifications";
+    routerState.locationPathname = "/feed";
+    routerState.navigationPathname = "/notifications";
 
     render(
-      <DashboardShell shell={shellData}>
+      <AppShell shell={shellData}>
         <div>Page</div>
-      </DashboardShell>,
+      </AppShell>,
     );
 
     expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(

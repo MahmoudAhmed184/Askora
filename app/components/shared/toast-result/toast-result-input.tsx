@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import {
   TOAST_RESULT_FIELD_NAME,
   TOAST_RESULT_FIELD_VALUE,
-} from "~/components/app/toast-result";
+} from "~/components/shared/toast-result/toast-result";
 
 export function ToastResultInput() {
   const mounted = useSyncExternalStore(
