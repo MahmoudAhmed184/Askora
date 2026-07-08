@@ -7,7 +7,7 @@ import {
   TEMPORARY_INVITE_COOKIE_NAME,
   type InviteStore,
   validateInviteCodeForSignIn,
-} from "~/features/auth/invite.server";
+} from "~/features/auth/services/invite.service.server";
 
 const VALID_INVITE_CODE = "BETA-2026";
 

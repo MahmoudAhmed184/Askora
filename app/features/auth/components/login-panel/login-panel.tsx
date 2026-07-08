@@ -1,17 +1,17 @@
 import { KeyRound, LogIn, Mail } from "lucide-react";
 import { Form } from "react-router";
 
-import { PendingButton } from "~/components/app/pending-button";
-import { Badge } from "~/components/ui/badge";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
+import { Badge } from "~/components/ui/badge/badge";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import { Separator } from "~/components/ui/separator";
-import type { AuthProviderStatus } from "~/lib/config.server";
+} from "~/components/ui/field/field";
+import { Input } from "~/components/ui/input/input";
+import { Separator } from "~/components/ui/separator/separator";
+import type { AuthProviderStatus } from "~/lib/config.types";
 
 export interface LoginActionData {
   login:

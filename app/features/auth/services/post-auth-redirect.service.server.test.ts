@@ -7,8 +7,8 @@ import {
   type CompletedProfileSessionSummary,
   type CurrentSessionSummary,
   type IncompleteProfileSessionSummary,
-} from "~/features/auth/auth.server";
-import { getPostAuthRedirectPath } from "~/features/auth/post-auth-redirect.server";
+} from "~/features/auth/services/auth.service.server";
+import { getPostAuthRedirectPath } from "~/features/auth/services/post-auth-redirect.service.server";
 
 describe("post-auth redirects", () => {
   it("sends callback URLs through login until the session exists", () => {
@@ -21,7 +21,7 @@ describe("post-auth redirects", () => {
 
   it("sends completed-profile users to Feed", () => {
     expect(getPostAuthRedirectPath(createCompletedSession())).toBe(
-      "/dashboard/feed",
+      "/feed",
     );
   });
 });
@@ -33,7 +33,7 @@ describe("profile guard redirect decisions", () => {
 
   it("redirects setup-route completed profiles to Feed", () => {
     expect(getIncompleteProfileGuardRedirectPath(createCompletedSession())).toBe(
-      "/dashboard/feed",
+      "/feed",
     );
   });
 

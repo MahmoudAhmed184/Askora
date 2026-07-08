@@ -11,7 +11,7 @@ import { currentSessionContext } from "~/features/auth/auth.context";
 import {
   completeInviteForCreatedUser,
   requireConsumedInviteForUserCreate,
-} from "~/features/auth/invite.server";
+} from "~/features/auth/services/invite.service.server";
 import { getAuthProviderStatus } from "~/lib/config.server";
 import { AppConfigurationError } from "~/lib/errors";
 import { getServerAuthSecret } from "~/lib/crypto.server";
@@ -288,7 +288,7 @@ export function getIncompleteProfileGuardRedirectPath(
     return "/login";
   }
 
-  return session.profileStatus === "complete" ? "/dashboard/feed" : undefined;
+  return session.profileStatus === "complete" ? "/feed" : undefined;
 }
 
 export function getCompletedProfileGuardRedirectPath(

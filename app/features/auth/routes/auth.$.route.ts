@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
-import { auth } from "~/features/auth/auth.server";
-import { clearTemporaryInviteCookieHeader } from "~/features/auth/invite.server";
+import { auth } from "~/features/auth/services/auth.service.server";
+import { clearTemporaryInviteCookieHeader } from "~/features/auth/services/invite.service.server";
 
 export async function loader({ request, url }: LoaderFunctionArgs) {
   if (isAuthHealthCheck(url)) {

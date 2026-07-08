@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { events, inviteCodes } from "~/db/schema";
-import { inviteCodeSchema } from "~/features/auth/invite.schema";
+import { inviteCodeSchema } from "~/features/auth/validations/invite.validations";
 import {
   hashWithHmacSha256,
   sealJsonForCookie,

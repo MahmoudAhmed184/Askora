@@ -4,9 +4,9 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import LoginRoute from "~/features/auth/routes/login.route";
-import { getPostAuthRedirectPath } from "~/features/auth/post-auth-redirect.server";
-import { magicLinkRequestSchema } from "~/features/auth/magic-link.schema";
-import type { AuthProviderStatus } from "~/lib/config.server";
+import { getPostAuthRedirectPath } from "~/features/auth/services/post-auth-redirect.service.server";
+import { magicLinkRequestSchema } from "~/features/auth/validations/magic-link.validations";
+import type { AuthProviderStatus } from "~/lib/config.types";
 
 interface LoginRouteProps {
   loaderData: {

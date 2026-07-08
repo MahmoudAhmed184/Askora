@@ -12,21 +12,21 @@ import type { Route } from "./+types/login.route";
 import {
   ActionToast,
   type ActionToastTone,
-} from "~/components/app/action-toast";
-import { PublicShell } from "~/components/app/public-shell";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+} from "~/components/shared/action-toast/action-toast";
+import { PublicShell } from "~/components/layout/public-shell/public-shell";
+import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
 import { getAuthProviderStatus } from "~/lib/config.server";
 import { getFormString, parseFormData } from "~/lib/zod-form";
-import { auth, getCurrentSessionSummaryFromContext } from "~/features/auth/auth.server";
+import { auth, getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
 import {
   getPostAuthRedirectPath,
-} from "~/features/auth/post-auth-redirect.server";
+} from "~/features/auth/services/post-auth-redirect.service.server";
 import {
   clearTemporaryInviteCookieHeader,
   validateInviteCodeForSignIn,
-} from "~/features/auth/invite.server";
-import { magicLinkRequestSchema } from "~/features/auth/magic-link.schema";
+} from "~/features/auth/services/invite.service.server";
+import { magicLinkRequestSchema } from "~/features/auth/validations/magic-link.validations";
 import { hashWithHmacSha256 } from "~/lib/crypto.server";
 import { getRequestInfoHashes } from "~/lib/request-info.server";
 import {
