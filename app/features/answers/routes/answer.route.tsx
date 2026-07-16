@@ -135,7 +135,7 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
         variant="ghost"
       >
         <Link
-          aria-label="Dismiss answer editor"
+          aria-label="Close answer editor"
           onClick={(event) => {
             if (!canClose()) {
               event.preventDefault();
@@ -159,7 +159,7 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:pb-28 sm:pt-10">
       <Link
-        aria-label="Dismiss answer editor"
+        aria-label="Close answer editor"
         className="absolute inset-0 bg-background/92"
         onClick={(event) => {
           if (!canClose()) {

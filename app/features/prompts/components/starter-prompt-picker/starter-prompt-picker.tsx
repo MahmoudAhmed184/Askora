@@ -1,9 +1,15 @@
 import { Sparkles } from "lucide-react";
-import { Form } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Form, useFetcher, useLocation, useNavigate } from "react-router";
 
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import { Button } from "~/components/ui/button/button";
 import type { StarterPromptCategory } from "~/features/prompts/starter-prompts";
+import type { StarterPromptActionResult } from "~/features/prompts/services/starter-prompts.service.server";
+import {
+  createAnswerModalLink,
+  getAnswerModalFocusReturnId,
+} from "~/features/answers/answer-modal";
 import { cn } from "~/lib/utils";
 
 interface StarterPromptPickerProps {
@@ -15,6 +21,37 @@ export function StarterPromptPicker({
   categories,
   disabled,
 }: StarterPromptPickerProps) {
+  const fetcher = useFetcher<{ starterPrompt: StarterPromptActionResult }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const navigatedQuestionRef = useRef<string | undefined>(undefined);
+  const [activePromptId, setActivePromptId] = useState<string | undefined>();
+
+  useEffect(() => {
+    const result = fetcher.data?.starterPrompt;
+
+    if (
+      result?.status !== "created" ||
+      navigatedQuestionRef.current === result.questionPublicId
+    ) {
+      return;
+    }
+
+    navigatedQuestionRef.current = result.questionPublicId;
+    const answerLink = createAnswerModalLink({
+      location,
+      questionPublicId: result.questionPublicId,
+    });
+
+    void navigate(answerLink.to, {
+      defaultShouldRevalidate: false,
+      mask: answerLink.mask,
+      preventScrollReset: true,
+    });
+  }, [fetcher.data, location, navigate]);
+
+  const isSubmitting = fetcher.state !== "idle";
+
   return (
     <section
       aria-label="Starter prompt picker"
@@ -66,6 +103,19 @@ export function StarterPromptPicker({
                   data-testid={`starter-prompt-card-${prompt.id}`}
                   key={prompt.id}
                   method="post"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const formData = new FormData(event.currentTarget);
+                    formData.set("submissionMode", "contextual");
+                    const promptId = formData.get("promptId");
+                    setActivePromptId(
+                      typeof promptId === "string" ? promptId : undefined,
+                    );
+                    void fetcher.submit(formData, {
+                      action: "/prompts",
+                      method: "post",
+                    });
+                  }}
                 >
                   <p className="line-clamp-3 min-w-0 text-sm font-semibold leading-6 text-foreground/85 sm:line-clamp-4">
                     {prompt.text}
@@ -74,7 +124,16 @@ export function StarterPromptPicker({
                   <PendingButton
                     aria-label={`Use starter prompt: ${prompt.text}`}
                     className="shrink-0 justify-center sm:w-full"
-                    disabled={disabled}
+                    disabled={disabled || isSubmitting}
+                    id={
+                      activePromptId === prompt.id &&
+                      fetcher.data?.starterPrompt.status === "created"
+                        ? getAnswerModalFocusReturnId({
+                            questionId: fetcher.data.starterPrompt.questionPublicId,
+                          })
+                        : undefined
+                    }
+                    pending={isSubmitting}
                     pendingName="promptId"
                     pendingText="Creating…"
                     pendingValue={prompt.id}

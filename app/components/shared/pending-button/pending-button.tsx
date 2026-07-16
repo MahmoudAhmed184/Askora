@@ -5,6 +5,7 @@ import { useNavigation } from "react-router";
 import { Button } from "~/components/ui/button/button";
 
 interface PendingButtonProps extends React.ComponentProps<typeof Button> {
+  pending?: boolean;
   pendingName?: string;
   pendingText?: string;
   pendingValue?: string;
@@ -13,13 +14,14 @@ interface PendingButtonProps extends React.ComponentProps<typeof Button> {
 export function PendingButton({
   children,
   disabled,
+  pending = false,
   pendingName,
   pendingText = "Working",
   pendingValue,
   ...props
 }: PendingButtonProps) {
   const navigation = useNavigation();
-  const isPending = isButtonSubmissionPending({
+  const isPending = pending || isButtonSubmissionPending({
     formData: navigation.formData,
     name: pendingName ?? getStringProp(props.name),
     state: navigation.state,

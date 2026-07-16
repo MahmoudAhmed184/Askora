@@ -46,7 +46,7 @@ describe("InboxList", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /answer/i })).toHaveAttribute(
       "href",
-      "/answer/qst_1?returnTo=%2F",
+      "/answer/qst_1",
     );
     expect(screen.queryByRole("button", { name: /report/i })).not.toBeInTheDocument();
     openActionsMenu();

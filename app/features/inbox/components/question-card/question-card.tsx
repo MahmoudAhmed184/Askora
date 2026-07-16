@@ -19,6 +19,7 @@ import { buttonVariants } from "~/components/ui/button/button-variants";
 import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
 import type { InboxActionResult } from "~/features/inbox/types/inbox.types";
 import type { InboxQuestionView } from "~/features/inbox/types/inbox.types";
+import { createAnswerModalLink } from "~/features/answers/answer-modal";
 import { formatMediumDateTime } from "~/lib/date-format";
 
 interface QuestionCardProps {
@@ -96,7 +97,13 @@ function QuestionCardFrame({
       <div className="grid gap-3 sm:grid-cols-2">
         {!restoreAction && !disabled && !isPending ? (
           <Button asChild className="w-full" size="sm">
-            <Link to={answerHref}>
+            <Link
+              defaultShouldRevalidate={false}
+              id={answerHref.focusReturnId}
+              mask={answerHref.mask}
+              preventScrollReset
+              to={answerHref.to}
+            >
               <PencilLine data-icon="inline-start" />
               Answer question
             </Link>
@@ -288,8 +295,5 @@ function createAnswerHref({
   };
   questionPublicId: string;
 }) {
-  const returnTo = `${location.pathname}${location.search}${location.hash}`;
-  const params = new URLSearchParams({ returnTo });
-
-  return `/answer/${questionPublicId}?${params.toString()}`;
+  return createAnswerModalLink({ location, questionPublicId });
 }

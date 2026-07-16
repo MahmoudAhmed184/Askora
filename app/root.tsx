@@ -16,6 +16,12 @@ import "./app.css";
 
 import { ThemeWatcher } from "~/components/shared/theme-watcher/theme-watcher";
 import { Toaster } from "~/components/ui/sonner/sonner";
+import { AnswerEditorModalHost } from "~/features/answers/components/answer-editor-modal-host";
+import { loadAnswerModalData } from "~/features/answers/services/answer-modal.service.server";
+import {
+  hasAnswerModalSearchParamChange,
+  getAnswerModalParams,
+} from "~/features/answers/answer-modal";
 import { currentSessionContext } from "~/features/auth/auth.context";
 import {
   getCurrentSessionSummary,
@@ -29,6 +35,7 @@ import {
   hasThreadModalSearchParamChange,
   type ThreadModalData,
 } from "~/features/threads/thread-modal";
+import { getThreadModalParams } from "~/features/threads/thread-modal";
 import { getPublicAppConfig } from "~/lib/config.server";
 import type { PublicAppConfig } from "~/lib/config.types";
 import {
@@ -40,6 +47,7 @@ export interface RootLoaderData {
   app: PublicAppConfig;
   session: PublicSessionSummary;
   threadModal: ThreadModalData | undefined;
+  answerModal: Awaited<ReturnType<typeof loadAnswerModalData>>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -54,11 +62,21 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 export async function loader({ context, request }: Route.LoaderArgs) {
   const session = getCurrentSessionSummaryFromContext(context);
+  const searchParams = new URL(request.url).searchParams;
+  const answerParams = getAnswerModalParams(searchParams);
+  const threadParams = getThreadModalParams(searchParams);
 
   const loaderData: RootLoaderData = {
     app: getPublicAppConfig(),
     session: toPublicSessionSummary(session),
-    threadModal: await loadThreadModalData({ request, session }),
+    threadModal:
+      answerParams === undefined && threadParams !== undefined
+        ? await loadThreadModalData({ request, session })
+        : undefined,
+    answerModal:
+      threadParams === undefined && answerParams !== undefined
+        ? await loadAnswerModalData({ request, session })
+        : undefined,
   };
 
   return data(loaderData, {
@@ -74,7 +92,10 @@ export function shouldRevalidate({
   defaultShouldRevalidate,
   nextUrl,
 }: ShouldRevalidateFunctionArgs) {
-  if (hasThreadModalSearchParamChange(currentUrl, nextUrl)) {
+  if (
+    hasThreadModalSearchParamChange(currentUrl, nextUrl) ||
+    hasAnswerModalSearchParamChange(currentUrl, nextUrl)
+  ) {
     return true;
   }
 
@@ -139,6 +160,7 @@ export default function App({ loaderData }: Route.ComponentProps) {
     <>
       <Outlet />
       <ThreadModalHost modal={loaderData.threadModal} />
+      <AnswerEditorModalHost modal={loaderData.answerModal} />
       <ThemeWatcher />
       <Toaster />
     </>

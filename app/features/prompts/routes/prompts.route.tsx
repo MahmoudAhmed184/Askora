@@ -40,18 +40,25 @@ export async function action({ context, request }: Route.ActionArgs) {
     return session;
   }
 
+  const formData = await request.formData();
   const result = await createStarterPromptQuestion({
-    formData: await request.formData(),
+    formData,
     session,
   });
 
-  if (result.status === "created") {
+  if (result.status === "created" && formData.get("submissionMode") !== "contextual") {
     return redirect(`/answer/${result.questionPublicId}`);
   }
 
   return data<StarterPromptRouteActionData>(
     { starterPrompt: result },
-    { status: getStarterPromptActionResponseStatus(result) },
+    {
+      status:
+        result.status === "created" &&
+        formData.get("submissionMode") === "contextual"
+          ? 200
+          : getStarterPromptActionResponseStatus(result),
+    },
   );
 }
 

@@ -3,6 +3,7 @@ import { Form, Link, useLocation } from "react-router";
 
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
 import { Button } from "~/components/ui/button/button";
+import { createAnswerModalLink } from "~/features/answers/answer-modal";
 import type { DraftAnswerView } from "~/features/answers/types/answers.types";
 import { formatMediumDateTime } from "~/lib/date-format";
 
@@ -51,10 +52,20 @@ export function DraftsList({ disabled = false, drafts }: DraftsListProps) {
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button asChild size="sm" variant="outline">
                 <Link
+                  defaultShouldRevalidate={false}
+                  id={createAnswerHref({
+                    location,
+                    questionPublicId: draft.questionPublicId,
+                  }).focusReturnId}
+                  mask={createAnswerHref({
+                    location,
+                    questionPublicId: draft.questionPublicId,
+                  }).mask}
+                  preventScrollReset
                   to={createAnswerHref({
                     location,
                     questionPublicId: draft.questionPublicId,
-                  })}
+                  }).to}
                 >
                   <PencilLine data-icon="inline-start" />
                   Continue
@@ -99,8 +110,5 @@ function createAnswerHref({
   };
   questionPublicId: string;
 }) {
-  const returnTo = `${location.pathname}${location.search}${location.hash}`;
-  const params = new URLSearchParams({ returnTo });
-
-  return `/answer/${questionPublicId}?${params.toString()}`;
+  return createAnswerModalLink({ location, questionPublicId });
 }

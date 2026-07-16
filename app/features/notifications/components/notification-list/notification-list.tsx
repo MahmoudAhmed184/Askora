@@ -13,6 +13,7 @@ import { EmptyState } from "~/components/shared/empty-state/empty-state";
 import { ToastResultInput } from "~/components/shared/toast-result/toast-result-input";
 import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
+import { createAnswerModalLink } from "~/features/answers/answer-modal";
 import { getAvatarImageSource } from "~/features/profiles/avatar-url";
 import { createThreadModalLink } from "~/features/threads/thread-modal";
 import { formatMediumDateTime } from "~/lib/date-format";
@@ -167,6 +168,7 @@ function NotificationTimelineItem({
               {targetLink === undefined ? null : (
                 <Button asChild className="w-full" size="sm">
                   <Link
+                    id={targetLink.focusReturnId}
                     onClick={() => {
                       if (unread) {
                         markNotificationRead({ fetcher, notification });
@@ -226,7 +228,17 @@ function createNotificationTargetLink({
     });
   }
 
+  const answerTarget = parseAnswerHref(href);
+
+  if (answerTarget !== undefined) {
+    return createAnswerModalLink({
+      location,
+      questionPublicId: answerTarget.questionPublicId,
+    });
+  }
+
   return {
+    focusReturnId: undefined,
     mask: undefined,
     to: href,
   };
@@ -263,6 +275,21 @@ function parsePublicThreadHref(href: string) {
     threadPublicId: decodeURIComponent(match[2] ?? ""),
     username: decodeURIComponent(match[1] ?? ""),
   };
+}
+
+function parseAnswerHref(href: string) {
+  if (!href.startsWith("/")) {
+    return undefined;
+  }
+
+  const url = new URL(href, "https://qna.local");
+  const match = /^\/answer\/([^/]+)$/.exec(url.pathname);
+
+  if (match?.[1] === undefined) {
+    return undefined;
+  }
+
+  return { questionPublicId: decodeURIComponent(match[1]) };
 }
 
 function ActorAvatar({
