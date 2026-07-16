@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createThreadModalLink,
+  getThreadModalParams,
   isThreadModalOnlySearchParamChange,
   removeThreadModalSearchParams,
 } from "~/features/threads/thread-modal";
@@ -65,6 +66,30 @@ describe("thread modal routing helpers", () => {
         url("/feed?threadUsername=person&threadPublicId=thr_1"),
       ),
     ).toBe(false);
+  });
+
+  it("rejects malformed and oversized modal query parameters", () => {
+    expect(
+      getThreadModalParams(
+        new URLSearchParams(
+          "threadUsername=person&threadPublicId=not-a-thread-id",
+        ),
+      ),
+    ).toBeUndefined();
+    expect(
+      getThreadModalParams(
+        new URLSearchParams(
+          `threadUsername=${"a".repeat(31)}&threadPublicId=thr_1`,
+        ),
+      ),
+    ).toBeUndefined();
+    expect(
+      getThreadModalParams(
+        new URLSearchParams(
+          `threadUsername=person&threadPublicId=thr_${"a".repeat(65)}`,
+        ),
+      ),
+    ).toBeUndefined();
   });
 });
 

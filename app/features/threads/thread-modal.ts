@@ -1,6 +1,7 @@
 import type { To } from "react-router";
 
 import type { PublicThreadPageData } from "~/features/threads/types/threads.types";
+import { USERNAME_PATTERN } from "~/features/profile-setup/username-policy";
 
 export const threadModalUsernameParam = "threadUsername";
 export const threadModalPublicIdParam = "threadPublicId";
@@ -9,6 +10,7 @@ const threadModalSearchParams = [
   threadModalUsernameParam,
   threadModalPublicIdParam,
 ] as const;
+const THREAD_PUBLIC_ID_PATTERN = /^thr_[A-Za-z0-9_-]{1,64}$/;
 
 export interface ThreadModalParams {
   username: string;
@@ -80,8 +82,8 @@ export function getThreadModalParams(
   if (
     username === null ||
     threadPublicId === null ||
-    username.trim().length === 0 ||
-    threadPublicId.trim().length === 0
+    !USERNAME_PATTERN.test(username) ||
+    !THREAD_PUBLIC_ID_PATTERN.test(threadPublicId)
   ) {
     return undefined;
   }
