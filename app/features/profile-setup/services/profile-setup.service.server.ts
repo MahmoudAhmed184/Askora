@@ -182,6 +182,28 @@ export async function submitProfileSetup({
   }
 }
 
+export type UsernameAvailability = "available" | "taken" | "invalid";
+
+export async function checkUsernameAvailability(
+  username: string,
+  store: ProfileSetupStore = createDrizzleProfileSetupStore(),
+): Promise<UsernameAvailability> {
+  const normalized = username.trim().toLowerCase();
+
+  if (!isAllowedUsername(normalized)) {
+    return "invalid";
+  }
+
+  const [activeProfile, reservation] = await Promise.all([
+    store.findActiveProfileByUsername(normalized),
+    store.findUsernameReservation(normalized),
+  ]);
+
+  return activeProfile !== undefined || reservation !== undefined
+    ? "taken"
+    : "available";
+}
+
 export function getProfileSetupDefaults(user: {
   email: string;
   name: string;

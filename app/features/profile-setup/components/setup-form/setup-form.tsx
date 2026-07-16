@@ -1,16 +1,18 @@
-import { AtSign, CheckCircle2, IdCard, MessageSquareText } from "lucide-react";
-import { useState } from "react";
-import { Form } from "react-router";
+import { AtSign, Check, LoaderCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Form, useFetcher } from "react-router";
 
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field/field";
 import { Input } from "~/components/ui/input/input";
 import { Textarea } from "~/components/ui/textarea/textarea";
+import type { UsernameAvailabilityData } from "~/features/profile-setup/routes/username-availability.route";
 import type {
   ProfileSetupFieldErrors,
   ProfileSetupFormResult,
@@ -22,18 +24,44 @@ interface SetupFormProps {
   defaults: ProfileSetupFormValues;
   disabled: boolean;
   result: ProfileSetupFormResult | undefined;
+  onValuesChange?: (values: ProfileSetupFormValues) => void;
 }
 
 const bioMaxLength = 160;
+const availabilityDebounceMs = 350;
 
-export function SetupForm({ defaults, disabled, result }: SetupFormProps) {
+type AvailabilityState = "idle" | "checking" | "available" | "taken";
+
+export function SetupForm({
+  defaults,
+  disabled,
+  onValuesChange,
+  result,
+}: SetupFormProps) {
   const initialValues = result?.values ?? defaults;
-  const [username, setUsername] = useState(initialValues.username);
-  const [bio, setBio] = useState(initialValues.bio);
+  const [values, setValues] = useState(initialValues);
   const fieldErrors = getFieldErrors(result);
+  const trimmedUsername = values.username.trim();
   const usernamePolicyIssue =
-    username.length > 0 ? getUsernamePolicyIssue(username.trim()) : undefined;
-  const usernameMessage = fieldErrors.username ?? usernamePolicyIssue;
+    trimmedUsername.length > 0
+      ? getUsernamePolicyIssue(trimmedUsername)
+      : undefined;
+  const availability = useUsernameAvailability({
+    skip: usernamePolicyIssue !== undefined || trimmedUsername.length === 0,
+    username: trimmedUsername,
+  });
+  const usernameError =
+    fieldErrors.username ??
+    usernamePolicyIssue ??
+    (availability === "taken" ? "This username is not available." : undefined);
+
+  function updateValues(partial: Partial<ProfileSetupFormValues>) {
+    setValues((current) => {
+      const next = { ...current, ...partial };
+      onValuesChange?.(next);
+      return next;
+    });
+  }
 
   return (
     <Form
@@ -41,8 +69,8 @@ export function SetupForm({ defaults, disabled, result }: SetupFormProps) {
       className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7"
       method="post"
     >
-      <FieldGroup>
-        <Field data-invalid={usernameMessage !== undefined ? true : undefined}>
+      <FieldGroup className="gap-6">
+        <Field data-invalid={usernameError !== undefined ? true : undefined}>
           <FieldLabel htmlFor="username">Username</FieldLabel>
           <div className="relative">
             <AtSign
@@ -51,7 +79,7 @@ export function SetupForm({ defaults, disabled, result }: SetupFormProps) {
             />
             <Input
               aria-describedby="username-description username-message"
-              aria-invalid={usernameMessage !== undefined}
+              aria-invalid={usernameError !== undefined}
               autoComplete="username"
               className="pl-9"
               disabled={disabled}
@@ -59,19 +87,21 @@ export function SetupForm({ defaults, disabled, result }: SetupFormProps) {
               inputMode="text"
               name="username"
               onChange={(event) => {
-                setUsername(event.currentTarget.value);
+                updateValues({ username: event.currentTarget.value });
               }}
               placeholder="your_name"
-              value={username}
+              required
+              value={values.username}
             />
           </div>
           <FieldDescription id="username-description">
-            Lowercase letters, numbers, and underscores only.
+            This becomes your public link and cannot be changed later.
+            Lowercase letters, numbers, and underscores.
           </FieldDescription>
-          <ValidationMessage
-            id="username-message"
-            message={usernameMessage}
-            valid={username.length > 0 && usernameMessage === undefined}
+          <UsernameStatus
+            availability={availability}
+            error={usernameError}
+            username={trimmedUsername}
           />
         </Field>
 
@@ -79,25 +109,25 @@ export function SetupForm({ defaults, disabled, result }: SetupFormProps) {
           data-invalid={fieldErrors.displayName !== undefined ? true : undefined}
         >
           <FieldLabel htmlFor="displayName">Display name</FieldLabel>
-          <div className="relative">
-            <IdCard
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              aria-describedby="display-name-message"
-              aria-invalid={fieldErrors.displayName !== undefined}
-              autoComplete="name"
-              className="pl-9"
-              defaultValue={initialValues.displayName}
-              disabled={disabled}
-              id="displayName"
-              maxLength={50}
-              name="displayName"
-              placeholder="Your display name"
-            />
-          </div>
-          <ValidationMessage
+          <Input
+            aria-describedby="display-name-description display-name-message"
+            aria-invalid={fieldErrors.displayName !== undefined}
+            autoComplete="name"
+            disabled={disabled}
+            id="displayName"
+            maxLength={50}
+            name="displayName"
+            onChange={(event) => {
+              updateValues({ displayName: event.currentTarget.value });
+            }}
+            placeholder="Your name as visitors see it"
+            required
+            value={values.displayName}
+          />
+          <FieldDescription id="display-name-description">
+            You can change this anytime in settings.
+          </FieldDescription>
+          <FieldError
             id="display-name-message"
             message={fieldErrors.displayName}
           />
@@ -105,48 +135,136 @@ export function SetupForm({ defaults, disabled, result }: SetupFormProps) {
 
         <Field data-invalid={fieldErrors.bio !== undefined ? true : undefined}>
           <div className="flex items-center justify-between gap-3">
-            <FieldLabel htmlFor="bio">Bio</FieldLabel>
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {bio.length}/{bioMaxLength}
+            <FieldLabel htmlFor="bio">
+              Bio{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </FieldLabel>
+            <span
+              aria-hidden="true"
+              className="text-xs tabular-nums text-muted-foreground"
+            >
+              {values.bio.length}/{bioMaxLength}
             </span>
           </div>
-          <div className="relative">
-            <MessageSquareText
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
-            />
-            <Textarea
-              aria-describedby="bio-description bio-message"
-              aria-invalid={fieldErrors.bio !== undefined}
-              className="pl-9"
-              disabled={disabled}
-              id="bio"
-              maxLength={bioMaxLength}
-              name="bio"
-              onChange={(event) => {
-                setBio(event.currentTarget.value);
-              }}
-              placeholder="Optional: tell visitors what they can ask about."
-              value={bio}
-            />
-          </div>
+          <Textarea
+            aria-describedby="bio-description bio-message"
+            aria-invalid={fieldErrors.bio !== undefined}
+            disabled={disabled}
+            id="bio"
+            maxLength={bioMaxLength}
+            name="bio"
+            onChange={(event) => {
+              updateValues({ bio: event.currentTarget.value });
+            }}
+            placeholder="Tell visitors what they can ask about."
+            value={values.bio}
+          />
           <FieldDescription id="bio-description">
-            Optional. Keep it short enough to fit profile previews.
+            Shown under your name on your public profile. Skip it for now if
+            you like.
           </FieldDescription>
-          <ValidationMessage id="bio-message" message={fieldErrors.bio} />
+          <FieldError id="bio-message" message={fieldErrors.bio} />
         </Field>
 
         <PendingButton
-          className="w-full sm:w-auto"
+          className="h-11 w-full"
           disabled={disabled}
-          pendingText="Creating profile"
+          pendingText="Creating your profile…"
           type="submit"
         >
-          <CheckCircle2 data-icon="inline-start" />
           Create profile
         </PendingButton>
       </FieldGroup>
     </Form>
+  );
+}
+
+function useUsernameAvailability({
+  skip,
+  username,
+}: {
+  skip: boolean;
+  username: string;
+}): AvailabilityState {
+  const fetcher = useFetcher<UsernameAvailabilityData>();
+  const fetcherLoad = fetcher.load;
+
+  useEffect(() => {
+    if (skip || username.length === 0) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void fetcherLoad(
+        `/setup/username-availability?username=${encodeURIComponent(username)}`,
+      );
+    }, availabilityDebounceMs);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [fetcherLoad, skip, username]);
+
+  if (skip || username.length === 0) {
+    return "idle";
+  }
+
+  if (fetcher.state !== "idle" || fetcher.data?.username !== username) {
+    return "checking";
+  }
+
+  if (fetcher.data.availability === "available") {
+    return "available";
+  }
+
+  if (fetcher.data.availability === "taken") {
+    return "taken";
+  }
+
+  return "idle";
+}
+
+function UsernameStatus({
+  availability,
+  error,
+  username,
+}: {
+  availability: AvailabilityState;
+  error: string | undefined;
+  username: string;
+}) {
+  if (error !== undefined) {
+    return <FieldError id="username-message" message={error} />;
+  }
+
+  return (
+    <p
+      aria-live="polite"
+      className="flex min-h-6 items-center gap-1.5 text-sm leading-6"
+      id="username-message"
+    >
+      {availability === "checking" ? (
+        <>
+          <LoaderCircle
+            aria-hidden="true"
+            className="size-3.5 animate-spin text-muted-foreground motion-reduce:animate-none"
+          />
+          <span className="text-muted-foreground">
+            Checking availability…
+          </span>
+        </>
+      ) : null}
+      {availability === "available" ? (
+        <>
+          <Check aria-hidden="true" className="size-3.5 text-success" />
+          <span className="font-medium text-success">
+            @{username} is available.
+          </span>
+        </>
+      ) : null}
+    </p>
   );
 }
 
@@ -158,32 +276,4 @@ function getFieldErrors(
   }
 
   return {};
-}
-
-function ValidationMessage({
-  id,
-  message,
-  valid = false,
-}: {
-  id: string;
-  message: string | undefined;
-  valid?: boolean;
-}) {
-  if (message !== undefined) {
-    return (
-      <p className="text-sm leading-6 text-destructive" id={id} role="alert">
-        {message}
-      </p>
-    );
-  }
-
-  if (valid) {
-    return (
-      <p className="text-sm leading-6 text-muted-foreground" id={id}>
-        Username format looks good.
-      </p>
-    );
-  }
-
-  return <span id={id} />;
 }

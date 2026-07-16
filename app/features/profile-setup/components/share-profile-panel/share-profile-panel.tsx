@@ -2,7 +2,6 @@ import { Check, Clipboard, Share2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
 import { Input } from "~/components/ui/input/input";
 
@@ -68,22 +67,14 @@ export function ShareProfilePanel({
       aria-labelledby="share-profile-heading"
       className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7"
     >
-      <div className="flex flex-col gap-2">
-        <div>
-          <Badge variant="secondary">Setup complete</Badge>
-        </div>
-        <p className="text-sm font-medium text-muted-foreground">
-          Public profile URL
-        </p>
-        <h1
-          className="max-w-2xl font-serif text-3xl font-bold leading-tight text-primary sm:text-4xl"
-          id="share-profile-heading"
-        >
-          Your profile is ready to share.
-        </h1>
-      </div>
+      <h2
+        className="text-sm font-semibold text-foreground"
+        id="share-profile-heading"
+      >
+        Your public profile link
+      </h2>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
         <Input
           aria-label="Profile URL"
           className="font-mono text-sm"
@@ -104,7 +95,7 @@ export function ShareProfilePanel({
             ) : (
               <Clipboard data-icon="inline-start" />
             )}
-            Copy
+            {status === "copied" ? "Copied" : "Copy"}
           </Button>
           <Button
             className="flex-1 sm:flex-none"
@@ -118,6 +109,9 @@ export function ShareProfilePanel({
           </Button>
         </div>
       </div>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        Anyone with this link can ask you a question — no account needed.
+      </p>
     </section>
   );
 }

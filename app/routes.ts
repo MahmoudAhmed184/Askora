@@ -10,6 +10,10 @@ export default [
   route("login", "features/auth/routes/login.route.tsx"),
   route("setup", "features/profile-setup/routes/setup.route.tsx"),
   route("setup/share", "features/profile-setup/routes/setup.share.route.tsx"),
+  route(
+    "setup/username-availability",
+    "features/profile-setup/routes/username-availability.route.ts",
+  ),
   layout("features/app-shell/routes/app-layout.route.tsx", [
     route("feed", "features/social/routes/feed.route.tsx"),
     route("inbox", "features/inbox/routes/inbox.route.tsx"),

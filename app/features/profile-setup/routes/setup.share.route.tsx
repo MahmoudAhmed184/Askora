@@ -1,4 +1,4 @@
-import { ArrowRight, Link2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Link2 } from "lucide-react";
 import { data, Link, redirect } from "react-router";
 
 import type { Route } from "./+types/setup.share.route";
@@ -55,45 +55,41 @@ export function meta() {
 export default function SetupShareRoute({ loaderData }: Route.ComponentProps) {
   return (
     <OnboardingShell activeStep="share">
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-start">
-        <div className="min-w-0">
-          <ShareProfilePanel
-            canonicalUrl={loaderData.canonicalUrl}
-            displayName={loaderData.profile.displayName}
-          />
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="flex size-14 items-center justify-center rounded-full bg-success/10 text-success">
+            <CheckCircle2 aria-hidden="true" className="size-7" />
+          </span>
+          <div className="flex flex-col gap-2">
+            <h1 className="font-serif text-3xl font-extrabold leading-tight text-foreground sm:text-4xl">
+              You&apos;re live, @{loaderData.profile.username}.
+            </h1>
+            <p className="mx-auto max-w-md text-base leading-7 text-muted-foreground">
+              Your profile link is reserved. Share it anywhere people already
+              follow you — questions arrive privately.
+            </p>
+          </div>
         </div>
 
-        <aside
-          aria-label="Next steps"
-          className="rounded-3xl border bg-card p-6 shadow-[var(--shadow-card)] lg:p-7"
-        >
-          <div className="flex flex-col gap-5">
-            <div className="flex size-12 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-              <Link2 aria-hidden="true" className="size-5" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <h2 className="text-2xl font-semibold leading-tight">
-                @{loaderData.profile.username}
-              </h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Your username and profile URL are reserved. More profile tools
-                will appear here as the beta opens.
-              </p>
-            </div>
-            <Button asChild variant="outline">
-              <Link to="/privacy">
-                Review privacy
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link to="/feed">
-                Continue to Feed
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-          </div>
-        </aside>
+        <ShareProfilePanel
+          canonicalUrl={loaderData.canonicalUrl}
+          displayName={loaderData.profile.displayName}
+        />
+
+        <div className="flex flex-col items-center gap-3">
+          <Button asChild className="h-11 w-full sm:w-auto sm:px-8">
+            <Link to="/feed">
+              Continue to your feed
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost">
+            <Link to={`/${loaderData.profile.username}`}>
+              <Link2 data-icon="inline-start" />
+              View your public profile
+            </Link>
+          </Button>
+        </div>
       </div>
     </OnboardingShell>
   );

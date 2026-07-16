@@ -1,5 +1,3 @@
-import { Check } from "lucide-react";
-
 import { cn } from "~/lib/utils";
 
 export type SetupStep = "profile" | "share" | "feed";
@@ -11,43 +9,41 @@ interface SetupProgressProps {
 const setupSteps = [
   { id: "profile", label: "Profile" },
   { id: "share", label: "Share" },
-  { id: "feed", label: "Feed" },
 ] as const satisfies readonly { id: SetupStep; label: string }[];
 
+/**
+ * Compact "Step x of 2" indicator with segmented progress, shown in the
+ * onboarding header.
+ */
 export function SetupProgress({ activeStep }: SetupProgressProps) {
-  const activeIndex = setupSteps.findIndex((step) => step.id === activeStep);
+  const activeIndex =
+    activeStep === "feed"
+      ? setupSteps.length
+      : setupSteps.findIndex((step) => step.id === activeStep);
+  const currentStep = Math.min(activeIndex + 1, setupSteps.length);
+  const currentLabel =
+    setupSteps[Math.min(activeIndex, setupSteps.length - 1)]?.label ?? "";
 
   return (
-    <nav aria-label="Profile setup progress">
-      <ol className="flex flex-wrap gap-2">
-        {setupSteps.map((step, index) => {
-          const isComplete = index < activeIndex;
-          const isActive = step.id === activeStep;
-
-          return (
-            <li
-              aria-current={isActive ? "step" : undefined}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-xs font-bold text-muted-foreground",
-                isActive && "border-primary bg-primary/10 text-primary",
-                isComplete && "text-foreground",
-              )}
-              key={step.id}
-            >
-              <span
-                className={cn(
-                  "flex size-5 items-center justify-center rounded-full bg-secondary text-[0.68rem] text-secondary-foreground",
-                  (isActive || isComplete) &&
-                    "bg-primary text-primary-foreground",
-                )}
-              >
-                {isComplete ? <Check data-icon="inline-start" /> : index + 1}
-              </span>
-              {step.label}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
+    <div className="flex items-center gap-3">
+      <p className="whitespace-nowrap text-xs font-semibold text-muted-foreground">
+        Step {currentStep} of {setupSteps.length}
+        <span className="sr-only"> — {currentLabel}</span>
+      </p>
+      <div
+        aria-hidden="true"
+        className="flex w-20 items-center gap-1 sm:w-28"
+      >
+        {setupSteps.map((step, index) => (
+          <span
+            className={cn(
+              "h-1.5 flex-1 rounded-full bg-muted",
+              index <= activeIndex && "bg-primary",
+            )}
+            key={step.id}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
