@@ -150,6 +150,19 @@ export async function submitPublicQuestion({
   minimumSubmitMilliseconds?: number | undefined;
 }): Promise<PublicQuestionSubmissionResult> {
   const values = getPublicQuestionFormValues(formData);
+
+  if (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.profileActive === false
+  ) {
+    return {
+      status: "denied",
+      values,
+      formError: "Questions are unavailable while your profile is deactivated.",
+    };
+  }
+
   const resolvedProfileStore = profileStore ?? createDrizzlePublicProfileStore();
   const resolution = await resolvePublicProfile({
     username,

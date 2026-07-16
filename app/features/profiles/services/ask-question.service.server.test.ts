@@ -153,6 +153,21 @@ describe("submitPublicQuestion", () => {
     expect(questions.created).toEqual([]);
   });
 
+  it("denies asks from a deactivated completed profile", async () => {
+    const questions = createQuestionStore();
+
+    const result = await submitQuestion({
+      questionStore: questions.store,
+      session: { ...completedSession, profileActive: false },
+    });
+
+    expect(result).toMatchObject({
+      status: "denied",
+      formError: "Questions are unavailable while your profile is deactivated.",
+    });
+    expect(questions.created).toEqual([]);
+  });
+
   it("allows a follower to ask a followers-only profile", async () => {
     const questions = createQuestionStore();
 

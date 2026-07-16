@@ -2,7 +2,7 @@ import { Outlet, type ShouldRevalidateFunctionArgs } from "react-router";
 
 import {
   isSessionSuspended,
-  requireCompletedProfileSessionFromContext,
+  requireCompletedProfileSessionAllowingInactiveFromContext,
 } from "~/features/auth/services/auth.service.server";
 import { loadAccountSettings } from "~/features/settings/services/account-settings.service.server";
 import { SettingsShell } from "~/features/settings/components/settings-shell";
@@ -14,7 +14,7 @@ import type { SettingsRouteContext } from "~/features/settings/types/settings.ty
 import type { Route } from "./+types/settings-layout.route";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const session = requireCompletedProfileSessionFromContext(context);
+  const session = requireCompletedProfileSessionAllowingInactiveFromContext(context);
 
   if (session instanceof Response) {
     return session;

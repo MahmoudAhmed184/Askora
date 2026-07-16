@@ -1,7 +1,7 @@
 import { data, useActionData, useOutletContext } from "react-router";
 
 import type { Route } from "./+types/account.route";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
+import { requireCompletedProfileSessionAllowingInactiveFromContext } from "~/features/auth/services/auth.service.server";
 import { AccountSettingsForm } from "~/features/settings/components/account-settings-form";
 import {
   submitAccountSettings,
@@ -14,7 +14,7 @@ interface AccountSettingsActionData {
 }
 
 export async function action({ context, request }: Route.ActionArgs) {
-  const session = requireCompletedProfileSessionFromContext(context);
+  const session = requireCompletedProfileSessionAllowingInactiveFromContext(context);
 
   if (session instanceof Response) {
     return session;

@@ -38,6 +38,9 @@ export interface CompletedProfileSessionSummary {
   user: CurrentSessionUser;
   profileStatus: "complete";
   suspensionStatus: ActiveSuspensionStatus;
+  /** False while the profile is deactivated but the account remains recoverable. */
+  profileActive?: boolean;
+  deletionPending?: boolean;
   profile: {
     id: string;
     username: string;
@@ -278,6 +281,26 @@ export function requireCompletedProfileSessionFromContext(
   return session as CompletedProfileSessionSummary;
 }
 
+/**
+ * The account settings screen is the one authenticated surface that must stay
+ * available while a profile is deactivated so the owner can reactivate it or
+ * cancel a pending deletion. All other completed-profile routes use the
+ * active-profile guard above.
+ */
+export function requireCompletedProfileSessionAllowingInactiveFromContext(
+  context: CurrentSessionContextReader,
+): CompletedProfileSessionSummary | Response {
+  const session = getCurrentSessionSummaryFromContext(context);
+
+  if (session.status === "anonymous") {
+    return redirect("/login");
+  }
+
+  return session.profileStatus === "incomplete"
+    ? redirect("/setup")
+    : session;
+}
+
 export function getAuthenticatedGuardRedirectPath(
   session: CurrentSessionSummary,
 ) {
@@ -301,7 +324,11 @@ export function getCompletedProfileGuardRedirectPath(
     return "/login";
   }
 
-  return session.profileStatus === "incomplete" ? "/setup" : undefined;
+  if (session.profileStatus === "incomplete") {
+    return "/setup";
+  }
+
+  return session.profileActive === false ? "/settings/account" : undefined;
 }
 
 export function isSessionSuspended(session: AuthenticatedSessionSummary) {
@@ -319,10 +346,13 @@ async function getSessionUserSummary(
       image: authUsers.image,
       suspensionStatus: authUsers.suspensionStatus,
       suspendedUntil: authUsers.suspendedUntil,
+      deletedAt: authUsers.deletedAt,
+      deletionAnonymizedAt: authUsers.deletionAnonymizedAt,
       profileId: profiles.id,
       profileUsername: profiles.username,
       profileDisplayName: profiles.displayName,
       profileAvatarUrl: profiles.avatarUrl,
+      profileIsActive: profiles.isActive,
     })
     .from(authUsers)
     .leftJoin(profiles, eq(profiles.userId, authUsers.id))
@@ -330,6 +360,11 @@ async function getSessionUserSummary(
     .limit(1);
 
   if (user === undefined) {
+    return undefined;
+  }
+
+  // Once anonymization has completed there is no recoverable account left.
+  if (user.deletionAnonymizedAt !== null) {
     return undefined;
   }
 
@@ -367,6 +402,8 @@ async function getSessionUserSummary(
       displayName: user.profileDisplayName,
       avatarUrl: user.profileAvatarUrl,
     },
+    profileActive: user.deletedAt === null && (user.profileIsActive ?? false),
+    deletionPending: user.deletedAt !== null,
   };
 }
 

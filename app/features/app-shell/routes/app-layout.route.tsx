@@ -1,13 +1,18 @@
 import { Outlet, type ShouldRevalidateFunctionArgs } from "react-router";
 
 import { AppShell } from "~/components/layout/app-shell/app-shell";
-import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
+import {
+  requireCompletedProfileSessionAllowingInactiveFromContext,
+  requireCompletedProfileSessionFromContext,
+} from "~/features/auth/services/auth.service.server";
 import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
 
 import type { Route } from "./+types/app-layout.route";
 
-export async function loader({ context }: Route.LoaderArgs) {
-  const session = requireCompletedProfileSessionFromContext(context);
+export async function loader({ context, request }: Route.LoaderArgs) {
+  const session = isAccountSettingsPath(request.url)
+    ? requireCompletedProfileSessionAllowingInactiveFromContext(context)
+    : requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
@@ -16,6 +21,10 @@ export async function loader({ context }: Route.LoaderArgs) {
   return {
     shell: await loadAppShellData({ session }),
   };
+}
+
+function isAccountSettingsPath(url: string) {
+  return new URL(url).pathname === "/settings/account";
 }
 
 export function shouldRevalidate({
