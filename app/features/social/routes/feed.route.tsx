@@ -157,6 +157,7 @@ function FeedItemArticle({
           <Button asChild size="sm" variant="secondary">
             <Link
               defaultShouldRevalidate={false}
+              id={threadHref.focusReturnId}
               mask={threadHref.mask}
               prefetch="intent"
               preventScrollReset

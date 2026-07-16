@@ -2,6 +2,7 @@ import type { To } from "react-router";
 
 import type { PublicThreadPageData } from "~/features/threads/types/threads.types";
 import { USERNAME_PATTERN } from "~/features/profile-setup/username-policy";
+import { isBoundedPublicId } from "~/lib/public-id";
 
 export const threadModalUsernameParam = "threadUsername";
 export const threadModalPublicIdParam = "threadPublicId";
@@ -10,7 +11,7 @@ const threadModalSearchParams = [
   threadModalUsernameParam,
   threadModalPublicIdParam,
 ] as const;
-const THREAD_PUBLIC_ID_PATTERN = /^thr_[A-Za-z0-9_-]{1,64}$/;
+const answerModalQuestionIdParam = "answerQuestionId";
 
 export interface ThreadModalParams {
   username: string;
@@ -31,6 +32,7 @@ export interface ThreadModalLocation {
 export interface ThreadModalLink {
   mask: To;
   to: To;
+  focusReturnId?: string;
 }
 
 export function createThreadModalLink({
@@ -44,10 +46,11 @@ export function createThreadModalLink({
 }): ThreadModalLink {
   const searchParams = new URLSearchParams(location.search);
 
+  searchParams.delete(answerModalQuestionIdParam);
   searchParams.set(threadModalUsernameParam, username);
   searchParams.set(threadModalPublicIdParam, threadPublicId);
 
-  return {
+  const link: ThreadModalLink = {
     mask: createCanonicalThreadPath({
       hash: canonicalHash,
       threadPublicId,
@@ -59,6 +62,21 @@ export function createThreadModalLink({
       search: toSearchString(searchParams),
     },
   };
+
+  Object.defineProperty(link, "focusReturnId", {
+    configurable: true,
+    enumerable: false,
+    value: getThreadModalFocusReturnId({ threadPublicId, username }),
+  });
+
+  return link;
+}
+
+export function getThreadModalFocusReturnId({
+  threadPublicId,
+  username,
+}: ThreadModalParams) {
+  return `thread-modal-${username}-${threadPublicId}`;
 }
 
 export function createCanonicalThreadPath({
@@ -76,6 +94,10 @@ export function createCanonicalThreadPath({
 export function getThreadModalParams(
   searchParams: URLSearchParams,
 ): ThreadModalParams | undefined {
+  if (searchParams.has(answerModalQuestionIdParam)) {
+    return undefined;
+  }
+
   const username = searchParams.get(threadModalUsernameParam);
   const threadPublicId = searchParams.get(threadModalPublicIdParam);
 
@@ -83,7 +105,7 @@ export function getThreadModalParams(
     username === null ||
     threadPublicId === null ||
     !USERNAME_PATTERN.test(username) ||
-    !THREAD_PUBLIC_ID_PATTERN.test(threadPublicId)
+    !isBoundedPublicId(threadPublicId)
   ) {
     return undefined;
   }

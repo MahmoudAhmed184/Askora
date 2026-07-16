@@ -158,6 +158,7 @@ function PublicAnswerArticle({
           <Link
             className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_4px_14px_var(--accent-glow)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             defaultShouldRevalidate={false}
+            id={threadHref.focusReturnId}
             mask={threadHref.mask}
             prefetch="intent"
             preventScrollReset

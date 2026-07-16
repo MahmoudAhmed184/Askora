@@ -81,6 +81,7 @@ function PinnedThreadLink({
     <Link
       className="group rounded-xl border border-transparent p-1.5 transition-[border-color,background-color] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-border hover:bg-secondary/70"
       defaultShouldRevalidate={false}
+      id={link.focusReturnId}
       mask={link.mask}
       prefetch="intent"
       preventScrollReset

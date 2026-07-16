@@ -48,14 +48,18 @@ function DialogOverlay({
 function DialogContent({
   children,
   className,
+  closeLabel = "Close dialog",
+  overlayClassName,
   showCloseButton = false,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  closeLabel?: string;
+  overlayClassName?: string;
   showCloseButton?: boolean;
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         className={cn(
           "fixed left-1/2 top-1/2 z-[70] flex max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto rounded-2xl border bg-card p-5 text-card-foreground shadow-[var(--shadow-card-hover)] duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
@@ -67,7 +71,7 @@ function DialogContent({
         {children}
         {showCloseButton ? (
           <DialogPrimitive.Close
-            aria-label="Close dialog"
+            aria-label={closeLabel}
             className={cn(
               buttonVariants({ size: "icon", variant: "ghost" }),
               "absolute right-3 top-3",

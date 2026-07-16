@@ -68,12 +68,15 @@ describe("thread modal routing helpers", () => {
     ).toBe(false);
   });
 
-  it("rejects malformed and oversized modal query parameters", () => {
+  it("accepts bounded fixture IDs and rejects malformed or oversized values", () => {
     expect(
       getThreadModalParams(
-        new URLSearchParams(
-          "threadUsername=person&threadPublicId=not-a-thread-id",
-        ),
+        new URLSearchParams("threadUsername=person&threadPublicId=demo_thread_1"),
+      ),
+    ).toEqual({ username: "person", threadPublicId: "demo_thread_1" });
+    expect(
+      getThreadModalParams(
+        new URLSearchParams("threadUsername=person&threadPublicId=bad.id"),
       ),
     ).toBeUndefined();
     expect(

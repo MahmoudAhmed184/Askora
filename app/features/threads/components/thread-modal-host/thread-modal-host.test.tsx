@@ -8,12 +8,10 @@ import type {
 } from "~/features/threads/queries/public-thread.queries.server";;
 
 describe("ThreadModalHost", () => {
-  it("renders a viewport-inset scrollable modal without a visible close button", () => {
+  it("renders a viewport-inset scrollable modal with an accessible close button", () => {
     renderThreadModalHost();
 
-    expect(
-      screen.queryByRole("button", { name: "Close thread" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close thread" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Public thread" })).toHaveClass(
       "block",
       "h-svh",
