@@ -766,7 +766,12 @@ async function upsertThread({
     .update(threads)
     .set({
       status,
-      followUpPermissionOverride: params.submission.followUpPermissionOverride,
+      ...(isFollowUpQuestion(params.question)
+        ? {}
+        : {
+            followUpPermissionOverride:
+              params.submission.followUpPermissionOverride,
+          }),
       publishedAt: publishedAt ?? null,
       updatedAt: params.now,
     })

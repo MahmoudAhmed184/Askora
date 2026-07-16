@@ -351,6 +351,26 @@ describe("answer workflows", () => {
     });
   });
 
+  it("does not overwrite thread permissions from a stale follow-up editor", async () => {
+    const answers = createAnswerStore({
+      items: [createThreadItem()],
+      question: createFollowUpQuestion(),
+      thread: createThread({ followUpPermissionOverride: "logged_in" }),
+    });
+
+    await submitAnswer({
+      formData: createAnswerFormData({
+        intent: "save_draft",
+        answerText: "Draft follow-up answer",
+        followUpPermissionOverride: "off",
+      }),
+      ids: ["item_follow_up"],
+      store: answers.store,
+    });
+
+    expect(answers.thread?.followUpPermissionOverride).toBe("logged_in");
+  });
+
   it("publishes follow-ups at the next position and redirects to the thread anchor", async () => {
     const answers = createAnswerStore({
       items: [createThreadItem()],
@@ -1098,8 +1118,10 @@ function upsertAnswerState({
     : nextThread.publishedAt;
 
   nextThread.status = threadStatus;
-  nextThread.followUpPermissionOverride =
-    params.submission.followUpPermissionOverride;
+  if (!isTestFollowUpQuestion(params.question)) {
+    nextThread.followUpPermissionOverride =
+      params.submission.followUpPermissionOverride;
+  }
   nextThread.publishedAt = publishedAt;
   nextThread.updatedAt = params.now;
 
