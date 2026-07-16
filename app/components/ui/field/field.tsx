@@ -42,4 +42,29 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   );
 }
 
-export { Field, FieldDescription, FieldGroup, FieldLabel };
+interface FieldErrorProps extends React.ComponentProps<"p"> {
+  message?: string | undefined;
+}
+
+/**
+ * Inline validation message. Renders an empty placeholder element when there
+ * is no message so aria-describedby ids stay valid.
+ */
+function FieldError({ className, message, ...props }: FieldErrorProps) {
+  if (message === undefined) {
+    return <span data-slot="field-error" {...props} />;
+  }
+
+  return (
+    <p
+      className={cn("text-sm leading-6 text-destructive", className)}
+      data-slot="field-error"
+      role="alert"
+      {...props}
+    >
+      {message}
+    </p>
+  );
+}
+
+export { Field, FieldDescription, FieldError, FieldGroup, FieldLabel };

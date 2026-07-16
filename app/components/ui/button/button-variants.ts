@@ -8,7 +8,7 @@ export const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground shadow-[0_4px_14px_var(--accent-glow)] hover:bg-primary/95 hover:shadow-[0_6px_20px_var(--accent-glow)]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-[0_4px_14px_oklch(0.55_0.22_25_/_0.18)] hover:bg-destructive/90 hover:shadow-[0_6px_20px_oklch(0.55_0.22_25_/_0.2)]",
+          "bg-destructive text-destructive-foreground shadow-[0_4px_14px_color-mix(in_oklch,var(--destructive)_18%,transparent)] hover:bg-destructive/90 hover:shadow-[0_6px_20px_color-mix(in_oklch,var(--destructive)_20%,transparent)]",
         outline:
           "border-border bg-transparent text-foreground hover:border-primary/45 hover:bg-surface",
         secondary: "bg-muted text-foreground hover:bg-muted/80",
@@ -19,7 +19,7 @@ export const buttonVariants = cva(
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-8 px-3 text-xs",
+        sm: "h-9 px-3.5 text-xs",
         lg: "h-11 px-5",
         icon: "size-10 p-0",
       },
