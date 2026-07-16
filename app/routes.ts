@@ -42,6 +42,7 @@ export default [
     "features/admin/routes/admin.reports.$reportId.route.tsx",
   ),
   route("reports", "features/moderation/routes/report.route.ts"),
+  route("api/cron/cleanup", "features/ops/routes/cleanup.route.ts"),
   route("terms", "features/legal/routes/terms.route.tsx"),
   route("privacy", "features/legal/routes/privacy.route.tsx"),
   route("api/avatar", "features/profiles/routes/avatar.route.ts"),

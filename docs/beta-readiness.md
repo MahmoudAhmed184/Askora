@@ -12,6 +12,7 @@ Required runtime values on Vercel:
 - `PUBLIC_BETA_NOINDEX=true`
 - `DATABASE_URL` for pooled Neon runtime access
 - `DIRECT_DATABASE_URL` for migrations and admin scripts
+- `CRON_SECRET` (at least 32 random characters) for the scheduled retention job
 - `BETTER_AUTH_URL`
 - `BETTER_AUTH_SECRET`
 - `TRUSTED_ORIGINS`
@@ -110,6 +111,14 @@ Current redesign QA evidence:
   console/page/server errors after any dev-server warm-up recapture.
 
 ## Cleanup Notes
+
+Vercel runs `/api/cron/cleanup` daily at 03:00 UTC. The route requires the
+`Authorization: Bearer $CRON_SECRET` header and uses `DIRECT_DATABASE_URL` (or
+the runtime database URL as a fallback). It anonymizes expired deletion
+requests, deletes expired notifications and stale rate-limit counters, and
+scrubs expired question safety metadata. Configure the same `CRON_SECRET` in
+the Vercel project before enabling the beta; a missing secret causes production
+startup validation to fail.
 
 The production app is organized around feature slices:
 

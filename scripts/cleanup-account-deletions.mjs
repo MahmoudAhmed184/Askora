@@ -7,6 +7,8 @@ import pg from "pg";
 const { Pool } = pg;
 
 const DEFAULT_LIMIT = 100;
+const RATE_LIMIT_RETENTION_MILLISECONDS = 2 * 24 * 60 * 60 * 1000;
+const REDACTED_QUESTION_TEXT = "[redacted after safety retention]";
 
 export async function cleanupExpiredAccountDeletions({
   limit = DEFAULT_LIMIT,
@@ -20,11 +22,17 @@ export async function cleanupExpiredAccountDeletions({
     results.push(await store.anonymizeDeletionRequest({ now, request }));
   }
 
+  const retention =
+    typeof store.cleanupRetentionData === "function"
+      ? await store.cleanupRetentionData({ now })
+      : undefined;
+
   return {
     scanned: requests.length,
     anonymized: results.filter((result) => result.status === "anonymized").length,
     skipped: results.filter((result) => result.status === "skipped").length,
     results,
+    retention,
   };
 }
 
@@ -71,6 +79,42 @@ export function createPoolCleanupStore(pool) {
       } finally {
         client.release();
       }
+    },
+    async cleanupRetentionData({ now }) {
+      const expiredNotifications = await pool.query(
+        `delete from notifications where expires_at <= $1`,
+        [now],
+      );
+      const staleRateLimits = await pool.query(
+        `delete from rate_limits where last_request < $1`,
+        [now.getTime() - RATE_LIMIT_RETENTION_MILLISECONDS],
+      );
+      const scrubbedQuestions = await pool.query(
+        `
+          update questions
+          set
+            ip_hash = null,
+            user_agent_hash = null,
+            safety_fingerprint_hash = '[redacted]',
+            original_text = $2,
+            updated_at = $1
+          where safety_metadata_retain_until <= $1
+            and not exists (
+              select 1
+              from reports
+              where reports.target_type = 'question'
+                and reports.target_id = questions.id
+                and reports.created_at > $1 - interval '180 days'
+            )
+        `,
+        [now, REDACTED_QUESTION_TEXT],
+      );
+
+      return {
+        expiredNotifications: expiredNotifications.rowCount ?? 0,
+        staleRateLimits: staleRateLimits.rowCount ?? 0,
+        scrubbedQuestions: scrubbedQuestions.rowCount ?? 0,
+      };
     },
   };
 }
@@ -272,11 +316,22 @@ async function executeCleanupStatements({ client, email, now, profileId, userId 
             when identity_mode = 'account_attributed' then 'account_anonymous'
             else identity_mode
           end,
-          anonymized_at = coalesce(anonymized_at, $3),
-          updated_at = $3
-        where asker_user_id = $1 or asker_profile_id = $2
+          ip_hash = null,
+          user_agent_hash = null,
+          safety_fingerprint_hash = '[redacted]',
+          original_text = $3,
+          anonymized_at = coalesce(anonymized_at, $4),
+          updated_at = $4
+        where (asker_user_id = $1 or asker_profile_id = $2)
+          and not exists (
+            select 1
+            from reports
+            where reports.target_type = 'question'
+              and reports.target_id = questions.id
+              and reports.created_at > $4 - interval '180 days'
+          )
       `,
-      values: [userId, profileId, now],
+      values: [userId, profileId, REDACTED_QUESTION_TEXT, now],
     },
     {
       sql: "/* cleanup: unlink_reporter_identity */ update reports set reporter_user_id = null, reporter_profile_id = null, updated_at = $3 where reporter_user_id = $1 or reporter_profile_id = $2",

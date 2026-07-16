@@ -78,6 +78,7 @@ const baseServerEnvSchema = z.object({
   PUBLIC_BETA_NOINDEX: booleanFromEnvironment,
   DATABASE_URL: optionalUrl,
   DIRECT_DATABASE_URL: optionalUrl,
+  CRON_SECRET: optionalSecret,
   TRUSTED_PROXY_IP_HEADER: trustedProxyIpHeader.default("x-vercel-forwarded-for"),
   TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(1),
   BETTER_AUTH_URL: optionalUrl,
@@ -113,6 +114,7 @@ export const serverEnvSchema = baseServerEnvSchema
     );
     requireProductionValue(context, environment.RESEND_API_KEY, "RESEND_API_KEY");
     requireProductionValue(context, environment.AUTH_EMAIL_FROM, "AUTH_EMAIL_FROM");
+    requireProductionValue(context, environment.CRON_SECRET, "CRON_SECRET");
   })
   .transform((environment) => {
     const betterAuthUrl = environment.BETTER_AUTH_URL ?? environment.APP_URL;

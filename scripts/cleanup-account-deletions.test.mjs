@@ -46,13 +46,6 @@ describe("cleanupExpiredAccountDeletions", () => {
     expect(state.follows).toEqual([]);
     expect(state.likes).toEqual([]);
     expect(state.answer_like_notifications).toEqual([]);
-    expect(state.notifications).toEqual([
-      {
-        id: "notification_actor",
-        recipient_user_id: "user_2",
-        actor_user_id: null,
-      },
-    ]);
     expect(state.questions.find((question) => question.id === "recipient_unanswered"))
       .toMatchObject({
         deleted_at: now,
@@ -71,8 +64,32 @@ describe("cleanupExpiredAccountDeletions", () => {
         asker_profile_id: null,
         identity_mode: "account_anonymous",
         anonymized_at: now,
-        original_text: "Retain attributed question text",
-        safety_fingerprint_hash: "safety_asked",
+        original_text: "[redacted after safety retention]",
+        safety_fingerprint_hash: "[redacted]",
+        ip_hash: null,
+        user_agent_hash: null,
+      });
+    expect(state.notifications).toEqual([
+      {
+        id: "notification_actor",
+        recipient_user_id: "user_2",
+        actor_user_id: null,
+        expires_at: new Date("2026-06-30T12:00:00.000Z"),
+      },
+    ]);
+    expect(state.rate_limits).toEqual([
+      {
+        id: "recent",
+        key: "ask:recent",
+        last_request: now.getTime(),
+      },
+    ]);
+    expect(state.questions.find((question) => question.id === "stale_safety"))
+      .toMatchObject({
+        original_text: "[redacted after safety retention]",
+        ip_hash: null,
+        user_agent_hash: null,
+        safety_fingerprint_hash: "[redacted]",
       });
   });
 
@@ -149,7 +166,12 @@ function createState(overrides = {}) {
         id: "notification_actor",
         recipient_user_id: "user_2",
         actor_user_id: "user_1",
+        expires_at: new Date("2026-06-30T12:00:00.000Z"),
       },
+    ],
+    rate_limits: [
+      { id: "stale", key: "ask:stale", last_request: now.getTime() - 3 * 24 * 60 * 60 * 1000 },
+      { id: "recent", key: "ask:recent", last_request: now.getTime() },
     ],
     blocks: [
       { id: "owned_block", owner_user_id: "user_1", owner_profile_id: "profile_1" },
@@ -173,6 +195,9 @@ function createState(overrides = {}) {
         deleted_by: null,
         original_text: "Unanswered question",
         safety_fingerprint_hash: "safety_recipient",
+        ip_hash: "ip_recipient",
+        user_agent_hash: "ua_recipient",
+        safety_metadata_retain_until: new Date("2026-07-01T12:00:00.000Z"),
       },
       {
         id: "recipient_answered",
@@ -185,6 +210,9 @@ function createState(overrides = {}) {
         deleted_by: null,
         original_text: "Answered question",
         safety_fingerprint_hash: "safety_answered",
+        ip_hash: "ip_answered",
+        user_agent_hash: "ua_answered",
+        safety_metadata_retain_until: new Date("2026-07-01T12:00:00.000Z"),
       },
       {
         id: "asked_attributed",
@@ -198,6 +226,25 @@ function createState(overrides = {}) {
         deleted_at: null,
         original_text: "Retain attributed question text",
         safety_fingerprint_hash: "safety_asked",
+        ip_hash: "ip_asked",
+        user_agent_hash: "ua_asked",
+        safety_metadata_retain_until: new Date("2026-05-01T12:00:00.000Z"),
+      },
+      {
+        id: "stale_safety",
+        recipient_user_id: "user_2",
+        recipient_profile_id: "profile_2",
+        asker_user_id: "user_2",
+        asker_profile_id: "profile_2",
+        identity_mode: "account_anonymous",
+        status: "answered",
+        anonymized_at: null,
+        deleted_at: null,
+        original_text: "Old safety metadata",
+        safety_fingerprint_hash: "safety_old",
+        ip_hash: "ip_old",
+        user_agent_hash: "ua_old",
+        safety_metadata_retain_until: new Date("2026-05-01T12:00:00.000Z"),
       },
     ],
     reports: [
@@ -259,6 +306,44 @@ function handleQuery(state, sql, values) {
 
   if (text.includes("from profiles") && text.includes("for update")) {
     return rows(state.profiles.filter((profile) => profile.user_id === values[0]));
+  }
+
+  if (text.startsWith("delete from notifications")) {
+    const before = state.notifications.length;
+    state.notifications = state.notifications.filter(
+      (notification) => notification.expires_at > values[0],
+    );
+    return commandResult(before - state.notifications.length);
+  }
+
+  if (text.startsWith("delete from rate_limits")) {
+    const before = state.rate_limits.length;
+    state.rate_limits = state.rate_limits.filter(
+      (rateLimit) => rateLimit.last_request >= values[0],
+    );
+    return commandResult(before - state.rate_limits.length);
+  }
+
+  if (text.startsWith("update questions set ip_hash")) {
+    let count = 0;
+    for (const question of state.questions) {
+      const hasRecentReport = state.reports.some(
+        (report) =>
+          report.target_type === "question" &&
+          report.target_id === question.id &&
+          report.created_at > new Date(values[0].getTime() - 180 * 24 * 60 * 60 * 1000),
+      );
+
+      if (question.safety_metadata_retain_until <= values[0] && !hasRecentReport) {
+        question.ip_hash = null;
+        question.user_agent_hash = null;
+        question.safety_fingerprint_hash = "[redacted]";
+        question.original_text = values[1];
+        question.updated_at = values[0];
+        count += 1;
+      }
+    }
+    return commandResult(count);
   }
 
   applyCleanupMutation(state, text, values);
@@ -366,7 +451,11 @@ function applyCleanupMutation(state, text, values) {
           question.identity_mode === "account_attributed"
             ? "account_anonymous"
             : question.identity_mode;
-        question.anonymized_at ??= values[2];
+        question.ip_hash = null;
+        question.user_agent_hash = null;
+        question.safety_fingerprint_hash = "[redacted]";
+        question.original_text = values[2];
+        question.anonymized_at ??= values[3];
       }
     }
   }
@@ -411,4 +500,8 @@ function rows(rowValues) {
     rows: rowValues,
     rowCount: rowValues.length,
   };
+}
+
+function commandResult(rowCount) {
+  return { rows: [], rowCount };
 }
