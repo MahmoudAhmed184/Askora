@@ -83,6 +83,22 @@ describe("anonymizeOwnQuestion", () => {
       }),
     ).resolves.toEqual({ status: "denied", reason: "suspended" });
   });
+
+  it("does not report success when the question closes before the update", async () => {
+    const regret = createRegretStore({
+      mutationAllowed: false,
+      question: createQuestion({ identityMode: "account_attributed" }),
+    });
+
+    await expect(
+      anonymizeOwnQuestion({
+        publicId: "qst_1",
+        session: completedSession,
+        store: regret.store,
+        now,
+      }),
+    ).resolves.toEqual({ status: "denied", reason: "closed" });
+  });
 });
 
 describe("deleteOwnQuestion", () => {
@@ -125,11 +141,29 @@ describe("deleteOwnQuestion", () => {
       }),
     ).resolves.toEqual({ status: "denied", reason: "closed" });
   });
+
+  it("does not report success when the question closes before deletion", async () => {
+    const regret = createRegretStore({
+      mutationAllowed: false,
+      question: createQuestion(),
+    });
+
+    await expect(
+      deleteOwnQuestion({
+        publicId: "qst_1",
+        session: completedSession,
+        store: regret.store,
+        now,
+      }),
+    ).resolves.toEqual({ status: "denied", reason: "closed" });
+  });
 });
 
 function createRegretStore({
+  mutationAllowed = true,
   question,
 }: {
+  mutationAllowed?: boolean;
   question?: RegretQuestion;
 } = {}) {
   const anonymized: { questionId: string; now: Date }[] = [];
@@ -142,11 +176,11 @@ function createRegretStore({
     },
     anonymizeQuestion(questionId, updatedAt) {
       anonymized.push({ questionId, now: updatedAt });
-      return Promise.resolve();
+      return Promise.resolve(mutationAllowed);
     },
     deleteQuestionByAsker(questionId, deletedAt) {
       deleted.push({ questionId, now: deletedAt });
-      return Promise.resolve();
+      return Promise.resolve(mutationAllowed);
     },
   };
 

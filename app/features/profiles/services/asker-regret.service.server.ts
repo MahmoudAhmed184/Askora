@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { questions } from "~/db/schema";
@@ -20,8 +20,8 @@ export interface RegretQuestion {
 
 export interface AskerRegretStore {
   findQuestionForRegret(publicId: string): Promise<RegretQuestion | undefined>;
-  anonymizeQuestion(questionId: string, now: Date): Promise<void>;
-  deleteQuestionByAsker(questionId: string, now: Date): Promise<void>;
+  anonymizeQuestion(questionId: string, now: Date): Promise<boolean>;
+  deleteQuestionByAsker(questionId: string, now: Date): Promise<boolean>;
 }
 
 export type AskerRegretResult =
@@ -62,7 +62,11 @@ export async function anonymizeOwnQuestion({
     return { status: "denied", reason: "not_attributed" };
   }
 
-  await store.anonymizeQuestion(question.question.id, now);
+  const updated = await store.anonymizeQuestion(question.question.id, now);
+
+  if (!updated) {
+    return { status: "denied", reason: "closed" };
+  }
 
   return { status: "updated" };
 }
@@ -84,7 +88,11 @@ export async function deleteOwnQuestion({
     return question;
   }
 
-  await store.deleteQuestionByAsker(question.question.id, now);
+  const updated = await store.deleteQuestionByAsker(question.question.id, now);
+
+  if (!updated) {
+    return { status: "denied", reason: "closed" };
+  }
 
   return { status: "updated" };
 }
@@ -110,7 +118,7 @@ export function createDrizzleAskerRegretStore(
       return question;
     },
     async anonymizeQuestion(questionId, now) {
-      await database
+      const updated = await database
         .update(questions)
         .set({
           identityMode: "account_anonymous",
@@ -118,17 +126,36 @@ export function createDrizzleAskerRegretStore(
           anonymizedAt: now,
           updatedAt: now,
         })
-        .where(eq(questions.id, questionId));
+        .where(
+          and(
+            eq(questions.id, questionId),
+            eq(questions.identityMode, "account_attributed"),
+            inArray(questions.status, ["inbox", "filtered"]),
+            isNull(questions.deletedAt),
+          ),
+        )
+        .returning({ id: questions.id });
+
+      return updated.length > 0;
     },
     async deleteQuestionByAsker(questionId, now) {
-      await database
+      const updated = await database
         .update(questions)
         .set({
           deletedAt: now,
           deletedBy: "asker",
           updatedAt: now,
         })
-        .where(eq(questions.id, questionId));
+        .where(
+          and(
+            eq(questions.id, questionId),
+            inArray(questions.status, ["inbox", "filtered"]),
+            isNull(questions.deletedAt),
+          ),
+        )
+        .returning({ id: questions.id });
+
+      return updated.length > 0;
     },
   };
 }
