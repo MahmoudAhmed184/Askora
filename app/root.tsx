@@ -14,6 +14,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 
+import { ThemeWatcher } from "~/components/shared/theme-watcher/theme-watcher";
 import { Toaster } from "~/components/ui/sonner/sonner";
 import { currentSessionContext } from "~/features/auth/auth.context";
 import {
@@ -103,12 +104,24 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return tags;
 }
 
+const themeBootstrapScript = `(function () {
+  try {
+    var stored = localStorage.getItem("theme");
+    var dark =
+      stored === "dark" ||
+      (stored !== "light" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", dark);
+  } catch (error) {}
+})();`;
+
 export function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
         <Meta />
         <Links />
       </head>
@@ -126,6 +139,7 @@ export default function App({ loaderData }: Route.ComponentProps) {
     <>
       <Outlet />
       <ThreadModalHost modal={loaderData.threadModal} />
+      <ThemeWatcher />
       <Toaster />
     </>
   );

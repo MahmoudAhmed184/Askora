@@ -34,6 +34,16 @@
   --shadow-card: 0 8px 30px oklch(0.16 0.035 295 / 0.06);
   --shadow-card-hover: 0 12px 34px oklch(0.16 0.035 295 / 0.08);
   --shadow-navbar: 0 12px 36px oklch(0.16 0.035 295 / 0.10);
+  --gradient-brand: linear-gradient(
+    135deg,
+    oklch(0.7 0.13 310),
+    oklch(0.5 0.15 295)
+  );
+  --toast-bg: oklch(0.21 0.032 292);
+  --toast-border: oklch(0.33 0.04 292);
+  --toast-fg: oklch(0.985 0.005 295);
+  --toast-fg-muted: oklch(0.985 0.005 295 / 0.72);
+  --toast-icon: oklch(0.78 0.12 300);
   --serif: "Playfair Display", Georgia, Cambria, "Times New Roman", serif;
   --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
@@ -66,6 +76,14 @@
   --shadow-card: 0 10px 32px oklch(0.08 0.02 292 / 0.35);
   --shadow-card-hover: 0 14px 38px oklch(0.08 0.02 292 / 0.42);
   --shadow-navbar: 0 12px 36px oklch(0.08 0.02 292 / 0.42);
+  --gradient-brand: linear-gradient(
+    135deg,
+    oklch(0.52 0.13 310),
+    oklch(0.36 0.13 295)
+  );
+  --toast-bg: oklch(0.27 0.038 292);
+  --toast-border: oklch(0.4 0.045 292);
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -111,6 +129,10 @@ html {
   color-scheme: light;
   font-synthesis-weight: none;
   text-rendering: optimizeLegibility;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {
@@ -193,11 +215,11 @@ li {
   max-width: calc(100vw - 32px);
   min-height: auto;
   gap: 10px;
-  border: 1px solid #322b3f;
+  border: 1px solid var(--toast-border);
   border-radius: 24px;
-  background: #0f0d13;
-  box-shadow: 0 10px 40px rgb(0 0 0 / 0.5);
-  color: #ffffff;
+  background: var(--toast-bg);
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.4);
+  color: var(--toast-fg);
   font-size: 0.84rem;
   font-weight: 600;
   padding: 12px 24px;
@@ -221,7 +243,7 @@ li {
 }
 
 .toaster [data-sonner-toast][data-styled="true"] [data-description] {
-  color: rgb(255 255 255 / 0.72);
+  color: var(--toast-fg-muted);
   font-weight: 500;
 }
 
@@ -229,7 +251,7 @@ li {
   width: 18px;
   height: 18px;
   margin: 0;
-  color: #a78bfa;
+  color: var(--toast-icon);
 }
 
 .toaster [data-sonner-toast][data-styled="true"] [data-icon] svg {
@@ -244,22 +266,22 @@ li {
 .toaster
   [data-sonner-toast][data-styled="true"][data-type="warning"]
   [data-icon] {
-  color: #ef4444;
+  color: oklch(0.68 0.19 25);
 }
 
 .toaster [data-sonner-toast][data-styled="true"] [data-button] {
   height: 28px;
   border-radius: 999px;
-  background: #ffffff;
-  color: #16111d;
+  background: var(--toast-fg);
+  color: var(--toast-bg);
   font-size: 0.78rem;
   font-weight: 700;
   padding-inline: 12px;
 }
 
 .toaster [data-sonner-toast][data-styled="true"] [data-cancel] {
-  background: rgb(255 255 255 / 0.12);
-  color: #ffffff;
+  background: color-mix(in oklch, var(--toast-fg) 12%, transparent);
+  color: var(--toast-fg);
 }
 
 .app-toast-loading {

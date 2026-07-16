@@ -3,6 +3,7 @@ import {
   LockKeyhole,
   Settings2,
   ShieldCheck,
+  SunMoon,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -37,6 +38,12 @@ const settingsLinks = [
     icon: ShieldCheck,
     description:
       "Pause intake, filter phrases, and review sender blocks created from private-question moderation.",
+  },
+  {
+    to: "/settings/appearance",
+    label: "Appearance",
+    icon: SunMoon,
+    description: "Choose a light, dark, or system theme for this device.",
   },
   {
     to: "/settings/account",

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ArrowRight, UserRound } from "lucide-react";
 import { Link, useRouteLoaderData } from "react-router";
 
+import { ThemeToggle } from "~/components/shared/theme-toggle/theme-toggle";
 import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
 import type { loader as rootLoader, RootLoaderData } from "~/root";
@@ -31,7 +32,7 @@ export function PublicShell({
             </span>
             <span className="truncate">Q&A Platform</span>
           </Link>
-          <nav aria-label="Public navigation" className="flex items-center gap-5">
+          <nav aria-label="Public navigation" className="flex items-center gap-3 sm:gap-5">
             <Link
               className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
               to="/terms"
@@ -44,6 +45,7 @@ export function PublicShell({
             >
               Privacy
             </Link>
+            <ThemeToggle />
             {showSessionEntry ? (
               <PublicSessionEntry session={session} />
             ) : (
