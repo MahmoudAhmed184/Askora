@@ -2,7 +2,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
-import { pinnedAnswers, profiles, threadItems, threads } from "~/db/schema";
+import { pinnedAnswers, profiles, questions, threadItems, threads } from "~/db/schema";
 import {
   publishedAnswerActionIntentValues,
   publishedAnswerActionSchema,
@@ -183,19 +183,68 @@ export function createDrizzlePublishedAnswerManagementStore(
     },
     async unpublishPublishedAnswer(params) {
       await database.transaction(async (transaction) => {
-        await deletePinnedAnswerRow({ params, transaction });
-        await transaction
+        const [restoredItem] = await transaction
           .update(threadItems)
           .set({
-            status: "unpublished",
+            status: "draft",
+            publishedAt: null,
             updatedAt: params.now,
           })
-          .where(visiblePublishedAnswerWhere(params.answer));
+          .where(visiblePublishedAnswerWhere(params.answer))
+          .returning({ id: threadItems.id });
+
+        if (restoredItem === undefined) {
+          return;
+        }
+
+        await deletePinnedAnswerRow({ params, transaction });
+
+        await transaction
+          .update(questions)
+          .set({
+            status: "draft",
+            updatedAt: params.now,
+          })
+          .where(
+            and(
+              eq(questions.id, params.answer.questionId),
+              isNull(questions.deletedAt),
+            ),
+          );
 
         if (isInitialThreadItem(params.answer)) {
+          await transaction
+            .update(threadItems)
+            .set({
+              status: "draft",
+              publishedAt: null,
+              updatedAt: params.now,
+            })
+            .where(
+              and(
+                eq(threadItems.threadId, params.answer.threadId),
+                eq(threadItems.status, "published"),
+                isNull(threadItems.deletedAt),
+              ),
+            );
+
+          await transaction
+            .update(questions)
+            .set({
+              status: "draft",
+              updatedAt: params.now,
+            })
+            .where(
+              and(
+                eq(questions.threadId, params.answer.threadId),
+                eq(questions.status, "answered"),
+                isNull(questions.deletedAt),
+              ),
+            );
+
           await markThreadStatus({
             answer: params.answer,
-            status: "unpublished",
+            status: "draft",
             transaction,
             updatedAt: params.now,
           });
@@ -367,7 +416,7 @@ async function markThreadStatus({
   updatedAt,
 }: {
   answer: ManagedPublishedAnswer;
-  status: "unpublished" | "deleted";
+  status: "draft" | "unpublished" | "deleted";
   transaction: DatabaseTransaction;
   updatedAt: Date;
 }) {

@@ -151,11 +151,11 @@ describe("published answer management", () => {
     expect(result).toMatchObject({ status: "unpublished" });
     expect(answers.answer).toMatchObject({
       answerText: "Published answer",
-      itemStatus: "unpublished",
-      publishedAt,
+      itemStatus: "draft",
+      publishedAt: null,
     });
     expect(answers.pins).toEqual([]);
-    expect(answers.thread.status).toBe("unpublished");
+    expect(answers.thread.status).toBe("draft");
   });
 
   it("deletes with owner metadata, removes its pin, and deletes the initial-item thread", async () => {
@@ -310,9 +310,10 @@ function createPublishedAnswerStore({
       const answer = findAnswer(answers, params.answer.id);
 
       removePin(pins, params.answer.id);
-      answer.itemStatus = "unpublished";
+      answer.itemStatus = "draft";
+      answer.publishedAt = null;
       answer.updatedAt = params.now;
-      markInitialThread(threads, params, "unpublished");
+      markInitialThread(threads, params, "draft");
 
       return Promise.resolve();
     },

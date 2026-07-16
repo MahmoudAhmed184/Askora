@@ -280,7 +280,7 @@ function ConfirmPublishedAnswerActionDialog({
         }
       : {
           description:
-            "This removes the answer from public profile, feed, and thread surfaces without creating a new notification.",
+            "This moves the answer back to Drafts. If it starts a thread, the entire thread and its follow-ups will be hidden until you publish the answer again.",
           label: "Unpublish answer",
           title: "Unpublish answer?",
         };

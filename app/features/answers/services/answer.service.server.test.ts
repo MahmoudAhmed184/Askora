@@ -89,6 +89,47 @@ describe("answer workflows", () => {
     });
   });
 
+  it("reopens and republishes an answer restored to draft by unpublish", async () => {
+    const answers = createAnswerStore({
+      question: createQuestion({
+        status: "draft",
+        threadId: "thread_id_1",
+        threadPublicId: "thr_1",
+        threadInitialQuestionId: "question_1",
+        threadStatus: "draft",
+      }),
+      thread: createThread({
+        status: "draft",
+        initialQuestionId: "question_1",
+        publishedAt: null,
+      }),
+      items: [
+        createThreadItem({
+          questionId: "question_1",
+          status: "draft",
+          publishedAt: null,
+        }),
+      ],
+    });
+
+    await expect(
+      submitAnswer({
+        formData: createAnswerFormData({
+          intent: "publish",
+          answerText: "Revised public answer",
+        }),
+        store: answers.store,
+      }),
+    ).resolves.toMatchObject({ status: "published" });
+    expect(answers.question.status).toBe("answered");
+    expect(answers.thread?.status).toBe("published");
+    expect(answers.item).toMatchObject({
+      answerText: "Revised public answer",
+      status: "published",
+      publishedAt: now,
+    });
+  });
+
   it("denies suspended sessions before saving or publishing content", async () => {
     for (const intent of ["save_draft", "publish"] as const) {
       const answers = createAnswerStore();
