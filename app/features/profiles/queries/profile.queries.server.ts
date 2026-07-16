@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
-import { authUsers, profiles, usernameReservations } from "~/db/schema";
+import { authUsers, follows, profiles, usernameReservations } from "~/db/schema";
 import {
   getPublicAskState,
   type AskPermission,
@@ -97,6 +97,10 @@ export interface PublicProfileView {
 
 export interface PublicProfileStore {
   findProfileByUsername(username: string): Promise<PublicProfile | undefined>;
+  findViewerFollow?(params: {
+    profileId: string;
+    viewerProfileId: string;
+  }): Promise<boolean>;
   findUsernameReservation(
     username: string,
   ): Promise<PublicUsernameReservation | undefined>;
@@ -223,6 +227,20 @@ export function createDrizzlePublicProfileStore(
         .limit(1);
 
       return profile;
+    },
+    async findViewerFollow({ profileId, viewerProfileId }) {
+      const [follow] = await database
+        .select({ followedProfileId: follows.followedProfileId })
+        .from(follows)
+        .where(
+          and(
+            eq(follows.followerProfileId, viewerProfileId),
+            eq(follows.followedProfileId, profileId),
+          ),
+        )
+        .limit(1);
+
+      return follow !== undefined;
     },
     async findUsernameReservation(username) {
       const [reservation] = await database

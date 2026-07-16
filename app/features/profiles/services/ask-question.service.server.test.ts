@@ -153,6 +153,36 @@ describe("submitPublicQuestion", () => {
     expect(questions.created).toEqual([]);
   });
 
+  it("allows a follower to ask a followers-only profile", async () => {
+    const questions = createQuestionStore();
+
+    const result = await submitQuestion({
+      profile: createProfile({ askPermission: "followers" }),
+      questionStore: questions.store,
+      session: completedSession,
+      viewerFollowsProfile: true,
+    });
+
+    expect(result).toMatchObject({ status: "created" });
+    expect(questions.created).toHaveLength(1);
+  });
+
+  it("denies a non-follower from asking a followers-only profile", async () => {
+    const questions = createQuestionStore();
+
+    const result = await submitQuestion({
+      profile: createProfile({ askPermission: "followers" }),
+      questionStore: questions.store,
+      session: completedSession,
+    });
+
+    expect(result).toMatchObject({
+      status: "denied",
+      formError: "Only followers can ask this profile a question.",
+    });
+    expect(questions.created).toEqual([]);
+  });
+
   it.each([
     {
       label: "guest anonymous",
@@ -332,6 +362,7 @@ async function submitQuestion({
   rateLimiter = () => Promise.resolve({ allowed: true }),
   safetyDecider,
   session = anonymousSession,
+  viewerFollowsProfile = false,
 }: {
   formData?: FormData;
   profile?: PublicProfile;
@@ -339,13 +370,17 @@ async function submitQuestion({
   rateLimiter?: (options: RateLimitOptions) => Promise<RateLimitDecision>;
   safetyDecider?: Parameters<typeof submitPublicQuestion>[0]["safetyDecider"];
   session?: CurrentSessionSummary;
+  viewerFollowsProfile?: boolean;
 } = {}) {
   return submitPublicQuestion({
     createId: createIdSequence(["question_1"]),
     createQuestionPublicId: () => "question_public_1",
     formData,
     now,
-    profileStore: createProfileStore({ profiles: [profile] }),
+    profileStore: createProfileStore({
+      profiles: [profile],
+      viewerFollowsProfile,
+    }),
     rateLimiter,
     request: createRequest(),
     safetyDecider: safetyDecider ?? (() => "allow"),
@@ -387,9 +422,11 @@ function createQuestionFormData(
 function createProfileStore({
   profiles = [],
   reservations = [],
+  viewerFollowsProfile = false,
 }: {
   profiles?: PublicProfile[];
   reservations?: PublicUsernameReservation[];
+  viewerFollowsProfile?: boolean;
 }): PublicProfileStore {
   return {
     findProfileByUsername(username) {
@@ -401,6 +438,9 @@ function createProfileStore({
       return Promise.resolve(
         reservations.find((reservation) => reservation.username === username),
       );
+    },
+    findViewerFollow() {
+      return Promise.resolve(viewerFollowsProfile);
     },
   };
 }

@@ -22,6 +22,7 @@ import {
 } from "~/features/profiles/validations/profile.validations";
 import {
   resolvePublicProfile,
+  createDrizzlePublicProfileStore,
   type PublicProfile,
   type PublicProfileStore,
 } from "~/features/profiles/queries/profile.queries.server";
@@ -149,9 +150,10 @@ export async function submitPublicQuestion({
   minimumSubmitMilliseconds?: number | undefined;
 }): Promise<PublicQuestionSubmissionResult> {
   const values = getPublicQuestionFormValues(formData);
+  const resolvedProfileStore = profileStore ?? createDrizzlePublicProfileStore();
   const resolution = await resolvePublicProfile({
     username,
-    store: profileStore,
+    store: resolvedProfileStore,
     now,
   });
 
@@ -162,6 +164,12 @@ export async function submitPublicQuestion({
       formError: "This profile is not available for questions.",
     };
   }
+
+  const askPermissionTarget = await getAskPermissionTarget({
+    profile: resolution.profile,
+    session,
+    store: resolvedProfileStore,
+  });
 
   if (hasHoneypotValue(formData)) {
     return { status: "dropped", values, reason: "honeypot" };
@@ -192,7 +200,7 @@ export async function submitPublicQuestion({
   const permission = evaluateAskPermission({
     actor: session,
     identity: parsed.value.identityMode,
-    target: resolution.profile,
+    target: askPermissionTarget,
   });
 
   if (permission.status === "denied") {
@@ -262,6 +270,34 @@ export async function submitPublicQuestion({
     values: getQuestionValues(parsed.value),
     identityMode: permission.identityMode,
     questionPublicId: publicId,
+  };
+}
+
+async function getAskPermissionTarget({
+  profile,
+  session,
+  store,
+}: {
+  profile: PublicProfile;
+  session: CurrentSessionSummary;
+  store: PublicProfileStore;
+}) {
+  if (
+    profile.askPermission !== "followers" ||
+    session.status !== "authenticated" ||
+    session.profileStatus !== "complete"
+  ) {
+    return profile;
+  }
+
+  const isFollowedByActor = await store.findViewerFollow?.({
+    profileId: profile.id,
+    viewerProfileId: session.profile.id,
+  });
+
+  return {
+    ...profile,
+    isFollowedByActor: isFollowedByActor === true,
   };
 }
 
