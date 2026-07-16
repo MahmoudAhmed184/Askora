@@ -6,6 +6,7 @@ import { PendingButton } from "~/components/shared/pending-button/pending-button
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field/field";
@@ -82,14 +83,10 @@ export function FollowUpComposer({
             <FieldDescription id="follow-up-question-description">
               500 characters max. Follow-ups stay private unless answered.
             </FieldDescription>
-            {error?.fieldErrors?.question === undefined ? null : (
-              <p
-                className="text-sm leading-6 text-destructive"
-                id="follow-up-question-error"
-              >
-                {error.fieldErrors.question}
-              </p>
-            )}
+            <FieldError
+              id="follow-up-question-error"
+              message={error?.fieldErrors?.question}
+            />
           </Field>
 
           <IdentityControls error={error} followUp={followUp} />

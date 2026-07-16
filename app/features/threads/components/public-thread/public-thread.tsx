@@ -4,8 +4,8 @@ import { Link } from "react-router";
 import type { AppShellData } from "~/types/app-shell-data";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
+import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
 import { Button } from "~/components/ui/button/button";
-import { Textarea } from "~/components/ui/textarea/textarea";
 import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
 import { BetaNoindexBadge } from "~/features/profiles/components/profile-header";
 import { FollowButton } from "~/features/social/components/follow-button";
@@ -78,11 +78,8 @@ function PublicThreadPage({
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="flex items-center gap-2 font-serif text-xl font-bold text-foreground">
+          <h1 className="font-serif text-xl font-bold text-foreground">
             Public Thread
-            <span className="rounded bg-secondary px-2 py-1 font-mono text-[0.68rem] font-semibold text-primary">
-              Preview
-            </span>
           </h1>
           {betaNoindex ? <BetaNoindexBadge /> : null}
         </div>
@@ -157,17 +154,10 @@ function PublicThreadFollowUpPanel({
             Available
           </span>
         </div>
-        <Textarea
-          aria-label="Follow-up preview"
-          className="min-h-24 resize-none rounded-xl bg-secondary p-4 placeholder:italic"
-          placeholder="Ask a follow-up on this thread..."
-          readOnly
-          tabIndex={-1}
-        />
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <span className="font-mono text-[0.68rem] text-muted-foreground">
-            0/500
-          </span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm leading-6 text-muted-foreground">
+            Follow-ups go to @{profileUsername}'s private inbox.
+          </p>
           <Button asChild className="justify-center px-6">
             <Link to={`/${profileUsername}/a/${threadPublicId}/follow-ups`}>
               <Send data-icon="inline-start" />
@@ -208,18 +198,11 @@ function UnavailablePublicThread({
   page: Extract<PublicThreadPageData, { status: "unavailable" }>;
 }) {
   return (
-    <section className="mx-auto flex min-h-[50svh] max-w-xl flex-col justify-center gap-3 py-10">
-      <p className="break-all text-sm font-medium text-muted-foreground">
-        @{page.username}
-      </p>
-      <h1 className="font-serif text-4xl font-bold leading-tight text-primary">
-        This thread is unavailable
-      </h1>
-      <p className="text-sm leading-6 text-muted-foreground">
-        The answer thread may have been removed, unpublished, or made
-        unavailable by the profile owner.
-      </p>
-    </section>
+    <UnavailableState
+      description="The answer thread may have been removed, unpublished, or made unavailable by the profile owner."
+      meta={`@${page.username}`}
+      title="This thread is unavailable"
+    />
   );
 }
 

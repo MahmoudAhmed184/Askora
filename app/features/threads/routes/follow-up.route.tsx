@@ -5,6 +5,7 @@ import { data, Link, redirect } from "react-router";
 import type { AppShellData } from "~/types/app-shell-data";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
+import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
 import { Button } from "~/components/ui/button/button";
 import { getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
 import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
@@ -217,18 +218,11 @@ function UnavailableFollowUp({
   page: Extract<FollowUpPageData, { status: "unavailable" }>;
 }) {
   return (
-    <section className="mx-auto flex min-h-[50svh] max-w-xl flex-col justify-center gap-3 py-10">
-      <p className="break-all text-sm font-medium text-muted-foreground">
-        @{page.username}
-      </p>
-      <h1 className="font-serif text-4xl font-bold leading-tight text-primary">
-        This thread is unavailable
-      </h1>
-      <p className="text-sm leading-6 text-muted-foreground">
-        The answer thread may have been removed, unpublished, or made
-        unavailable by the profile owner.
-      </p>
-    </section>
+    <UnavailableState
+      description="The answer thread may have been removed, unpublished, or made unavailable by the profile owner."
+      meta={`@${page.username}`}
+      title="This thread is unavailable"
+    />
   );
 }
 
