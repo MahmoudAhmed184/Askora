@@ -25,7 +25,7 @@ describe("LoginRoute", () => {
     });
 
     expect(
-      screen.getByRole("heading", { name: /sign in to q&a platform/i }),
+      screen.getByRole("heading", { name: /sign in to askora/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/not configured in this environment/i),

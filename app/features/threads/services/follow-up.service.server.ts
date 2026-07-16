@@ -60,7 +60,7 @@ import { checkRateLimit } from "~/lib/rate-limit.server";
 import { getRequestInfoHashes } from "~/lib/request-info.server";
 import { parseFormData } from "~/lib/zod-form";
 
-export const FOLLOW_UP_FLASH_COOKIE_NAME = "qna_follow_up_flash";
+export const FOLLOW_UP_FLASH_COOKIE_NAME = "askora_follow_up_flash";
 
 const FOLLOW_UP_FLASH_COOKIE_MAX_AGE_SECONDS = 120;
 const FOLLOW_UP_FLASH_COOKIE_PURPOSE = "thread-follow-up-flash";

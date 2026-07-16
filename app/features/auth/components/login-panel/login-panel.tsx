@@ -56,7 +56,7 @@ export function LoginPanel({ auth, result }: LoginPanelProps) {
     <Card className="hover:translate-y-0 hover:border-border hover:shadow-[var(--shadow-card)]">
       <CardHeader className="gap-2 p-6 sm:p-7">
         <CardTitle className="font-serif text-2xl font-extrabold leading-tight">
-          Sign in to Q&amp;A Platform
+          Sign in to Askora
         </CardTitle>
         <CardDescription>
           Existing accounts sign in directly. New accounts need an unused

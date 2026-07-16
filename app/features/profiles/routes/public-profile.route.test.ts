@@ -14,7 +14,7 @@ describe("public profile route metadata", () => {
       },
     });
 
-    expect(tags).toContainEqual({ title: "Profile unavailable | Q&A" });
+    expect(tags).toContainEqual({ title: "Profile unavailable | Askora" });
     expect(tags).toContainEqual({
       name: "robots",
       content: "noindex,nofollow",
@@ -45,7 +45,7 @@ describe("public profile route metadata", () => {
       page,
     });
 
-    const title = "Person (@person) | Q&A";
+    const title = "Person (@person) | Askora";
     const description = "Questions, software, and thoughtful answers.";
 
     expect(tags).toEqual(
@@ -131,7 +131,7 @@ function createAppConfig(
   overrides: Partial<PublicAppConfig> = {},
 ): PublicAppConfig {
   return {
-    appName: "Q&A",
+    appName: "Askora",
     appUrl: "https://app.example.com",
     betaNoindex: false,
     environment: "test",

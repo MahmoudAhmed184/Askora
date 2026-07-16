@@ -32,7 +32,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Account settings | qna-platform" }];
+  return [{ title: "Account settings | Askora" }];
 }
 
 export default function AccountSettingsRoute() {

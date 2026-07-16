@@ -50,7 +50,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Filtered questions | qna-platform" }];
+  return [{ title: "Filtered questions | Askora" }];
 }
 
 export default function FilteredRoute({ loaderData }: Route.ComponentProps) {

@@ -1,21 +1,23 @@
+name: askora
+
 services:
   postgres:
     image: postgres:17
-    container_name: qna-platform-postgres
+    container_name: askora-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: qna_platform
-      POSTGRES_USER: qna_platform
-      POSTGRES_PASSWORD: qna_platform_local
+      POSTGRES_DB: askora
+      POSTGRES_USER: askora
+      POSTGRES_PASSWORD: askora_local
     ports:
       - "5433:5432"
     volumes:
-      - qna_platform_postgres_data:/var/lib/postgresql/data
+      - askora_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U qna_platform -d qna_platform"]
+      test: ["CMD-SHELL", "pg_isready -U askora -d askora"]
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  qna_platform_postgres_data:
+  askora_postgres_data:

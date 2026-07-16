@@ -23,7 +23,7 @@ const reactRouterRouteExports = [
 
 export default defineConfig(
   {
-    name: "qna/ignores",
+    name: "askora/ignores",
     ignores: [
       ".agents/**",
       ".codex/**",
@@ -42,7 +42,7 @@ export default defineConfig(
     ],
   },
   {
-    name: "qna/linter-options",
+    name: "askora/linter-options",
     linterOptions: {
       reportUnusedDisableDirectives: "error",
     },
@@ -53,7 +53,7 @@ export default defineConfig(
   reactHooks.configs.flat["recommended-latest"],
   reactRefresh.configs.vite(),
   {
-    name: "qna/typescript-react",
+    name: "askora/typescript-react",
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parserOptions: {

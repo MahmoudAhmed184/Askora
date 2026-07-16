@@ -39,7 +39,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 }
 
 export function meta() {
-  return [{ title: "Feed | qna-platform" }];
+  return [{ title: "Feed | Askora" }];
 }
 
 export function shouldRevalidate({

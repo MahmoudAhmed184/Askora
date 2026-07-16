@@ -1,4 +1,4 @@
-# Q/A Platform Specification
+# Askora Specification
 
 Status: Draft v0.2
 Date: 2026-05-30
@@ -43,11 +43,10 @@ Product tone:
 - Avoid childish anonymous-app language.
 - The product should feel safe enough for personal questions and modern enough for creators.
 
-Working name:
+Product name:
 
-- Use a neutral working name in code, such as `qna-platform`.
-- Decide the public brand before the first external beta.
-- Do not block technical development on naming.
+- Use `Askora` in product copy, page titles, emails, and share metadata.
+- Use `askora` for package and other lowercase identifiers.
 
 ## Launch And Beta Access
 

@@ -68,7 +68,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Notifications | qna-platform" }];
+  return [{ title: "Notifications | Askora" }];
 }
 
 export default function NotificationsRoute({

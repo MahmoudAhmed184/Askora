@@ -60,8 +60,8 @@ describe("answer modal routing helpers", () => {
   it("detects a contextual-only URL change", () => {
     expect(
       isAnswerModalOnlySearchParamChange(
-        new URL("https://qna.local/inbox?folder=all"),
-        new URL("https://qna.local/inbox?folder=all&answerQuestionId=qst_1"),
+        new URL("https://askora.local/inbox?folder=all"),
+        new URL("https://askora.local/inbox?folder=all&answerQuestionId=qst_1"),
       ),
     ).toBe(true);
   });

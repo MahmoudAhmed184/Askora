@@ -2,7 +2,7 @@ import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import { Badge } from "~/components/ui/badge/badge";
 
 export function meta() {
-  return [{ title: "Privacy | qna-platform" }];
+  return [{ title: "Privacy | Askora" }];
 }
 
 export default function PrivacyRoute() {

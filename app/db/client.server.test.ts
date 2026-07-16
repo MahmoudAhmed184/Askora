@@ -30,7 +30,7 @@ describe("database URL selection", () => {
 
   it("creates a standard Postgres database for local workloads", async () => {
     const database = createRuntimeDatabase(
-      "postgres://qna_platform:qna_platform_local@localhost:5432/qna_platform?sslmode=disable",
+      "postgres://askora:askora_local@localhost:5432/askora?sslmode=disable",
     );
 
     expect(database.$client).toBeInstanceOf(NodePostgresPool);
@@ -43,7 +43,7 @@ describe("database URL selection", () => {
     expect(isNeonDatabaseUrl(pooledUrl)).toBe(true);
     expect(
       isNeonDatabaseUrl(
-        "postgres://qna_platform:qna_platform_local@localhost:5432/qna_platform?sslmode=disable",
+        "postgres://askora:askora_local@localhost:5432/askora?sslmode=disable",
       ),
     ).toBe(false);
   });

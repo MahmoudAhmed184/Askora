@@ -40,7 +40,7 @@ export async function action({ context, params, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Admin report detail | qna-platform" }];
+  return [{ title: "Admin report detail | Askora" }];
 }
 
 export default function AdminReportDetailRoute({

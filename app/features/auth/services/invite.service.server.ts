@@ -12,7 +12,7 @@ import {
 import { serverEnv } from "~/lib/env.server";
 import { createDatabaseId } from "~/lib/ids.server";
 
-export const TEMPORARY_INVITE_COOKIE_NAME = "qna_invite_state";
+export const TEMPORARY_INVITE_COOKIE_NAME = "askora_invite_state";
 
 const TEMPORARY_INVITE_COOKIE_PURPOSE = "auth-invite";
 const TEMPORARY_INVITE_COOKIE_MAX_AGE_SECONDS = 60 * 30;

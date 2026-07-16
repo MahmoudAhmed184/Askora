@@ -2,7 +2,7 @@ import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import { Badge } from "~/components/ui/badge/badge";
 
 export function meta() {
-  return [{ title: "Terms | qna-platform" }];
+  return [{ title: "Terms | Askora" }];
 }
 
 export default function TermsRoute() {

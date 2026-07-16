@@ -97,5 +97,5 @@ describe("thread modal routing helpers", () => {
 });
 
 function url(path: string) {
-  return new URL(path, "https://qna.local");
+  return new URL(path, "https://askora.local");
 }

@@ -6,7 +6,7 @@ describe("parseServerEnv", () => {
   it("provides local development defaults without secrets", () => {
     const environment = parseServerEnv({});
 
-    expect(environment.APP_NAME).toBe("qna-platform");
+    expect(environment.APP_NAME).toBe("Askora");
     expect(environment.APP_URL).toBe("http://localhost:5173");
     expect(environment.PUBLIC_BETA_NOINDEX).toBe(true);
     expect(environment.BETTER_AUTH_URL).toBe("http://localhost:5173");

@@ -3,6 +3,7 @@ import { ArrowRight, UserRound } from "lucide-react";
 import { Link, useRouteLoaderData } from "react-router";
 
 import { ThemeToggle } from "~/components/shared/theme-toggle/theme-toggle";
+import { BrandLogo } from "~/components/shared/brand-logo/brand-logo";
 import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
 import type { loader as rootLoader, RootLoaderData } from "~/root";
@@ -24,13 +25,10 @@ export function PublicShell({
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <Link
-            className="flex min-w-0 items-center gap-2.5 text-sm font-semibold text-foreground"
+            className="flex min-w-0 items-center"
             to="/"
           >
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary font-serif text-base font-bold text-primary-foreground">
-              Q
-            </span>
-            <span className="truncate">Q&A Platform</span>
+            <BrandLogo />
           </Link>
           <nav aria-label="Public navigation" className="flex items-center gap-3 sm:gap-5">
             <Link

@@ -47,7 +47,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Drafts | qna-platform" }];
+  return [{ title: "Drafts | Askora" }];
 }
 
 export default function DraftsRoute({ loaderData }: Route.ComponentProps) {

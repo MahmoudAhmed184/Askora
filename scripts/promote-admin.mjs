@@ -57,7 +57,7 @@ export async function changeAdminRole({ action, email, pool }) {
   try {
     await client.query("begin");
     await client.query(
-      "select pg_advisory_xact_lock(hashtext('qna-admin-role-management'))",
+      "select pg_advisory_xact_lock(hashtext('askora-admin-role-management'))",
     );
     const currentResult = await client.query(
       `

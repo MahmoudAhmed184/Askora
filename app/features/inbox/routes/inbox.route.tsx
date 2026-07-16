@@ -50,7 +50,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Inbox | qna-platform" }];
+  return [{ title: "Inbox | Askora" }];
 }
 
 export default function InboxRoute({ loaderData }: Route.ComponentProps) {

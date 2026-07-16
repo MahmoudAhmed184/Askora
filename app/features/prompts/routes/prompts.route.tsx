@@ -63,7 +63,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Starter prompts | qna-platform" }];
+  return [{ title: "Starter prompts | Askora" }];
 }
 
 export default function PromptsRoute({ loaderData }: Route.ComponentProps) {

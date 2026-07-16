@@ -104,5 +104,5 @@ function getSealedCookieKey(purpose: string) {
 }
 
 function getSealedCookieAdditionalData(purpose: string) {
-  return Buffer.from(`qna-platform:${purpose}:${SEALED_COOKIE_VERSION}`);
+  return Buffer.from(`askora:${purpose}:${SEALED_COOKIE_VERSION}`);
 }

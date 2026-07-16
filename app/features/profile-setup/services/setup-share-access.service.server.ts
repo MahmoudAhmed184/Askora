@@ -6,7 +6,7 @@ import {
 } from "~/lib/crypto.server";
 import { serverEnv } from "~/lib/env.server";
 
-const SETUP_SHARE_ACCESS_COOKIE_NAME = "qna_setup_share_access";
+const SETUP_SHARE_ACCESS_COOKIE_NAME = "askora_setup_share_access";
 const SETUP_SHARE_ACCESS_COOKIE_PURPOSE = "setup-share-access";
 const SETUP_SHARE_ACCESS_COOKIE_MAX_AGE_SECONDS = 5 * 60;
 

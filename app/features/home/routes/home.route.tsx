@@ -113,7 +113,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "qna-platform" }];
+  return [{ title: "Askora" }];
 }
 
 export default function HomeRoute({ loaderData }: Route.ComponentProps) {

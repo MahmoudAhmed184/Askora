@@ -10,7 +10,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 }
 
 export function meta() {
-  return [{ title: "Admin reports | qna-platform" }];
+  return [{ title: "Admin reports | Askora" }];
 }
 
 export default function AdminRoute({ loaderData }: Route.ComponentProps) {

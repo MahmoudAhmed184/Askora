@@ -263,7 +263,7 @@ function parsePublicThreadHref(href: string) {
     return undefined;
   }
 
-  const url = new URL(href, "https://qna.local");
+  const url = new URL(href, "https://askora.local");
   const match = /^\/([^/]+)\/a\/([^/]+)$/.exec(url.pathname);
 
   if (match === null) {
@@ -282,7 +282,7 @@ function parseAnswerHref(href: string) {
     return undefined;
   }
 
-  const url = new URL(href, "https://qna.local");
+  const url = new URL(href, "https://askora.local");
   const match = /^\/answer\/([^/]+)$/.exec(url.pathname);
 
   if (match?.[1] === undefined) {

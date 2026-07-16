@@ -86,7 +86,7 @@ export async function action({ context, params, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Answer | qna-platform" }];
+  return [{ title: "Answer | Askora" }];
 }
 
 export default function AnswerRoute({ loaderData }: Route.ComponentProps) {

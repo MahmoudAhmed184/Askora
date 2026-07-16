@@ -10,7 +10,7 @@ test("public foundation routes render", async ({ page }) => {
 
   await page.goto("/login");
   await expect(
-    page.getByRole("heading", { name: /sign in to q&a platform/i }),
+    page.getByRole("heading", { name: /sign in to askora/i }),
   ).toBeVisible();
 
   await page.goto("/terms");

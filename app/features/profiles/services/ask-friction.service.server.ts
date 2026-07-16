@@ -6,7 +6,7 @@ import {
 } from "~/lib/crypto.server";
 import { serverEnv } from "~/lib/env.server";
 
-export const PUBLIC_ASK_FLASH_COOKIE_NAME = "qna_public_ask_flash";
+export const PUBLIC_ASK_FLASH_COOKIE_NAME = "askora_public_ask_flash";
 export const ASK_MINIMUM_SUBMIT_MILLISECONDS = 1_500;
 export const ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS = 60 * 60 * 1000;
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
+import { BrandLogo } from "~/components/shared/brand-logo/brand-logo";
 import {
   SetupProgress,
   type SetupStep,
@@ -24,13 +25,10 @@ export function OnboardingShell({
       <header className="sticky top-0 z-20 border-b bg-background/88 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <Link
-            className="flex min-w-0 items-center gap-2.5 text-sm font-semibold text-foreground"
+            className="flex min-w-0 items-center"
             to="/"
           >
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary font-serif text-base font-bold text-primary-foreground">
-              Q
-            </span>
-            <span className="truncate">Q&amp;A Platform</span>
+            <BrandLogo />
           </Link>
           <SetupProgress activeStep={activeStep} />
         </div>

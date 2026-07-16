@@ -43,7 +43,7 @@ export function ShareProfilePanel({
     if (hasNativeShare()) {
       try {
         await navigator.share({
-          title: `${displayName} on Q&A Platform`,
+          title: `${displayName} on Askora`,
           url: canonicalUrl,
         });
         toast.success("Native share sheet requested.", {

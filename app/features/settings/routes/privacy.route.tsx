@@ -32,7 +32,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Privacy settings | qna-platform" }];
+  return [{ title: "Privacy settings | Askora" }];
 }
 
 export default function PrivacySettingsRoute() {

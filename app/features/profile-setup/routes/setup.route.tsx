@@ -72,7 +72,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Set up profile | qna-platform" }];
+  return [{ title: "Set up profile | Askora" }];
 }
 
 export default function SetupRoute({ loaderData }: Route.ComponentProps) {

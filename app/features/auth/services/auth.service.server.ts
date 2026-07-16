@@ -468,7 +468,7 @@ async function sendMagicLink({
     body: JSON.stringify({
       from: authEmailFrom,
       to: email,
-      subject: "Your Q&A Platform sign-in link",
+      subject: "Your Askora sign-in link",
       text: createMagicLinkText(url),
       html: createMagicLinkHtml(url),
     }),
@@ -481,7 +481,7 @@ async function sendMagicLink({
 
 function createMagicLinkText(url: string) {
   return [
-    "Use this link to sign in to Q&A Platform:",
+    "Use this link to sign in to Askora:",
     "",
     url,
     "",
@@ -491,8 +491,8 @@ function createMagicLinkText(url: string) {
 
 function createMagicLinkHtml(url: string) {
   return [
-    "<p>Use this link to sign in to Q&amp;A Platform:</p>",
-    `<p><a href="${escapeHtmlAttribute(url)}">Sign in to Q&amp;A Platform</a></p>`,
+    "<p>Use this link to sign in to Askora:</p>",
+    `<p><a href="${escapeHtmlAttribute(url)}">Sign in to Askora</a></p>`,
     "<p>If you did not request this email, you can ignore it.</p>",
   ].join("");
 }

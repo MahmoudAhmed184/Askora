@@ -14,6 +14,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 
+import { BrandLogo } from "~/components/shared/brand-logo/brand-logo";
 import { ThemeWatcher } from "~/components/shared/theme-watcher/theme-watcher";
 import { Toaster } from "~/components/ui/sonner/sonner";
 import { AnswerEditorModalHost } from "~/features/answers/components/answer-editor-modal-host";
@@ -108,7 +109,7 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const appName = loaderData?.app.appName ?? "qna-platform";
+  const appName = loaderData?.app.appName ?? "Askora";
   const tags = [
     { title: appName },
     {
@@ -180,9 +181,7 @@ export function ErrorBoundary() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-5 py-12">
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-6 text-card-foreground">
-        <p className="text-sm font-medium text-muted-foreground">
-          qna-platform
-        </p>
+        <BrandLogo className="h-9" />
         <h1 className="font-serif text-3xl font-bold text-primary">{title}</h1>
         <p className="text-sm leading-6 text-muted-foreground">
           {message}

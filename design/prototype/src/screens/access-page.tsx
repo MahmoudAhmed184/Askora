@@ -200,7 +200,7 @@ function AccessHeader({
       <div className="gemini-profile-body-inner">
         <div className="gemini-profile-meta-top">
           <div className="gemini-avatar-wrapper">
-            <div aria-label="Q&A beta" className="gemini-profile-avatar">
+            <div aria-label="Askora beta" className="gemini-profile-avatar">
               QA
             </div>
           </div>
@@ -545,7 +545,7 @@ function SharePanel({
   onToast: (message: string, tone?: "danger" | "success") => void;
   username: string;
 }) {
-  const profileUrl = `https://qna.example/${username || "mayachen"}`;
+  const profileUrl = `https://askora.example/${username || "mayachen"}`;
 
   return (
     <section className="gemini-content-card mx-auto max-w-3xl">

@@ -32,7 +32,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Safety settings | qna-platform" }];
+  return [{ title: "Safety settings | Askora" }];
 }
 
 export default function SafetySettingsRoute() {

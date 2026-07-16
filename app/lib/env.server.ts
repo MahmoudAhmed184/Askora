@@ -73,7 +73,7 @@ const baseServerEnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  APP_NAME: z.string().min(1).default("qna-platform"),
+  APP_NAME: z.string().min(1).default("Askora"),
   APP_URL: z.url().default("http://localhost:5173"),
   PUBLIC_BETA_NOINDEX: booleanFromEnvironment,
   DATABASE_URL: optionalUrl,

@@ -19,7 +19,7 @@ function getInviteCodeHash(inviteCode) {
     .digest("hex");
 }
 
-// Generate a random code: QNA-XXXX-XXXX where X is uppercase alphanumeric
+// Generate a random code: ASKORA-XXXX-XXXX where X is uppercase alphanumeric
 function generateInviteCode() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let part1 = "";
@@ -28,7 +28,7 @@ function generateInviteCode() {
     part1 += chars[randomBytes(1)[0] % chars.length];
     part2 += chars[randomBytes(1)[0] % chars.length];
   }
-  return `QNA-${part1}-${part2}`;
+  return `ASKORA-${part1}-${part2}`;
 }
 
 const databaseUrl = process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL;

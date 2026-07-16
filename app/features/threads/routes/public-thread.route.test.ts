@@ -18,7 +18,7 @@ describe("public thread route metadata", () => {
     const serializedMeta = JSON.stringify(meta);
 
     expect(meta).toContainEqual({
-      title: "Answer thread by Person (@person) | Q&A",
+      title: "Answer thread by Person (@person) | Askora",
     });
     expect(meta).toContainEqual({
       name: "description",
@@ -49,7 +49,7 @@ describe("public thread route metadata", () => {
       },
     });
 
-    expect(meta).toContainEqual({ title: "Thread unavailable | Q&A" });
+    expect(meta).toContainEqual({ title: "Thread unavailable | Askora" });
     expect(meta).toContainEqual({
       name: "description",
       content: "This answer thread is unavailable.",
@@ -144,7 +144,7 @@ function createAppConfig(
   overrides: Partial<PublicAppConfig> = {},
 ): PublicAppConfig {
   return {
-    appName: "Q&A",
+    appName: "Askora",
     appUrl: "https://app.example.com",
     betaNoindex: false,
     environment: "test",

@@ -111,7 +111,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export function meta() {
-  return [{ title: "Log in | qna-platform" }];
+  return [{ title: "Log in | Askora" }];
 }
 
 export default function LoginRoute({ loaderData }: Route.ComponentProps) {

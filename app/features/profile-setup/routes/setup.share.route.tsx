@@ -49,7 +49,7 @@ export function loader({ context, request }: Route.LoaderArgs) {
 }
 
 export function meta() {
-  return [{ title: "Share profile | qna-platform" }];
+  return [{ title: "Share profile | Askora" }];
 }
 
 export default function SetupShareRoute({ loaderData }: Route.ComponentProps) {
