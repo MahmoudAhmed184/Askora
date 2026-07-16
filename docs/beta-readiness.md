@@ -28,11 +28,18 @@ headers and meta tags. Do not add a sitemap route during beta.
 
 ## Migrations
 
-Run migrations against the direct Neon connection:
+Vercel runs migrations against the direct Neon connection before each build
+through `npm run deploy:build`. A failed migration stops the deployment. To run
+the same step manually:
 
 ```bash
 DIRECT_DATABASE_URL="postgres://..." npm run db:migrate
 ```
+
+The GitHub Actions workflow validates typechecking, lint, unit/component tests,
+and the production build on pull requests and pushes to `main`. Configure a
+separate Neon branch for preview deployments so preview migrations cannot alter
+the production database.
 
 Slice 16 adds `starter_prompt` to the `question_source` enum. Existing
 `public_profile` questions remain the default.

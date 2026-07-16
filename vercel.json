@@ -1,4 +1,5 @@
 {
+  "buildCommand": "npm run deploy:build",
   "crons": [
     {
       "path": "/api/cron/cleanup",
