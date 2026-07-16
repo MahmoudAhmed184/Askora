@@ -61,6 +61,20 @@ resets only deterministic beta rows, then recreates completed, incomplete,
 suspended, and admin users; signed Better Auth sessions; inbox and filtered
 questions; a published thread; social rows; reports; and blocks.
 
+## Admin Role Management
+
+Admin roles remain a manual operations task during MVP. Every change requires
+an action-specific confirmation; production also requires the explicit
+`--allow-production` override. Demotion refuses to remove the last admin.
+
+```bash
+npm run admin:promote -- user@example.com --confirm=promote
+npm run admin:demote -- user@example.com --confirm=demote
+
+NODE_ENV=production npm run admin:demote -- user@example.com \
+  --confirm=demote --allow-production
+```
+
 ## Smoke Tests
 
 Run foundation smoke without a database:
