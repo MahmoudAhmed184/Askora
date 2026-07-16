@@ -91,6 +91,9 @@ export const questions = pgTable(
       table.createdAt,
     ),
     index("questions_thread_id_idx").on(table.threadId),
+    index("questions_ip_hash_idx")
+      .on(table.ipHash)
+      .where(sql`${table.ipHash} is not null`),
     index("questions_safety_fingerprint_idx").on(table.safetyFingerprintHash),
     index("questions_normalized_text_hash_idx").on(table.normalizedTextHash),
   ],

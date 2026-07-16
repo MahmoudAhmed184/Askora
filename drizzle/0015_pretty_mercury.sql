@@ -1,0 +1,1 @@
+CREATE INDEX "questions_ip_hash_idx" ON "questions" USING btree ("ip_hash") WHERE "questions"."ip_hash" is not null;
