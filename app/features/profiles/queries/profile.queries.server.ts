@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { authUsers, follows, profiles, usernameReservations } from "~/db/schema";
@@ -12,6 +12,7 @@ import {
   type PublicAskFlash,
 } from "~/features/profiles/services/ask-friction.service.server";
 import type {
+  ActiveSuspensionStatus,
   CurrentSessionSummary
 } from "~/features/auth/services/auth.service.server";;
 import type {
@@ -41,6 +42,7 @@ export interface PublicProfile {
   showFollowerCounts: boolean;
   showLikeCounts: boolean;
   userDeletedAt: Date | null;
+  suspensionStatus: ActiveSuspensionStatus;
 }
 
 export type PublicProfileResolution =
@@ -177,6 +179,8 @@ export function createPublicProfilePageData({
     actor: session,
     target: {
       ...profile,
+      acceptingQuestions:
+        profile.acceptingQuestions && profile.suspensionStatus !== "active",
       isFollowedByActor: social.isFollowedByViewer,
     },
   });
@@ -239,6 +243,13 @@ export function createDrizzlePublicProfileStore(
           showFollowerCounts: profiles.showFollowerCounts,
           showLikeCounts: profiles.showLikeCounts,
           userDeletedAt: authUsers.deletedAt,
+          suspensionStatus: sql<ActiveSuspensionStatus>`case
+            when ${authUsers.suspensionStatus} = 'permanent' then 'active'
+            when ${authUsers.suspensionStatus} = 'suspended'
+              and (${authUsers.suspendedUntil} is null or ${authUsers.suspendedUntil} > now())
+              then 'active'
+            else 'none'
+          end`,
         })
         .from(profiles)
         .leftJoin(authUsers, eq(authUsers.id, profiles.userId))

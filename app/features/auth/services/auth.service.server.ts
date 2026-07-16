@@ -328,7 +328,9 @@ export function getCompletedProfileGuardRedirectPath(
     return "/setup";
   }
 
-  return session.profileActive === false ? "/settings/account" : undefined;
+  return session.profileActive === false || isSessionSuspended(session)
+    ? "/settings/account"
+    : undefined;
 }
 
 export function isSessionSuspended(session: AuthenticatedSessionSummary) {

@@ -6,6 +6,7 @@ import { authUsers } from "~/db/schema";
 import {
   requireAuthenticatedSession,
   requireAuthenticatedSessionFromContext,
+  isSessionSuspended,
   type AuthenticatedSessionSummary,
   type CurrentSessionContextReader,
 } from "~/features/auth/services/auth.service.server";
@@ -41,14 +42,14 @@ export async function requireAdminSession(
     return session;
   }
 
+  if (isSessionSuspended(session)) {
+    throwForbidden();
+  }
+
   const role = await store.findUserRole(session.user.id);
 
   if (role !== "admin") {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error -- React Router catches thrown data responses as route errors.
-    throw data("Forbidden", {
-      status: 403,
-      statusText: "Forbidden",
-    });
+    throwForbidden();
   }
 
   return {
@@ -71,20 +72,28 @@ export async function requireAdminSessionFromContext(
     return session;
   }
 
+  if (isSessionSuspended(session)) {
+    throwForbidden();
+  }
+
   const role = await store.findUserRole(session.user.id);
 
   if (role !== "admin") {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error -- React Router catches thrown data responses as route errors.
-    throw data("Forbidden", {
-      status: 403,
-      statusText: "Forbidden",
-    });
+    throwForbidden();
   }
 
   return {
     ...session,
     role,
   };
+}
+
+function throwForbidden(): never {
+  // eslint-disable-next-line @typescript-eslint/only-throw-error -- React Router catches thrown data responses as route errors.
+  throw data("Forbidden", {
+    status: 403,
+    statusText: "Forbidden",
+  });
 }
 
 export function createDrizzleAdminAuthStore(

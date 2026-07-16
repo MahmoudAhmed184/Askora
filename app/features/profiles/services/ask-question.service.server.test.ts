@@ -30,6 +30,18 @@ import type {
 const now = new Date("2026-05-31T12:00:00.000Z");
 
 describe("submitPublicQuestion", () => {
+  it("rejects direct submissions to a suspended recipient", async () => {
+    const profile = createProfile({ suspensionStatus: "active" });
+    const result = await submitQuestion({
+      profile,
+    });
+
+    expect(result).toMatchObject({
+      status: "denied",
+      formError: "This profile is not accepting new questions right now.",
+    });
+  });
+
   it("returns field errors for invalid question text", async () => {
     const questions = createQuestionStore();
 
@@ -560,6 +572,7 @@ function createProfile(overrides: Partial<PublicProfile> = {}): PublicProfile {
     showFollowerCounts: true,
     showLikeCounts: true,
     userDeletedAt: null,
+    suspensionStatus: "none",
     ...overrides,
   };
 }

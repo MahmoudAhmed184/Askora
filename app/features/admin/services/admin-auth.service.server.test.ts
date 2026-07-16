@@ -46,6 +46,30 @@ describe("requireAdminSession", () => {
       },
     });
   });
+
+  it("throws 403 for suspended admins before checking their role", async () => {
+    let roleChecked = false;
+
+    await expect(
+      requireAdminSession(new Request("http://localhost/admin"), {
+        getAuthenticatedSession: () =>
+          Promise.resolve({
+            ...authenticatedSession,
+            suspensionStatus: "active",
+          }),
+        store: {
+          findUserRole: () => {
+            roleChecked = true;
+            return Promise.resolve("admin");
+          },
+        },
+      }),
+    ).rejects.toMatchObject({
+      data: "Forbidden",
+      init: { status: 403 },
+    });
+    expect(roleChecked).toBe(false);
+  });
 });
 
 const authenticatedSession = {

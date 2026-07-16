@@ -129,6 +129,21 @@ describe("resolvePublicProfile", () => {
 });
 
 describe("createPublicProfilePageData", () => {
+  it("does not offer an ask form for a suspended recipient", () => {
+    const page = createPublicProfilePageData({
+      askFlash: undefined,
+      profile: createProfile({ suspensionStatus: "active" }),
+      session: anonymousSession,
+      now,
+    });
+
+    expect(page).toMatchObject({
+      status: "available",
+      ask: { status: "denied", reason: "questions_closed" },
+      timingToken: undefined,
+    });
+  });
+
   it("creates an ask-enabled public profile view", () => {
     const page = createPublicProfilePageData({
       askFlash: undefined,
@@ -333,6 +348,7 @@ function createProfile(overrides: Partial<PublicProfile> = {}): PublicProfile {
     showFollowerCounts: true,
     showLikeCounts: true,
     userDeletedAt: null,
+    suspensionStatus: "none",
     ...overrides,
   };
 }

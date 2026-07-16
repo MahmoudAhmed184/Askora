@@ -306,12 +306,18 @@ async function getAskPermissionTarget({
   session: CurrentSessionSummary;
   store: PublicProfileStore;
 }) {
+  const availableProfile = {
+    ...profile,
+    acceptingQuestions:
+      profile.acceptingQuestions && profile.suspensionStatus !== "active",
+  };
+
   if (
     profile.askPermission !== "followers" ||
     session.status !== "authenticated" ||
     session.profileStatus !== "complete"
   ) {
-    return profile;
+    return availableProfile;
   }
 
   const isFollowedByActor = await store.findViewerFollow?.({
@@ -320,7 +326,7 @@ async function getAskPermissionTarget({
   });
 
   return {
-    ...profile,
+    ...availableProfile,
     isFollowedByActor: isFollowedByActor === true,
   };
 }

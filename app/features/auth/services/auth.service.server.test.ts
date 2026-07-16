@@ -18,6 +18,15 @@ describe("completed profile session guards", () => {
   it("keeps active profiles on authenticated routes", () => {
     expect(getCompletedProfileGuardRedirectPath(completedSession)).toBeUndefined();
   });
+
+  it("redirects suspended profiles to the recoverable account surface", () => {
+    expect(
+      getCompletedProfileGuardRedirectPath({
+        ...completedSession,
+        suspensionStatus: "active",
+      }),
+    ).toBe("/settings/account");
+  });
 });
 
 const completedSession = {
