@@ -57,6 +57,43 @@ describe("loadFollowUpPage", () => {
       page: { status: "unavailable" },
     });
   });
+
+  it("does not reveal a renamed owner for hidden follow-up pages", async () => {
+    const store = createFollowUpStore({
+      threads: [createThread({ status: "deleted" })],
+    });
+
+    const result = await loadFollowUpPage({
+      session: anonymousSession,
+      store: store.store,
+      threadPublicId: "thr_1",
+      username: "old-person",
+    });
+
+    expect(result).toEqual({
+      status: "page",
+      responseStatus: 200,
+      page: {
+        status: "unavailable",
+        username: "old-person",
+        threadPublicId: "thr_1",
+      },
+    });
+    await expect(
+      submitThreadFollowUp({
+        formData: createFollowUpFormData(),
+        now,
+        request: createRequest(),
+        session: anonymousSession,
+        store: store.store,
+        threadPublicId: "thr_1",
+        username: "old-person",
+      }),
+    ).resolves.toMatchObject({
+      status: "denied",
+      formError: "This thread is unavailable for follow-ups.",
+    });
+  });
 });
 
 describe("submitThreadFollowUp", () => {

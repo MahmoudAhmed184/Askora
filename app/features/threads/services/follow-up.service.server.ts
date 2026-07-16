@@ -241,20 +241,17 @@ export async function loadFollowUpPage({
     return unavailableFollowUpResult({ threadPublicId, username }, 404);
   }
 
+  const rows = await store.findThreadItems(thread.id);
+
+  if (!isPublicThreadAvailableForFollowUps({ rows, thread })) {
+    return unavailableFollowUpResult({ threadPublicId, username }, 200);
+  }
+
   if (thread.ownerUsername !== username) {
     return {
       status: "redirect",
       username: thread.ownerUsername,
     };
-  }
-
-  const rows = await store.findThreadItems(thread.id);
-
-  if (!isPublicThreadAvailableForFollowUps({ rows, thread })) {
-    return unavailableFollowUpResult(
-      { threadPublicId: thread.publicId, username: thread.ownerUsername },
-      200,
-    );
   }
 
   const followUp = getPublicThreadFollowUpState({
@@ -333,17 +330,17 @@ export async function submitThreadFollowUp({
     return unavailableSubmissionResult(values);
   }
 
+  const rows = await store.findThreadItems(thread.id);
+
+  if (!isPublicThreadAvailableForFollowUps({ rows, thread })) {
+    return unavailableSubmissionResult(values);
+  }
+
   if (thread.ownerUsername !== username) {
     return {
       status: "redirect",
       username: thread.ownerUsername,
     };
-  }
-
-  const rows = await store.findThreadItems(thread.id);
-
-  if (!isPublicThreadAvailableForFollowUps({ rows, thread })) {
-    return unavailableSubmissionResult(values);
   }
 
   if (hasHoneypotValue(formData)) {

@@ -91,6 +91,27 @@ describe("loadPublicThreadPage", () => {
     }
   });
 
+  it("does not reveal a renamed owner for a hidden thread", async () => {
+    const result = await loadPublicThreadPage({
+      session: anonymousSession,
+      store: createThreadStore({
+        threads: [createThread({ status: "draft" })],
+      }),
+      threadPublicId: "thr_1",
+      username: "old-person",
+    });
+
+    expect(result).toEqual({
+      status: "page",
+      responseStatus: 200,
+      page: {
+        status: "unavailable",
+        username: "old-person",
+        threadPublicId: "thr_1",
+      },
+    });
+  });
+
   it("returns generic unavailable data for inactive or deleted owners", async () => {
     await expect(
       loadAvailableThread({

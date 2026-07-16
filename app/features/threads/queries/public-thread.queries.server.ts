@@ -174,18 +174,8 @@ export async function loadPublicThreadPage({
     return unavailableThreadResult({ threadPublicId, username }, 404);
   }
 
-  if (thread.ownerUsername !== username) {
-    return {
-      status: "redirect",
-      username: thread.ownerUsername,
-    };
-  }
-
   if (!isPublishedThreadAvailable(thread)) {
-    return unavailableThreadResult(
-      { threadPublicId: thread.publicId, username: thread.ownerUsername },
-      200,
-    );
+    return unavailableThreadResult({ threadPublicId, username }, 200);
   }
 
   const [rows, isViewerFollowing] = await Promise.all([
@@ -213,10 +203,14 @@ export async function loadPublicThreadPage({
       itemDeletedAt: initialItem.itemDeletedAt,
     })
   ) {
-    return unavailableThreadResult(
-      { threadPublicId: thread.publicId, username: thread.ownerUsername },
-      200,
-    );
+    return unavailableThreadResult({ threadPublicId, username }, 200);
+  }
+
+  if (thread.ownerUsername !== username) {
+    return {
+      status: "redirect",
+      username: thread.ownerUsername,
+    };
   }
 
   return {
