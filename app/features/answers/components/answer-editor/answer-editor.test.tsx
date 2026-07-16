@@ -29,6 +29,7 @@ describe("AnswerEditor", () => {
       screen.getByRole("textbox", { name: /edited question/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /original/i })).toBeChecked();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 

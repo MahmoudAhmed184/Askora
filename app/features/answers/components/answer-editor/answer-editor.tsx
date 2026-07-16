@@ -102,9 +102,7 @@ export function AnswerEditor({
   return (
     <section
       aria-labelledby="answer-editor-title"
-      aria-modal="true"
       className="flex max-h-full w-full max-w-[53rem] flex-col overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]"
-      role="dialog"
     >
       <ActionToast
         message={getAnswerActionToastMessage(actionResult, formError)}

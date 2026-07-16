@@ -1,6 +1,18 @@
-import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { data, Link, redirect, useActionData } from "react-router";
+import { ArrowLeft, X } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import {
+  data,
+  Link,
+  redirect,
+  useActionData,
+  useNavigate,
+} from "react-router";
 
 import { Button } from "~/components/ui/button/button";
 import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
@@ -79,6 +91,7 @@ export function meta() {
 
 export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
+  const navigate = useNavigate();
   const [isDirty, setIsDirty] = useState(false);
 
   if (loaderData.status === "not_found") {
@@ -98,34 +111,199 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
     );
   }
 
+  const { closeHref, editor: editorData, isSuspended } = loaderData;
+
+  function canClose() {
+    return (
+      !isDirty ||
+      window.confirm("Discard this answer? Unsaved changes will be lost.")
+    );
+  }
+
+  function requestClose() {
+    if (canClose()) {
+      void navigate(closeHref);
+    }
+  }
+
+  const editor = (
+    <div className="relative flex max-h-full w-full max-w-[53rem]">
+      <Button
+        asChild
+        className="absolute right-3 top-3 z-10"
+        size="icon"
+        variant="ghost"
+      >
+        <Link
+          aria-label="Dismiss answer editor"
+          onClick={(event) => {
+            if (!canClose()) {
+              event.preventDefault();
+            }
+          }}
+          to={closeHref}
+        >
+          <X aria-hidden="true" />
+        </Link>
+      </Button>
+      <AnswerEditor
+        actionResult={actionData?.answer}
+        disabled={isSuspended}
+        editor={editorData}
+        key={editorData.question.publicId}
+        onDirtyChange={setIsDirty}
+      />
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:pb-28 sm:pt-10">
       <Link
         aria-label="Dismiss answer editor"
         className="absolute inset-0 bg-background/92"
         onClick={(event) => {
-          if (
-            isDirty &&
-            !window.confirm(
-              "Discard this answer? Unsaved changes will be lost.",
-            )
-          ) {
+          if (!canClose()) {
             event.preventDefault();
           }
         }}
-        to={loaderData.closeHref}
+        to={closeHref}
       />
-      <div className="relative z-10 flex max-h-[calc(100svh_-_9rem_-_env(safe-area-inset-bottom))] w-full max-w-[53rem] sm:max-h-[calc(100svh_-_9rem)]">
-        <AnswerEditor
-          actionResult={actionData?.answer}
-          disabled={loaderData.isSuspended}
-          editor={loaderData.editor}
-          key={loaderData.editor.question.publicId}
-          onDirtyChange={setIsDirty}
-        />
-      </div>
+      <AnswerRouteDialog onRequestClose={requestClose}>
+        {editor}
+      </AnswerRouteDialog>
     </div>
   );
+}
+
+function AnswerRouteDialog({
+  children,
+  onRequestClose,
+}: {
+  children: ReactNode;
+  onRequestClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+
+    if (dialog === null) {
+      return;
+    }
+
+    if (typeof dialog.showModal === "function") {
+      if (dialog.open) {
+        dialog.close();
+      }
+
+      dialog.showModal();
+      dialog.setAttribute("aria-modal", "true");
+
+      return () => {
+        if (dialog.open) {
+          dialog.close();
+        }
+      };
+    }
+
+    const restoreBackground = makeDialogBackgroundInert(dialog);
+    dialog.setAttribute("aria-modal", "true");
+    focusFirstDialogControl(dialog);
+
+    return () => {
+      restoreBackground();
+    };
+  }, []);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDialogElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onRequestClose();
+      return;
+    }
+
+    if (
+      event.key === "Tab" &&
+      typeof dialogRef.current?.showModal !== "function"
+    ) {
+      trapDialogTabKey(event);
+    }
+  }
+
+  return (
+    <dialog
+      aria-labelledby="answer-editor-title"
+      className="fixed inset-0 z-10 m-auto max-h-[calc(100svh_-_9rem_-_env(safe-area-inset-bottom))] w-full max-w-[53rem] overflow-visible border-0 bg-transparent p-0 backdrop:bg-background/88 sm:max-h-[calc(100svh_-_9rem)]"
+      onCancel={(event) => {
+        event.preventDefault();
+        onRequestClose();
+      }}
+      onKeyDown={handleKeyDown}
+      open
+      ref={dialogRef}
+    >
+      {children}
+    </dialog>
+  );
+}
+
+function makeDialogBackgroundInert(dialog: HTMLDialogElement) {
+  const changedElements: {
+    element: HTMLElement;
+    wasInert: boolean;
+  }[] = [];
+  let current: HTMLElement = dialog;
+
+  while (
+    current.parentElement !== null &&
+    current.parentElement !== document.body
+  ) {
+    for (const sibling of current.parentElement.children) {
+      if (sibling instanceof HTMLElement && sibling !== current) {
+        changedElements.push({ element: sibling, wasInert: sibling.inert });
+        sibling.inert = true;
+      }
+    }
+
+    current = current.parentElement;
+  }
+
+  return () => {
+    for (const { element, wasInert } of changedElements) {
+      element.inert = wasInert;
+    }
+  };
+}
+
+function focusFirstDialogControl(dialog: HTMLDialogElement) {
+  dialog
+    .querySelector<HTMLElement>(
+      "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]",
+    )
+    ?.focus();
+}
+
+function trapDialogTabKey(event: KeyboardEvent<HTMLDialogElement>) {
+  const controls = Array.from(
+    event.currentTarget.querySelectorAll<HTMLElement>(
+      "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]",
+    ),
+  );
+  const first = controls[0];
+  const last = controls.at(-1);
+
+  if (first === undefined || last === undefined) {
+    event.preventDefault();
+    return;
+  }
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function getAnswerEditorCloseHref(request: Request) {
