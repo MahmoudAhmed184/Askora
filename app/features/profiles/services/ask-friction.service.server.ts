@@ -12,6 +12,7 @@ export const ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS = 60 * 60 * 1000;
 
 const ASK_FLASH_COOKIE_PURPOSE = "public-ask-flash";
 const ASK_FLASH_COOKIE_MAX_AGE_SECONDS = 120;
+const ASK_FLASH_QUESTION_MAX_LENGTH = 600;
 const ASK_TIMING_TOKEN_PURPOSE = "public-ask-timing";
 
 const askTimingTokenSchema = z.object({
@@ -125,10 +126,23 @@ export function createPublicAskFlashCookieHeader({
   username: string;
   result: PublicAskFlash;
 }) {
+  const boundedResult =
+    result.status === "error"
+      ? {
+          ...result,
+          values: {
+            ...result.values,
+            question: result.values.question.slice(
+              0,
+              ASK_FLASH_QUESTION_MAX_LENGTH,
+            ),
+          },
+        }
+      : result;
   const value = sealJsonForCookie(
     {
       username,
-      result,
+      result: boundedResult,
       createdAt: Date.now(),
     },
     ASK_FLASH_COOKIE_PURPOSE,
