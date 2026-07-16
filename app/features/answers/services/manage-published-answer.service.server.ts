@@ -65,7 +65,7 @@ export type PublishedAnswerActionResult =
     };
 
 export interface PinPublishedAnswerResult {
-  status: "pinned" | "limit_reached";
+  status: "pinned" | "limit_reached" | "unavailable";
 }
 
 export interface PublishedAnswerManagementStore {
@@ -276,6 +276,37 @@ export function createDrizzlePublishedAnswerManagementStore(
     },
     async pinPublishedAnswer(params) {
       return database.transaction(async (transaction) => {
+        const [owner] = await transaction
+          .select({ id: profiles.id })
+          .from(profiles)
+          .where(eq(profiles.id, params.answer.ownerProfileId))
+          .for("update")
+          .limit(1);
+
+        if (owner === undefined) {
+          return { status: "unavailable" };
+        }
+
+        const [eligibleAnswer] = await transaction
+          .select({ id: threadItems.id })
+          .from(threadItems)
+          .innerJoin(threads, eq(threads.id, threadItems.threadId))
+          .where(
+            and(
+              eq(threadItems.id, params.answer.id),
+              eq(threadItems.status, "published"),
+              isNull(threadItems.deletedAt),
+              eq(threads.status, "published"),
+              eq(threads.ownerProfileId, params.answer.ownerProfileId),
+            ),
+          )
+          .for("update")
+          .limit(1);
+
+        if (eligibleAnswer === undefined) {
+          return { status: "unavailable" };
+        }
+
         const existingPin = await findPinnedAnswerRow({ params, transaction });
 
         if (existingPin !== undefined) {
@@ -291,7 +322,7 @@ export function createDrizzlePublishedAnswerManagementStore(
           return { status: "limit_reached" };
         }
 
-        await transaction
+        const [inserted] = await transaction
           .insert(pinnedAnswers)
           .values({
             profileId: params.answer.ownerProfileId,
@@ -299,7 +330,19 @@ export function createDrizzlePublishedAnswerManagementStore(
             position,
             createdAt: params.now,
           })
-          .onConflictDoNothing();
+          .onConflictDoNothing()
+          .returning({ threadItemId: pinnedAnswers.threadItemId });
+
+        if (inserted === undefined) {
+          const concurrentPin = await findPinnedAnswerRow({
+            params,
+            transaction,
+          });
+
+          return concurrentPin === undefined
+            ? { status: "limit_reached" }
+            : { status: "pinned" };
+        }
 
         return { status: "pinned" };
       });
@@ -341,6 +384,10 @@ async function mutatePublishedAnswer({
       return successResult("deleted", answer.publicId, session);
     case "pin": {
       const result = await store.pinPublishedAnswer(mutationParams);
+
+      if (result.status === "unavailable") {
+        return deniedResult(values, "not_found");
+      }
 
       if (result.status === "limit_reached") {
         return deniedResult(values, "pin_limit");

@@ -138,6 +138,57 @@ describe("published answer management", () => {
     });
   });
 
+  it("reports only one success when concurrent pin claims conflict", async () => {
+    const answers = createPublishedAnswerStore({
+      answers: [
+        createManagedAnswer({ id: "item_1", publicId: "titem_1" }),
+        createManagedAnswer({
+          id: "item_2",
+          publicId: "titem_2",
+          questionId: "question_2",
+          threadId: "thread_2",
+        }),
+      ],
+    });
+    let arrivals = 0;
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const store: PublishedAnswerManagementStore = {
+      ...answers.store,
+      async pinPublishedAnswer(params) {
+        arrivals += 1;
+
+        if (arrivals === 2) {
+          release?.();
+        }
+
+        await gate;
+        return params.answer.id === "item_1"
+          ? { status: "pinned" }
+          : { status: "limit_reached" };
+      },
+    };
+    const results = await Promise.all([
+      submitPublishedAnswerAction({
+        formData: createPublishedAnswerActionFormData({ intent: "pin" }),
+        store,
+        threadItemPublicId: "titem_1",
+      }),
+      submitPublishedAnswerAction({
+        formData: createPublishedAnswerActionFormData({ intent: "pin" }),
+        store,
+        threadItemPublicId: "titem_2",
+      }),
+    ]);
+
+    expect(results.map((result) => result.status).sort()).toEqual([
+      "denied",
+      "pinned",
+    ]);
+  });
+
   it("unpublishes the answer, removes its pin, and unpublishes the initial-item thread", async () => {
     const answers = createPublishedAnswerStore({
       pins: [{ profileId: "profile_1", threadItemId: "item_1", position: 1 }],
