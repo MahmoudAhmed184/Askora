@@ -2,32 +2,31 @@
 
 ## Project Structure & Module Organization
 
-This is a React Router 7 TypeScript app. Runtime code lives under `app/`: `root.tsx`, `routes.ts`, `entry.*.tsx`, shared UI in `app/components`, shared utilities in `app/lib`, database client/schema in `app/db`, and feature slices in `app/features/<feature>`. Feature slices keep route modules in `routes/`, local components in `components/`, read helpers in `queries/`, server mutations/domain workflows in `services/`, feature DTOs in `types/`, and Zod schemas in `validations/`. Database migrations live in `drizzle/`; public static assets in `public/`; automation and seed scripts in `scripts/`; Playwright specs in `tests/e2e`; Vitest setup in `tests/setup.ts`. `design/prototype` is a separate Vite prototype excluded from main TypeScript and lint runs.
+Askora is a React Router 7 application written in TypeScript. Production code lives in `app/`: feature slices are under `app/features/<feature>`, shared UI under `app/components`, common utilities under `app/lib`, and database code under `app/db`. Within a feature, keep routes in `routes/`, UI in `components/`, reads in `queries/`, server workflows in `services/`, DTOs in `types/`, and Zod schemas in `validations/`. Drizzle migrations live in `drizzle/`, static assets in `public/`, operational scripts in `scripts/`, and Playwright tests in `tests/e2e/`. `design/prototype/` is a separate Vite prototype and is excluded from main lint and typecheck runs.
 
 ## Build, Test, and Development Commands
 
-- `npm ci`: install locked dependencies with Node `>=22.12.0`.
+- `npm ci`: install locked dependencies; Node 22.12 or newer is required.
 - `npm run dev`: start the React Router development server.
-- `npm run build` then `npm start`: build and serve production output from `build/`.
-- `npm run typecheck`: generate React Router types and run `tsc --noEmit`.
-- `npm run lint` / `npm run lint:fix`: run ESLint, optionally fixing safe issues.
+- `npm run build && npm start`: build and serve the production bundle.
+- `npm run typecheck`: generate route types and run strict TypeScript checks.
+- `npm run lint` / `npm run lint:fix`: check ESLint rules or apply safe fixes.
 - `npm test` / `npm run test:watch`: run Vitest once or in watch mode.
-- `npm run test:e2e`: run Playwright against the built app.
-- `npm run db:local:up`, `npm run db:migrate`, `npm run db:generate`: start local Postgres and manage Drizzle migrations.
-- `npm run prototype:dev`: run the design prototype.
+- `npm run test:e2e`: run Playwright on desktop and mobile Chromium.
+- `npm run db:local:up`, `npm run db:migrate`, `npm run db:generate`: manage local Postgres and Drizzle migrations.
 
 ## Coding Style & Naming Conventions
 
-Use strict TypeScript and React function components. Follow existing 2-space indentation, double quotes, semicolons, and type-only imports. Prefer `~/` or `@/` aliases for app imports. Name route files `*.route.tsx`, server-only modules `*.server.ts`, tests `*.test.ts`/`*.test.tsx`, and Playwright specs `*.spec.ts`. Keep feature-specific code inside its feature slice unless it is genuinely shared.
+Use strict TypeScript, React function components, 2-space indentation, double quotes, and semicolons. Prefer type-only imports and the `~/` or `@/` aliases for app code. Name routes `*.route.tsx`, server-only modules `*.server.ts`, unit/component tests `*.test.ts(x)`, and browser tests `*.spec.ts`. Keep feature-specific code within its slice; promote only genuinely reusable code to shared modules.
 
 ## Testing Guidelines
 
-Vitest covers app and script tests matching `app/**/*.test.ts(x)` and `scripts/**/*.test.mjs`; React component tests run in `jsdom` with `tests/setup.ts`. Place tests near the code they verify. Use Playwright for browser flows in `tests/e2e` across desktop Chrome and mobile Chrome. No coverage threshold is configured; add regression tests for changed behavior.
+Vitest uses `jsdom` and `tests/setup.ts`; colocate tests with the implementation. Playwright owns end-to-end flows in `tests/e2e/`. There is no configured coverage threshold, but every behavior change or bug fix should include focused regression coverage. Before opening a PR, run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
 
 ## Commit & Pull Request Guidelines
 
-History uses Conventional Commit style with scopes, for example `feat(admin): ...`, `test(e2e): ...`, `docs(design): ...`, and `chore(seed): ...`. Keep commits focused and imperative. PRs should summarize behavior changes, link the relevant issue or spec, list validation commands, and include screenshots or recordings for UI changes.
+Follow the scoped Conventional Commit style found in history, such as `fix(auth): align rate-limit schema` or `test(e2e): update smoke assertions`. Keep commits focused and imperative. PRs should explain behavior changes, link the relevant issue or specification, list validation performed, and include screenshots or recordings for UI work.
 
-## Security & Configuration Tips
+## Security & Configuration
 
-Copy `.env.example` to `.env` for local setup and never commit secrets. Review `docs/specification.md`, `docs/beta-readiness.md`, and `design/DESIGN.md` before changing product behavior, beta operations, or cross-cutting architecture.
+Copy `.env.example` to `.env`; never commit credentials. Consult `docs/specification.md` and `docs/beta-readiness.md` before changing product rules, migrations, authentication, or deployment behavior.
