@@ -11,15 +11,18 @@ import {
 import { LikeButton } from "~/features/social/components/like-button";
 import { createThreadModalLink } from "~/features/threads/thread-modal";
 import { formatMediumDateTime } from "~/lib/date-format";
+import { PublicReportDialog } from "~/features/moderation/components/public-report-dialog";
 
 interface PublicAnswerListProps {
   answers: PublicPublishedAnswer[];
+  canReport?: boolean | undefined;
   controls?: PublishedAnswerControlState;
   profileUsername: string;
 }
 
 export function PublicAnswerList({
   answers,
+  canReport = false,
   controls = hiddenPublishedAnswerControls,
   profileUsername,
 }: PublicAnswerListProps) {
@@ -61,6 +64,7 @@ export function PublicAnswerList({
           <PublicAnswerArticle
             answer={answer}
             controls={controls}
+            canReport={canReport}
             key={answer.publicId}
             profileUsername={profileUsername}
           />
@@ -72,10 +76,12 @@ export function PublicAnswerList({
 
 function PublicAnswerArticle({
   answer,
+  canReport,
   controls,
   profileUsername,
 }: {
   answer: PublicPublishedAnswer;
+  canReport: boolean;
   controls: PublishedAnswerControlState;
   profileUsername: string;
 }) {
@@ -131,6 +137,12 @@ function PublicAnswerArticle({
       <footer className="flex flex-col gap-3 border-t border-dashed pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <LikeButton like={answer.like} />
+          <PublicReportDialog
+            canReport={canReport}
+            targetId={answer.publicId}
+            targetLabel="answer"
+            targetType="thread_item"
+          />
           <Link
             className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_4px_14px_var(--accent-glow)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             defaultShouldRevalidate={false}

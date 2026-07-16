@@ -226,6 +226,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
         </div>
       ) : null}
       <ProfileHeader
+        canReport={page.canReport}
         follow={page.follow}
         isOwnerView={isOwnerView}
         profile={page.profile}
@@ -242,6 +243,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
           <div>
             <PublicAnswerList
               answers={page.publishedAnswers}
+              canReport={page.canReport}
               controls={page.publishedAnswerControls}
               profileUsername={page.profile.username}
             />

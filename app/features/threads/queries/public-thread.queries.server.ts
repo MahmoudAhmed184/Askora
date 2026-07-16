@@ -116,6 +116,7 @@ export type PublicThreadPageData =
       followUp: PublicThreadFollowUpState;
       publishedAnswerControls: PublishedAnswerControlState;
       follow: FollowControlState;
+      canReport: boolean;
     }
   | {
       status: "unavailable";
@@ -252,6 +253,7 @@ export async function loadPublicThreadPage({
         },
         session,
       }),
+      canReport: canSubmitPublicReport(session),
       follow: getFollowControlState({
         isFollowing: isViewerFollowing,
         session,
@@ -265,6 +267,14 @@ export async function loadPublicThreadPage({
     },
     responseStatus: 200,
   };
+}
+
+function canSubmitPublicReport(session: CurrentSessionSummary) {
+  return (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.suspensionStatus !== "active"
+  );
 }
 
 export function createDrizzlePublicThreadStore(

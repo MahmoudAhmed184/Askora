@@ -87,6 +87,7 @@ function createAvailablePage(): PublicProfilePageData {
       isFollowing: false,
       disabled: false,
     },
+    canReport: false,
   };
 }
 

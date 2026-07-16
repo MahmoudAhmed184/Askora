@@ -259,6 +259,7 @@ function createAvailablePage(
       isFollowing: false,
       disabled: false,
     },
+    canReport: false,
     ...overrides,
   };
 }

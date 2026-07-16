@@ -8,15 +8,18 @@ import { getAvatarImageSource } from "~/features/profiles/avatar-url";
 import type { PublicProfileView } from "~/features/profiles/types/profiles.types";
 import { FollowButton } from "~/features/social/components/follow-button";
 import type { FollowControlState } from "~/features/social/types/social.types";
+import { PublicReportDialog } from "~/features/moderation/components/public-report-dialog";
 
 interface ProfileHeaderProps {
   profile: PublicProfileView;
+  canReport?: boolean | undefined;
   follow?: FollowControlState | undefined;
   isOwnerView?: boolean | undefined;
 }
 
 export function ProfileHeader({
   follow,
+  canReport = false,
   isOwnerView = false,
   profile,
 }: ProfileHeaderProps) {
@@ -55,7 +58,15 @@ export function ProfileHeader({
             {isOwnerView ? (
               <OwnerProfileActions profile={profile} />
             ) : follow === undefined ? null : (
-              <FollowButton follow={follow} />
+              <>
+                <FollowButton follow={follow} />
+                <PublicReportDialog
+                  canReport={canReport}
+                  targetId={profile.username}
+                  targetLabel="profile"
+                  targetType="profile"
+                />
+              </>
             )}
           </div>
         </div>

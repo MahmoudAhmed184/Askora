@@ -96,5 +96,6 @@ function createAvailablePage(): Extract<
       isFollowing: false,
       disabled: false,
     },
+    canReport: false,
   };
 }

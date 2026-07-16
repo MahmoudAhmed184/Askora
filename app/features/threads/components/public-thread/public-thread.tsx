@@ -10,6 +10,7 @@ import { PublishedAnswerOwnerControls } from "~/features/answers/components/publ
 import { BetaNoindexBadge } from "~/features/profiles/components/profile-header";
 import { FollowButton } from "~/features/social/components/follow-button";
 import { LikeButton } from "~/features/social/components/like-button";
+import { PublicReportDialog } from "~/features/moderation/components/public-report-dialog";
 import type {
   PublicThreadAnswerItem,
   PublicThreadItem,
@@ -101,6 +102,7 @@ function PublicThreadCard({
   return (
     <section className="overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
       <PublicThreadHeader
+        canReport={page.canReport}
         follow={page.follow}
         itemCount={page.items.length}
         profile={page.profile}
@@ -117,6 +119,7 @@ function PublicThreadCard({
         </h2>
         {page.items.map((item, index) => (
           <PublicThreadItemCard
+            canReport={page.canReport}
             controls={page.publishedAnswerControls}
             index={index}
             item={item}
@@ -207,6 +210,7 @@ function UnavailablePublicThread({
 }
 
 function PublicThreadHeader({
+  canReport,
   follow,
   itemCount,
   profile,
@@ -214,6 +218,7 @@ function PublicThreadHeader({
   threadPublicId,
   title,
 }: {
+  canReport: boolean;
   follow: Extract<PublicThreadPageData, { status: "available" }>["follow"];
   itemCount: number;
   profile: PublicThreadProfileView;
@@ -255,17 +260,25 @@ function PublicThreadHeader({
         <span className="rounded-full border bg-secondary px-3 py-1 text-sm font-medium text-muted-foreground">
           {itemCount} {itemCount === 1 ? "item" : "items"}
         </span>
+        <PublicReportDialog
+          canReport={canReport}
+          targetId={profile.username}
+          targetLabel="profile"
+          targetType="profile"
+        />
       </div>
     </header>
   );
 }
 
 function PublicThreadItemCard({
+  canReport,
   controls,
   index,
   item,
   profileDisplayName,
 }: {
+  canReport: boolean;
   controls: Extract<PublicThreadPageData, { status: "available" }>["publishedAnswerControls"];
   index: number;
   item: PublicThreadItem;
@@ -277,6 +290,7 @@ function PublicThreadItemCard({
 
   return (
     <AnswerThreadItem
+      canReport={canReport}
       controls={controls}
       index={index}
       item={item}
@@ -286,11 +300,13 @@ function PublicThreadItemCard({
 }
 
 function AnswerThreadItem({
+  canReport,
   controls,
   index,
   item,
   profileDisplayName,
 }: {
+  canReport: boolean;
   controls: Extract<PublicThreadPageData, { status: "available" }>["publishedAnswerControls"];
   index: number;
   item: PublicThreadAnswerItem;
@@ -321,6 +337,12 @@ function AnswerThreadItem({
       <footer className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <LikeButton like={item.like} />
+          <PublicReportDialog
+            canReport={canReport}
+            targetId={item.publicId}
+            targetLabel="answer"
+            targetType="thread_item"
+          />
           <span className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground">
             <MessageCircle data-icon="inline-start" />
             {index === 0 ? "Original answer" : "Follow-up answer"}

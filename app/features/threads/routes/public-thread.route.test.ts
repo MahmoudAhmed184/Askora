@@ -136,6 +136,7 @@ function createAvailablePage(): PublicThreadPageData {
       isFollowing: false,
       disabled: false,
     },
+    canReport: false,
   };
 }
 

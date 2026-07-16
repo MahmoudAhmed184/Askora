@@ -71,6 +71,7 @@ export type PublicProfilePageData =
       publishedAnswers: PublicPublishedAnswer[];
       publishedAnswerControls: PublishedAnswerControlState;
       follow: FollowControlState;
+      canReport: boolean;
     }
   | {
       status: "unavailable";
@@ -192,12 +193,21 @@ export function createPublicProfilePageData({
         : undefined,
     publishedAnswers,
     publishedAnswerControls,
+    canReport: canSubmitPublicReport(session),
     follow: getFollowControlState({
       isFollowing: social.isFollowedByViewer,
       session,
       target: profile,
     }),
   };
+}
+
+function canSubmitPublicReport(session: CurrentSessionSummary) {
+  return (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.suspensionStatus !== "active"
+  );
 }
 
 export function createDrizzlePublicProfileStore(
