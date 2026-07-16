@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
-import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
+import {
+  QuestionModerationControls,
+  QuestionModerationNoScriptFallback,
+} from "~/features/inbox/components/question-moderation-controls";
 
 describe("QuestionModerationControls", () => {
   it("opens a report dialog with report-plus-block checked by default", async () => {
@@ -45,6 +49,22 @@ describe("QuestionModerationControls", () => {
     fireEvent.click(screen.getByRole("button", { name: /block sender/i }));
 
     expect(screen.getByRole("dialog", { name: /block sender/i })).toBeInTheDocument();
+  });
+
+  it("server-renders complete report and block forms for no-JavaScript clients", () => {
+    const markup = renderToStaticMarkup(
+      <QuestionModerationNoScriptFallback
+        action="/inbox"
+        disabled={false}
+        questionPublicId="qst_1"
+      />,
+    );
+
+    expect(markup).toMatch(/<form[^>]+action="\/inbox" method="post">/);
+    expect(markup).toContain('type="hidden" name="intent" value="report"');
+    expect(markup).toContain('type="hidden" name="intent" value="block"');
+    expect(markup).toMatch(/<select[^>]+name="reason" required="">/);
+    expect(markup).toContain('name="alsoBlockSender"');
   });
 });
 
