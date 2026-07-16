@@ -1,12 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AppShellData } from "~/types/app-shell-data";
 
 const routerState = vi.hoisted(() => ({
   locationPathname: "/feed",
   navigationPathname: undefined as string | undefined,
+  revalidate: vi.fn(),
 }));
 
 vi.mock("react-router", async () => {
@@ -34,12 +35,21 @@ vi.mock("react-router", async () => {
       state:
         routerState.navigationPathname === undefined ? "idle" : "loading",
     }),
+    useRevalidator: () => ({
+      revalidate: routerState.revalidate,
+      state: "idle",
+    }),
   };
 });
 
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 
 describe("AppShell navigation", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    routerState.revalidate.mockClear();
+  });
+
   it("keeps the rendered page active while marking the pending destination", () => {
     routerState.locationPathname = "/feed";
     routerState.navigationPathname = "/notifications";
@@ -69,6 +79,22 @@ describe("AppShell navigation", () => {
       "data-prefetch",
       "viewport",
     );
+  });
+
+  it("refreshes shell data while the document remains visible", () => {
+    vi.useFakeTimers();
+    routerState.locationPathname = "/feed";
+    routerState.navigationPathname = undefined;
+
+    render(
+      <AppShell shell={shellData}>
+        <div>Page</div>
+      </AppShell>,
+    );
+
+    vi.advanceTimersByTime(60_000);
+
+    expect(routerState.revalidate).toHaveBeenCalledOnce();
   });
 });
 

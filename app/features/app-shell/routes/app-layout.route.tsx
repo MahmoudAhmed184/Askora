@@ -1,4 +1,9 @@
-import { Outlet, type ShouldRevalidateFunctionArgs } from "react-router";
+import {
+  isRouteErrorResponse,
+  Link,
+  Outlet,
+  type ShouldRevalidateFunctionArgs,
+} from "react-router";
 
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import {
@@ -29,18 +34,8 @@ function isAccountSettingsPath(url: string) {
 
 export function shouldRevalidate({
   defaultShouldRevalidate,
-  formAction,
-  formMethod,
 }: ShouldRevalidateFunctionArgs) {
-  if (formMethod === undefined) {
-    return false;
-  }
-
-  if (!isMutationMethod(formMethod)) {
-    return defaultShouldRevalidate;
-  }
-
-  return isShellMutation(formAction);
+  return defaultShouldRevalidate;
 }
 
 export default function AppLayoutRoute({
@@ -53,26 +48,43 @@ export default function AppLayoutRoute({
   );
 }
 
-function isMutationMethod(method: string) {
-  return method.toUpperCase() !== "GET";
-}
-
-function isShellMutation(formAction: string | undefined) {
-  if (formAction === undefined) {
-    return false;
-  }
-
-  const pathname = getPathname(formAction);
-
-  return (
-    pathname === "/notifications" ||
-    pathname === "/settings/profile" ||
-    pathname === "/settings/account"
+export function ErrorBoundary({
+  error,
+  loaderData,
+}: Route.ErrorBoundaryProps) {
+  const title = isRouteErrorResponse(error)
+    ? `${String(error.status)} ${error.statusText}`
+    : "Something went wrong";
+  const message =
+    isRouteErrorResponse(error) && typeof error.data === "string"
+      ? error.data
+      : "This page could not be loaded. Your navigation is still available.";
+  const content = (
+    <section
+      aria-labelledby="app-route-error-title"
+      className="mx-auto flex w-full max-w-2xl flex-col gap-4 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)]"
+    >
+      <h1
+        className="font-serif text-3xl font-bold text-primary"
+        id="app-route-error-title"
+      >
+        {title}
+      </h1>
+      <p className="text-sm leading-6 text-muted-foreground">{message}</p>
+      <Link
+        className="w-fit rounded-full border bg-background px-4 py-2 text-sm font-semibold text-foreground"
+        to="/feed"
+      >
+        Return to feed
+      </Link>
+    </section>
   );
-}
 
-function getPathname(value: string) {
-  return value.startsWith("http")
-    ? new URL(value).pathname
-    : (value.split("?")[0] ?? "");
+  return loaderData === undefined ? (
+    <main className="mx-auto flex min-h-screen w-full items-center px-5 py-12">
+      {content}
+    </main>
+  ) : (
+    <AppShell shell={loaderData.shell}>{content}</AppShell>
+  );
 }

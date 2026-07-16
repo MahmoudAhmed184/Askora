@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { useLocation, useNavigation } from "react-router";
+import { useEffect, type ReactNode } from "react";
+import { useLocation, useNavigation, useRevalidator } from "react-router";
 
 import type { AppShellData } from "~/types/app-shell-data";
 import {
@@ -13,9 +13,12 @@ interface AppShellProps {
   children: ReactNode;
 }
 
+const SHELL_REFRESH_INTERVAL_MILLISECONDS = 60_000;
+
 export function AppShell({ children, shell }: AppShellProps) {
   const location = useLocation();
   const navigation = useNavigation();
+  useRefreshAppShell();
   const navigationLocation = navigation.location as
     | { pathname: string }
     | undefined;
@@ -63,6 +66,25 @@ export function AppShell({ children, shell }: AppShellProps) {
       />
     </div>
   );
+}
+
+function useRefreshAppShell() {
+  const { revalidate, state } = useRevalidator();
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (
+        document.visibilityState === "visible" &&
+        state === "idle"
+      ) {
+        void revalidate();
+      }
+    }, SHELL_REFRESH_INTERVAL_MILLISECONDS);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [revalidate, state]);
 }
 
 interface AppNavigationInput {
