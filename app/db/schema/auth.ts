@@ -133,7 +133,7 @@ export const authRateLimits = pgTable("rate_limits", {
   id: text("id").primaryKey(),
   key: text("key").notNull(),
   count: integer("count").notNull(),
-  windowStartedAt: bigint("last_request", { mode: "number" }).notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 }, (table) => [
   uniqueIndex("rate_limits_key_unique").on(table.key),
 ]);

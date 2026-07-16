@@ -71,25 +71,25 @@ async function checkDatabaseRateLimit(
   const database = options.database ?? getRuntimeDatabase();
   const windowMilliseconds = options.windowSeconds * 1000;
   const resetBeforeMilliseconds = now - windowMilliseconds;
-  const hasExpiredWindow = sql`${authRateLimits.windowStartedAt} <= ${resetBeforeMilliseconds}`;
+  const hasExpiredWindow = sql`${authRateLimits.lastRequest} <= ${resetBeforeMilliseconds}`;
   const [counter] = await database
     .insert(authRateLimits)
     .values({
       id: createDatabaseId(),
       key: options.key,
       count: 1,
-      windowStartedAt: now,
+      lastRequest: now,
     })
     .onConflictDoUpdate({
       target: authRateLimits.key,
       set: {
         count: sql<number>`case when ${hasExpiredWindow} then 1 else least(${authRateLimits.count} + 1, ${options.max + 1}) end`,
-        windowStartedAt: sql<number>`case when ${hasExpiredWindow} then ${now} else ${authRateLimits.windowStartedAt} end`,
+        lastRequest: sql<number>`case when ${hasExpiredWindow} then ${now} else ${authRateLimits.lastRequest} end`,
       },
     })
     .returning({
       count: authRateLimits.count,
-      windowStartedAt: authRateLimits.windowStartedAt,
+      lastRequest: authRateLimits.lastRequest,
     });
 
   if (counter === undefined) {
@@ -98,7 +98,7 @@ async function checkDatabaseRateLimit(
 
   return getRateLimitDecision({
     count: counter.count,
-    windowStartedAtMilliseconds: counter.windowStartedAt,
+    windowStartedAtMilliseconds: counter.lastRequest,
     max: options.max,
     now,
     windowMilliseconds,
