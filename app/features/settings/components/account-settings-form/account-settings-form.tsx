@@ -159,7 +159,7 @@ function ProfileLifecycleAction({
         intent="deactivate"
         pendingText="Deactivating"
         result={result}
-        variant="outline"
+        variant="destructive"
       />
     );
   }
@@ -421,8 +421,6 @@ function ConfirmAccountActionDialog({
   open: boolean;
   title: string;
 }) {
-  const destructive = intent === "request_deletion";
-
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -434,17 +432,15 @@ function ConfirmAccountActionDialog({
           <AlertDialogCancel disabled={disabled}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             asChild
-            className={buttonVariants({
-              variant: destructive ? "destructive" : "default",
-            })}
+            className={buttonVariants({ variant: "destructive" })}
           >
             <Button
               disabled={disabled}
               onClick={onConfirm}
               type="button"
-              variant={destructive ? "destructive" : "default"}
+              variant="destructive"
             >
-              {destructive ? (
+              {intent === "request_deletion" ? (
                 <Trash2 data-icon="inline-start" />
               ) : (
                 <ShieldOff data-icon="inline-start" />
@@ -471,6 +467,7 @@ function StatePanel({
     <div
       className={cn(
         "rounded-xl border bg-secondary p-3 text-sm leading-6",
+        tone === "warning" ? "border-warning/40 bg-warning/5" : undefined,
         tone === "danger" ? "border-destructive/35" : undefined,
       )}
     >

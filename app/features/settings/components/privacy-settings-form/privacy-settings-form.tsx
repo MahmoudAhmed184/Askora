@@ -10,6 +10,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field/field";
+import { Select } from "~/components/ui/select/select";
 import type {
   PrivacySettingsFieldErrors,
   PrivacySettingsFormValues,
@@ -19,7 +20,6 @@ import type {
   AskPermission,
   FollowUpPermission,
 } from "~/features/settings/validations/settings.validations";
-import { cn } from "~/lib/utils";
 
 interface PrivacySettingsFormProps {
   settings: PrivacySettingsFormValues;
@@ -256,12 +256,9 @@ function SelectField({
   return (
     <Field data-invalid={error !== undefined ? true : undefined}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <select
+      <Select
         aria-describedby={`${id}-description ${messageId}`}
         aria-invalid={error !== undefined}
-        className={cn(
-          "flex h-10 w-full min-w-0 rounded-xl border border-input bg-card px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20",
-        )}
         id={id}
         name={name}
         onChange={(event) => {
@@ -274,7 +271,7 @@ function SelectField({
             {option.label}
           </option>
         ))}
-      </select>
+      </Select>
       <FieldDescription id={`${id}-description`}>{description}</FieldDescription>
       {error === undefined ? (
         <span id={messageId} />
