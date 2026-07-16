@@ -1,12 +1,7 @@
 import { hashWithHmacSha256 } from "~/lib/crypto.server";
+import { serverEnv } from "~/lib/env.server";
 
 const FORWARDED_FOR_HEADER = "x-forwarded-for";
-const CLIENT_IP_HEADERS = [
-  "cf-connecting-ip",
-  "fly-client-ip",
-  "x-real-ip",
-  "x-client-ip",
-] as const;
 
 export interface RequestInfoHashes {
   ipHash: string;
@@ -28,34 +23,51 @@ export function getRequestInfoHashes(request: Request): RequestInfoHashes {
   };
 }
 
-function getClientIpAddress(request: Request) {
-  const forwardedFor = request.headers.get(FORWARDED_FOR_HEADER);
-  const forwardedIpAddress = getFirstForwardedIpAddress(forwardedFor);
+export function getClientIpAddress(request: Request) {
+  const trustedHeaderValue = getSingleHeaderValue(
+    request.headers.get(serverEnv.TRUSTED_PROXY_IP_HEADER),
+  );
 
-  if (forwardedIpAddress !== undefined) {
-    return forwardedIpAddress;
+  if (trustedHeaderValue !== undefined) {
+    return trustedHeaderValue;
   }
 
-  for (const headerName of CLIENT_IP_HEADERS) {
-    const value = request.headers.get(headerName)?.trim();
-
-    if (value !== undefined && value.length > 0) {
-      return value;
-    }
-  }
-
-  return undefined;
+  return getForwardedIpAddress(
+    request.headers.get(FORWARDED_FOR_HEADER),
+    serverEnv.TRUSTED_PROXY_HOPS,
+  );
 }
 
-function getFirstForwardedIpAddress(headerValue: string | null) {
+function getSingleHeaderValue(headerValue: string | null) {
+  const trimmedHeaderValue = headerValue?.trim();
+
+  if (
+    trimmedHeaderValue === undefined ||
+    trimmedHeaderValue.length === 0 ||
+    trimmedHeaderValue.includes(",")
+  ) {
+    return undefined;
+  }
+
+  return trimmedHeaderValue;
+}
+
+function getForwardedIpAddress(
+  headerValue: string | null,
+  trustedProxyHops: number,
+) {
   if (headerValue === null) {
     return undefined;
   }
 
-  const [firstIpAddress] = headerValue.split(",");
-  const trimmedIpAddress = firstIpAddress?.trim();
+  const ipAddresses = headerValue
+    .split(",")
+    .map((ipAddress) => ipAddress.trim())
+    .filter((ipAddress) => ipAddress.length > 0);
+  const untrustedIpIndex = Math.max(
+    0,
+    ipAddresses.length - trustedProxyHops - 1,
+  );
 
-  return trimmedIpAddress === undefined || trimmedIpAddress.length === 0
-    ? undefined
-    : trimmedIpAddress;
+  return ipAddresses[untrustedIpIndex];
 }

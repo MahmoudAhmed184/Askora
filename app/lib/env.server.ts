@@ -61,6 +61,14 @@ const trustedOriginsFromEnvironment = z.preprocess((value) => {
   return value;
 }, z.array(z.url()));
 
+const trustedProxyIpHeader = z.enum([
+  "x-vercel-forwarded-for",
+  "cf-connecting-ip",
+  "fly-client-ip",
+  "x-real-ip",
+  "x-client-ip",
+]);
+
 const baseServerEnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -70,6 +78,8 @@ const baseServerEnvSchema = z.object({
   PUBLIC_BETA_NOINDEX: booleanFromEnvironment,
   DATABASE_URL: optionalUrl,
   DIRECT_DATABASE_URL: optionalUrl,
+  TRUSTED_PROXY_IP_HEADER: trustedProxyIpHeader.default("x-vercel-forwarded-for"),
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(1),
   BETTER_AUTH_URL: optionalUrl,
   BETTER_AUTH_SECRET: optionalSecret,
   TRUSTED_ORIGINS: trustedOriginsFromEnvironment,

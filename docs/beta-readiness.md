@@ -15,6 +15,8 @@ Required runtime values on Vercel:
 - `BETTER_AUTH_URL`
 - `BETTER_AUTH_SECRET`
 - `TRUSTED_ORIGINS`
+- `TRUSTED_PROXY_IP_HEADER=x-vercel-forwarded-for` (the Vercel-owned client-IP header)
+- `TRUSTED_PROXY_HOPS=1` (fallback X-Forwarded-For proxy depth)
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `RESEND_API_KEY`

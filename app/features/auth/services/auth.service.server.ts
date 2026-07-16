@@ -91,6 +91,9 @@ export const auth = betterAuth({
   },
   advanced: {
     useSecureCookies: serverEnv.NODE_ENV === "production",
+    ipAddress: {
+      ipAddressHeaders: [serverEnv.TRUSTED_PROXY_IP_HEADER],
+    },
   },
   rateLimit: {
     enabled: true,
