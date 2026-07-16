@@ -10,6 +10,8 @@ import {
 import type { Route } from "./+types/notifications.route";
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import type { AppShellData } from "~/types/app-shell-data";
+import { PageHeader } from "~/components/shared/page-header/page-header";
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import { ToastResultInput } from "~/components/shared/toast-result/toast-result-input";
 import { wantsToastResult } from "~/components/shared/toast-result/toast-result";
 import { Badge } from "~/components/ui/badge/badge";
@@ -84,38 +86,37 @@ export default function NotificationsRoute({
         tone={toastCopy.tone}
         trigger={actionData?.notification}
       />
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <header className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)]">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-serif text-2xl font-bold text-foreground">
-                  Notification Center
-                </h1>
-                <Badge variant="secondary">{unreadCount} unread</Badge>
-              </div>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Items deep-link to inbox questions, public threads, or member
-                profiles.
-              </p>
-            </div>
-            {unreadCount > 0 ? (
-              <Form method="post">
-                <ToastResultInput />
-                <input name="intent" type="hidden" value="mark_all_read" />
-                <Button className="w-full sm:w-auto" type="submit" variant="outline">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <PageHeader
+          actions={
+            <>
+              <Badge variant="secondary">{unreadCount} unread</Badge>
+              {unreadCount > 0 ? (
+                <Form method="post">
+                  <ToastResultInput />
+                  <input name="intent" type="hidden" value="mark_all_read" />
+                  <PendingButton
+                    pendingName="intent"
+                    pendingText="Marking…"
+                    pendingValue="mark_all_read"
+                    type="submit"
+                    variant="outline"
+                  >
+                    <CheckCheck data-icon="inline-start" />
+                    Mark all read
+                  </PendingButton>
+                </Form>
+              ) : (
+                <Button disabled variant="outline">
                   <CheckCheck data-icon="inline-start" />
                   Mark all read
                 </Button>
-              </Form>
-            ) : (
-              <Button className="w-full sm:w-auto" disabled variant="outline">
-                <CheckCheck data-icon="inline-start" />
-                Mark all read
-              </Button>
-            )}
-          </div>
-        </header>
+              )}
+            </>
+          }
+          description="Items deep-link to inbox questions, public threads, or member profiles."
+          title="Notifications"
+        />
 
         <NotificationList notifications={loaderData.page.notifications} />
       </div>

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Form, Link, useFetcher, useLocation } from "react-router";
 
+import { EmptyState } from "~/components/shared/empty-state/empty-state";
 import { ToastResultInput } from "~/components/shared/toast-result/toast-result-input";
 import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
@@ -33,20 +34,11 @@ const notificationIcons = {
 export function NotificationList({ notifications }: NotificationListProps) {
   if (notifications.length === 0) {
     return (
-      <section className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7">
-        <div className="flex gap-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full border bg-secondary text-primary">
-            <Bell data-icon="inline-start" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-foreground">No activity yet</h2>
-            <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">
-              Activity from answered questions, follow-ups, likes, and follows
-              will appear here.
-            </p>
-          </div>
-        </div>
-      </section>
+      <EmptyState
+        description="Activity from answered questions, follow-ups, likes, and follows will appear here."
+        icon={<Bell aria-hidden="true" />}
+        title="No activity yet"
+      />
     );
   }
 
@@ -104,7 +96,7 @@ function NotificationTimelineItem({
           unread && "border-primary/25 bg-primary/10",
         )}
       >
-        <Icon aria-hidden="true" size={16} strokeWidth={2.4} />
+        <Icon aria-hidden="true" className="size-4" />
       </span>
 
       <div
