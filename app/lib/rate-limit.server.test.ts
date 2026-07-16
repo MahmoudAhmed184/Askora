@@ -39,4 +39,43 @@ describe("checkRateLimit", () => {
 
     await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
   });
+
+  it("resets an active counter after its fixed window", async () => {
+    let now = 1_000;
+    const options = {
+      key: "test:fixed-window",
+      max: 2,
+      storage: "memory" as const,
+      windowSeconds: 60,
+      now: () => now,
+    };
+
+    await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
+    now = 31_000;
+    await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
+    now = 62_000;
+
+    await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
+  });
+
+  it("does not extend the window when a request is denied", async () => {
+    let now = 1_000;
+    const options = {
+      key: "test:denied-window",
+      max: 1,
+      storage: "memory" as const,
+      windowSeconds: 60,
+      now: () => now,
+    };
+
+    await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
+    now = 31_000;
+    await expect(checkRateLimit(options)).resolves.toEqual({
+      allowed: false,
+      retryAfterSeconds: 30,
+    });
+    now = 62_000;
+
+    await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
+  });
 });

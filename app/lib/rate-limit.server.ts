@@ -25,7 +25,7 @@ export type RateLimitDecision =
 
 interface MemoryCounter {
   count: number;
-  lastRequestAtMilliseconds: number;
+  windowStartedAtMilliseconds: number;
 }
 
 const memoryCounters = new Map<string, MemoryCounter>();
@@ -71,24 +71,25 @@ async function checkDatabaseRateLimit(
   const database = options.database ?? getRuntimeDatabase();
   const windowMilliseconds = options.windowSeconds * 1000;
   const resetBeforeMilliseconds = now - windowMilliseconds;
+  const hasExpiredWindow = sql`${authRateLimits.windowStartedAt} <= ${resetBeforeMilliseconds}`;
   const [counter] = await database
     .insert(authRateLimits)
     .values({
       id: createDatabaseId(),
       key: options.key,
       count: 1,
-      lastRequest: now,
+      windowStartedAt: now,
     })
     .onConflictDoUpdate({
       target: authRateLimits.key,
       set: {
-        count: sql<number>`case when ${authRateLimits.lastRequest} < ${resetBeforeMilliseconds} then 1 else ${authRateLimits.count} + 1 end`,
-        lastRequest: now,
+        count: sql<number>`case when ${hasExpiredWindow} then 1 else least(${authRateLimits.count} + 1, ${options.max + 1}) end`,
+        windowStartedAt: sql<number>`case when ${hasExpiredWindow} then ${now} else ${authRateLimits.windowStartedAt} end`,
       },
     })
     .returning({
       count: authRateLimits.count,
-      lastRequest: authRateLimits.lastRequest,
+      windowStartedAt: authRateLimits.windowStartedAt,
     });
 
   if (counter === undefined) {
@@ -97,7 +98,7 @@ async function checkDatabaseRateLimit(
 
   return getRateLimitDecision({
     count: counter.count,
-    lastRequestAtMilliseconds: counter.lastRequest,
+    windowStartedAtMilliseconds: counter.windowStartedAt,
     max: options.max,
     now,
     windowMilliseconds,
@@ -117,7 +118,7 @@ function checkMemoryRateLimit(options: RateLimitOptions, now: number) {
 
   return getRateLimitDecision({
     count: nextCounter.count,
-    lastRequestAtMilliseconds: nextCounter.lastRequestAtMilliseconds,
+    windowStartedAtMilliseconds: nextCounter.windowStartedAtMilliseconds,
     max: options.max,
     now,
     windowMilliseconds,
@@ -135,29 +136,29 @@ function getNextMemoryCounter({
 }) {
   if (
     existingCounter === undefined ||
-    now - existingCounter.lastRequestAtMilliseconds > windowMilliseconds
+    now - existingCounter.windowStartedAtMilliseconds >= windowMilliseconds
   ) {
     return {
       count: 1,
-      lastRequestAtMilliseconds: now,
+      windowStartedAtMilliseconds: now,
     };
   }
 
   return {
-    count: existingCounter.count + 1,
-    lastRequestAtMilliseconds: now,
+    count: Math.min(existingCounter.count + 1, Number.MAX_SAFE_INTEGER),
+    windowStartedAtMilliseconds: existingCounter.windowStartedAtMilliseconds,
   };
 }
 
 function getRateLimitDecision({
   count,
-  lastRequestAtMilliseconds,
+  windowStartedAtMilliseconds,
   max,
   now,
   windowMilliseconds,
 }: {
   count: number;
-  lastRequestAtMilliseconds: number;
+  windowStartedAtMilliseconds: number;
   max: number;
   now: number;
   windowMilliseconds: number;
@@ -170,7 +171,7 @@ function getRateLimitDecision({
     allowed: false,
     retryAfterSeconds: Math.max(
       1,
-      Math.ceil((lastRequestAtMilliseconds + windowMilliseconds - now) / 1000),
+      Math.ceil((windowStartedAtMilliseconds + windowMilliseconds - now) / 1000),
     ),
   };
 }

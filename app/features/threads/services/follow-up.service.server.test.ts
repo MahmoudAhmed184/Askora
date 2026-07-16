@@ -5,6 +5,7 @@ import type {
 } from "~/features/auth/services/auth.service.server";;
 import {
   createFollowUpTimingToken,
+  getFollowUpFlashForResult,
   loadFollowUpPage,
   submitThreadFollowUp,
   type FollowUpStore,
@@ -134,7 +135,7 @@ describe("submitThreadFollowUp", () => {
     expect(followUps.notifications).toHaveLength(1);
   });
 
-  it("drops blocked and rate-limited senders without creating questions", async () => {
+  it("drops blocked senders and rejects rate-limited senders", async () => {
     const blocked = createFollowUpStore();
 
     await expect(
@@ -158,11 +159,29 @@ describe("submitThreadFollowUp", () => {
           Promise.resolve({ allowed: false, retryAfterSeconds: 60 }),
       }),
     ).resolves.toMatchObject({
-      status: "dropped",
-      reason: "rate_limited",
+      status: "rate_limited",
+      retryAfterSeconds: 60,
     });
     expect(limited.created).toEqual([]);
     expect(limited.notifications).toEqual([]);
+  });
+
+  it("returns an error flash for rate-limited follow-ups", async () => {
+    const result = await submitFollowUp({
+      rateLimiter: () =>
+        Promise.resolve({ allowed: false, retryAfterSeconds: 60 }),
+    });
+
+    expect(
+      getFollowUpFlashForResult({ result, session: anonymousSession }),
+    ).toEqual({
+      status: "error",
+      values: {
+        question: "Can you say more?",
+        identityMode: "anonymous",
+      },
+      formError: "Too many follow-ups. Try again in 1 minute.",
+    });
   });
 
   it("does not notify the owner for self follow-ups", async () => {
@@ -221,6 +240,12 @@ async function submitFollowUp({
     store: followUpStore,
     threadPublicId: "thr_1",
     username: "person",
+  }).then((result) => {
+    if (result.status === "redirect") {
+      throw new Error("expected follow-up submission result");
+    }
+
+    return result;
   });
 }
 

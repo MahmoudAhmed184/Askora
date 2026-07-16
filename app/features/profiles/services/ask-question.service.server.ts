@@ -61,9 +61,14 @@ export type PublicQuestionSubmissionResult =
       formError: string;
     }
   | {
+      status: "rate_limited";
+      values: PublicQuestionFormValues;
+      retryAfterSeconds: number;
+    }
+  | {
       status: "dropped";
       values: PublicQuestionFormValues;
-      reason: "honeypot" | "timing" | "rate_limited" | "safety";
+      reason: "honeypot" | "timing" | "safety";
       timing?: AskTimingTokenDecision;
     };
 
@@ -209,9 +214,9 @@ export async function submitPublicQuestion({
 
   if (!rateLimit.allowed) {
     return {
-      status: "dropped",
+      status: "rate_limited",
       values: getQuestionValues(parsed.value),
-      reason: "rate_limited",
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
     };
   }
 
@@ -267,6 +272,14 @@ export function getPublicAskFlashForResult({
   result: PublicQuestionSubmissionResult;
   session: CurrentSessionSummary;
 }) {
+  if (result.status === "rate_limited") {
+    return {
+      status: "error" as const,
+      values: result.values,
+      formError: `Too many questions. Try again in ${formatRetryAfter(result.retryAfterSeconds)}.`,
+    };
+  }
+
   if (result.status === "created" || result.status === "dropped") {
     const flash = {
       status: "success" as const,
@@ -297,6 +310,15 @@ export function getPublicAskFlashForResult({
     fieldErrors: result.fieldErrors,
     formError: result.formError,
   };
+}
+
+function formatRetryAfter(retryAfterSeconds: number) {
+  if (retryAfterSeconds <= 60) {
+    return "1 minute";
+  }
+
+  const retryAfterMinutes = Math.ceil(retryAfterSeconds / 60);
+  return `${String(retryAfterMinutes)} minutes`;
 }
 
 export function createDrizzlePublicQuestionStore(

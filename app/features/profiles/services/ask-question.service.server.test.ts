@@ -8,6 +8,7 @@ import {
 } from "~/features/profiles/services/ask-friction.service.server";;
 import {
   decideQuestionSafety,
+  getPublicAskFlashForResult,
   submitPublicQuestion,
   type NewPublicQuestion,
   type PublicQuestionSafetyInput,
@@ -98,7 +99,7 @@ describe("submitPublicQuestion", () => {
     expect(questions.created).toEqual([]);
   });
 
-  it("drops rate-limited submissions without creating questions", async () => {
+  it("rejects rate-limited submissions without creating questions", async () => {
     const questions = createQuestionStore();
 
     const result = await submitQuestion({
@@ -110,10 +111,31 @@ describe("submitPublicQuestion", () => {
     });
 
     expect(result).toMatchObject({
-      status: "dropped",
-      reason: "rate_limited",
+      status: "rate_limited",
+      retryAfterSeconds: 60,
     });
     expect(questions.created).toEqual([]);
+  });
+
+  it("returns an error flash for rate-limited submissions", async () => {
+    const result = await submitQuestion({
+      rateLimiter: () =>
+        Promise.resolve({
+          allowed: false,
+          retryAfterSeconds: 60,
+        }),
+    });
+
+    expect(
+      getPublicAskFlashForResult({ result, session: anonymousSession }),
+    ).toEqual({
+      status: "error",
+      values: {
+        question: "What should I read next?",
+        identityMode: "anonymous",
+      },
+      formError: "Too many questions. Try again in 1 minute.",
+    });
   });
 
   it("denies anonymous-disabled guest asks without creating questions", async () => {
