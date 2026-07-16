@@ -556,6 +556,10 @@ function isAdminActionAvailable({
   actionType: AdminActionType;
   report: StoredAdminReport;
 }) {
+  if (report.report.status !== "open") {
+    return false;
+  }
+
   if (actionType === "dismiss") {
     return true;
   }

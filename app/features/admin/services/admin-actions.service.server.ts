@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, lte, not, or } from "drizzle-orm";
 import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
@@ -60,7 +60,7 @@ export interface AdminActionMutationParams {
 
 export interface AdminReportActionStore {
   findReportById(reportId: string): Promise<StoredAdminReport | undefined>;
-  applyAdminAction(params: AdminActionMutationParams): Promise<void>;
+  applyAdminAction(params: AdminActionMutationParams): Promise<boolean>;
 }
 
 export async function handleAdminReportAction({
@@ -100,13 +100,17 @@ export async function handleAdminReportAction({
     return deniedResult(values, "unavailable");
   }
 
-  await store.applyAdminAction({
+  const applied = await store.applyAdminAction({
     id: createId(),
     report,
     form: parsed.value,
     adminUserId: session.user.id,
     now,
   });
+
+  if (!applied) {
+    return deniedResult(values, "unavailable");
+  }
 
   return {
     status: parsed.value.actionType === "dismiss" ? "dismissed" : "actioned",
@@ -125,23 +129,33 @@ export function createDrizzleAdminReportActionStore(
       return reportLoader.findReportById(reportId);
     },
     async applyAdminAction(params) {
-      await database.transaction(async (transaction) => {
+      return database.transaction(async (transaction) => {
         const references = getAdminActionTargetReferences(params.report);
+        const [claimedReport] = await transaction
+          .update(reports)
+          .set({
+            status:
+              params.form.actionType === "dismiss" ? "dismissed" : "actioned",
+            reviewedAt: params.now,
+            updatedAt: params.now,
+          })
+          .where(
+            and(
+              eq(reports.id, params.report.report.id),
+              eq(reports.status, "open"),
+            ),
+          )
+          .returning({ id: reports.id });
+
+        if (claimedReport === undefined) {
+          return false;
+        }
 
         await applyTargetMutation({
           references,
           params,
           transaction,
         });
-
-        await transaction
-          .update(reports)
-          .set({
-            status: params.form.actionType === "dismiss" ? "dismissed" : "actioned",
-            reviewedAt: params.now,
-            updatedAt: params.now,
-          })
-          .where(eq(reports.id, params.report.report.id));
 
         await transaction.insert(adminActions).values({
           id: params.id,
@@ -158,6 +172,8 @@ export function createDrizzleAdminReportActionStore(
           createdAt: params.now,
           updatedAt: params.now,
         });
+
+        return true;
       });
     },
   };
@@ -258,6 +274,12 @@ async function updateTargetUserSuspension({
     return;
   }
 
+  const suspensionPredicate = getSuspensionChangePredicate({
+    nextStatus: status,
+    nextSuspendedUntil: suspendedUntil,
+    now: params.now,
+  });
+
   await transaction
     .update(authUsers)
     .set({
@@ -265,7 +287,60 @@ async function updateTargetUserSuspension({
       suspendedUntil,
       updatedAt: params.now,
     })
-    .where(eq(authUsers.id, references.targetUserId));
+    .where(
+      and(eq(authUsers.id, references.targetUserId), suspensionPredicate),
+    );
+}
+
+export function isSuspensionChangeAllowed(
+  currentStatus: "warned" | "suspended" | "permanent" | null,
+  nextStatus: "warned" | "suspended" | "permanent",
+) {
+  if (nextStatus === "warned") {
+    return currentStatus === null || currentStatus === "warned";
+  }
+
+  if (nextStatus === "suspended") {
+    return currentStatus !== "permanent";
+  }
+
+  return true;
+}
+
+function getSuspensionChangePredicate({
+  nextStatus,
+  nextSuspendedUntil,
+  now,
+}: {
+  nextStatus: "warned" | "suspended" | "permanent";
+  nextSuspendedUntil: Date | null;
+  now: Date;
+}) {
+  if (nextStatus === "warned") {
+    return or(
+      isNull(authUsers.suspensionStatus),
+      eq(authUsers.suspensionStatus, "warned"),
+      lte(authUsers.suspendedUntil, now),
+    );
+  }
+
+  if (nextStatus === "suspended") {
+    return or(
+      isNull(authUsers.suspensionStatus),
+      eq(authUsers.suspensionStatus, "warned"),
+      and(
+        eq(authUsers.suspensionStatus, "suspended"),
+        nextSuspendedUntil === null
+          ? isNull(authUsers.suspendedUntil)
+          : lte(authUsers.suspendedUntil, nextSuspendedUntil),
+      ),
+    );
+  }
+
+  return or(
+    isNull(authUsers.suspensionStatus),
+    not(eq(authUsers.suspensionStatus, "permanent")),
+  );
 }
 
 async function removePublicThreadItem({

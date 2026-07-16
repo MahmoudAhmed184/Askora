@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   handleAdminReportAction,
+  isSuspensionChangeAllowed,
   type AdminActionMutationParams,
   type AdminReportActionStore
 } from "~/features/admin/services/admin-actions.service.server";;
@@ -17,6 +18,58 @@ import {
 const now = new Date("2026-05-31T12:00:00.000Z");
 
 describe("handleAdminReportAction", () => {
+  it("rejects actions on terminal reports", async () => {
+    const admin = createAdminActionStore({
+      report: createStoredReport({
+        report: {
+          ...createStoredReport().report,
+          status: "actioned",
+        },
+      }),
+    });
+
+    await expect(
+      submitAdminAction({ actionType: "dismiss", store: admin.store }),
+    ).resolves.toMatchObject({
+      status: "denied",
+      reason: "unavailable",
+    });
+    expect(admin.applied).toEqual([]);
+  });
+
+  it("allows only one concurrent action to claim an open report", async () => {
+    let claimed = false;
+    let applyCount = 0;
+    const store: AdminReportActionStore = {
+      findReportById: () => Promise.resolve(createStoredReport()),
+      applyAdminAction: () => {
+        if (claimed) {
+          return Promise.resolve(false);
+        }
+
+        claimed = true;
+        applyCount += 1;
+        return Promise.resolve(true);
+      },
+    };
+
+    const results = await Promise.all([
+      submitAdminAction({ actionType: "dismiss", store }),
+      submitAdminAction({ actionType: "dismiss", store }),
+    ]);
+
+    expect(results.filter((result) => result.status === "dismissed")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "denied")).toHaveLength(1);
+    expect(applyCount).toBe(1);
+  });
+
+  it("does not allow warnings or shorter suspensions to downgrade active enforcement", () => {
+    expect(isSuspensionChangeAllowed("suspended", "warned")).toBe(false);
+    expect(isSuspensionChangeAllowed("permanent", "suspended")).toBe(false);
+    expect(isSuspensionChangeAllowed("warned", "suspended")).toBe(true);
+    expect(isSuspensionChangeAllowed("suspended", "permanent")).toBe(true);
+  });
+
   it("requires notes for suspensions and public content removal", async () => {
     const suspensionStore = createAdminActionStore({
       report: createStoredReport(),
@@ -319,7 +372,7 @@ function createAdminActionStore({ report }: { report: StoredAdminReport }) {
         ...references,
       });
 
-      return Promise.resolve();
+      return Promise.resolve(true);
     },
   };
 
