@@ -1,5 +1,5 @@
-import { FileText, PencilLine } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import { FileText, PencilLine, Trash2 } from "lucide-react";
+import { Form, Link, useLocation } from "react-router";
 
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
 import { Button } from "~/components/ui/button/button";
@@ -8,9 +8,10 @@ import { formatMediumDateTime } from "~/lib/date-format";
 
 interface DraftsListProps {
   drafts: DraftAnswerView[];
+  disabled?: boolean;
 }
 
-export function DraftsList({ drafts }: DraftsListProps) {
+export function DraftsList({ disabled = false, drafts }: DraftsListProps) {
   const location = useLocation();
 
   if (drafts.length === 0) {
@@ -47,17 +48,31 @@ export function DraftsList({ drafts }: DraftsListProps) {
                 {draft.questionText}
               </p>
             </div>
-            <Button asChild className="shrink-0" size="sm" variant="outline">
-              <Link
-                to={createAnswerHref({
-                  location,
-                  questionPublicId: draft.questionPublicId,
-                })}
-              >
-                <PencilLine data-icon="inline-start" />
-                Continue
-              </Link>
-            </Button>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  to={createAnswerHref({
+                    location,
+                    questionPublicId: draft.questionPublicId,
+                  })}
+                >
+                  <PencilLine data-icon="inline-start" />
+                  Continue
+                </Link>
+              </Button>
+              <Form action="/drafts" method="post">
+                <input name="intent" type="hidden" value="delete" />
+                <input
+                  name="questionPublicId"
+                  type="hidden"
+                  value={draft.questionPublicId}
+                />
+                <Button disabled={disabled} size="sm" type="submit" variant="ghost">
+                  <Trash2 data-icon="inline-start" />
+                  Discard
+                </Button>
+              </Form>
+            </div>
           </header>
 
           <p className="whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">

@@ -1,8 +1,15 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
-import { blocks, follows, questions, reports } from "~/db/schema";
+import {
+  blocks,
+  follows,
+  questions,
+  reports,
+  threadItems,
+  threads,
+} from "~/db/schema";
 import type {
   CompletedProfileSessionSummary
 } from "~/features/auth/services/auth.service.server";;
@@ -214,14 +221,51 @@ export function createDrizzleInboxActionStore(
       return question;
     },
     async deleteQuestionByRecipient({ deletedAt, questionId }) {
-      await database
-        .update(questions)
-        .set({
-          deletedAt,
-          deletedBy: "recipient",
-          updatedAt: deletedAt,
-        })
-        .where(eq(questions.id, questionId));
+      await database.transaction(async (transaction) => {
+        await transaction
+          .update(questions)
+          .set({
+            deletedAt,
+            deletedBy: "recipient",
+            updatedAt: deletedAt,
+          })
+          .where(
+            and(
+              eq(questions.id, questionId),
+              inArray(questions.status, ["inbox", "filtered", "draft"]),
+              isNull(questions.deletedAt),
+            ),
+          );
+
+        await transaction
+          .update(threadItems)
+          .set({
+            status: "deleted",
+            deletedAt,
+            deletedBy: "owner",
+            updatedAt: deletedAt,
+          })
+          .where(
+            and(
+              eq(threadItems.questionId, questionId),
+              eq(threadItems.status, "draft"),
+              isNull(threadItems.deletedAt),
+            ),
+          );
+
+        await transaction
+          .update(threads)
+          .set({
+            status: "deleted",
+            updatedAt: deletedAt,
+          })
+          .where(
+            and(
+              eq(threads.initialQuestionId, questionId),
+              eq(threads.status, "draft"),
+            ),
+          );
+      });
     },
     async restoreFilteredQuestion({ questionId, updatedAt }) {
       await database
@@ -637,7 +681,10 @@ function isPrivateQuestionActionStatus({
     return true;
   }
 
-  return status === "draft" && (intent === "report" || intent === "block");
+  return (
+    status === "draft" &&
+    (intent === "delete" || intent === "report" || intent === "block")
+  );
 }
 
 function isInboxActionIntent(

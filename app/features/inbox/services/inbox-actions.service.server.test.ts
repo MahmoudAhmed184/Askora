@@ -35,6 +35,25 @@ describe("handleInboxAction", () => {
     ]);
   });
 
+  it("discards drafted questions without leaving a draft thread item", async () => {
+    const inbox = createInboxActionStore({
+      draftItemQuestionIds: ["question_1"],
+      question: createQuestion({ status: "draft" }),
+    });
+
+    await expect(
+      submitInboxAction({
+        formData: createActionFormData({ intent: "delete" }),
+        store: inbox.store,
+      }),
+    ).resolves.toEqual({
+      status: "deleted",
+      questionPublicId: "qst_1",
+    });
+    expect(inbox.deleted).toHaveLength(1);
+    expect(inbox.draftItemQuestionIds).toEqual([]);
+  });
+
   it("restores only filtered questions back to inbox", async () => {
     const filteredInbox = createInboxActionStore({
       question: createQuestion({ status: "filtered" }),
@@ -363,15 +382,18 @@ function createActionFormData({
 }
 
 function createInboxActionStore({
+  draftItemQuestionIds: initialDraftItemQuestionIds = [],
   follows: initialFollows = [],
   question = createQuestion(),
 }: {
+  draftItemQuestionIds?: string[];
   follows?: {
     followerProfileId: string;
     followedProfileId: string;
   }[];
   question?: InboxActionQuestion;
 } = {}) {
+  const draftItemQuestionIds = [...initialDraftItemQuestionIds];
   const deleted: Parameters<InboxActionStore["deleteQuestionByRecipient"]>[0][] = [];
   const restored: Parameters<InboxActionStore["restoreFilteredQuestion"]>[0][] = [];
   const reports: NewQuestionReport[] = [];
@@ -388,6 +410,12 @@ function createInboxActionStore({
     },
     deleteQuestionByRecipient(params) {
       deleted.push(params);
+      const itemIndex = draftItemQuestionIds.indexOf(params.questionId);
+
+      if (itemIndex >= 0) {
+        draftItemQuestionIds.splice(itemIndex, 1);
+      }
+
       return Promise.resolve();
     },
     restoreFilteredQuestion(params) {
@@ -438,6 +466,7 @@ function createInboxActionStore({
   return {
     blocks,
     deleted,
+    draftItemQuestionIds,
     follows,
     reports,
     restored,
