@@ -30,6 +30,11 @@ describe("avatar URL helpers", () => {
       false,
     );
     expect(isAllowedProxiedAvatarUrl("https://example.com/a/id")).toBe(false);
+    expect(
+      isAllowedProxiedAvatarUrl(
+        "https://accounts.googleusercontent.com/a/id",
+      ),
+    ).toBe(false);
     expect(isAllowedProxiedAvatarUrl("not a url")).toBe(false);
   });
 });

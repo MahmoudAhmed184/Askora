@@ -1,4 +1,4 @@
-const proxiedAvatarHosts = ["googleusercontent.com"];
+const proxiedAvatarHost = "lh3.googleusercontent.com";
 
 export function getAvatarImageSource(avatarUrl: string) {
   return isAllowedProxiedAvatarUrl(avatarUrl)
@@ -25,11 +25,7 @@ export function isAllowedProxiedAvatarUrl(avatarUrl: string) {
 function isAllowedAvatarHostname(hostname: string) {
   const normalizedHostname = hostname.toLowerCase();
 
-  return proxiedAvatarHosts.some(
-    (allowedHostname) =>
-      normalizedHostname === allowedHostname ||
-      normalizedHostname.endsWith(`.${allowedHostname}`),
-  );
+  return normalizedHostname === proxiedAvatarHost;
 }
 
 function isGoogleAccountAvatarPath(pathname: string) {
