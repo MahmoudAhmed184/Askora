@@ -30,16 +30,21 @@ describe("requireAdminSession", () => {
     });
   });
 
-  it("returns 403 for authenticated non-admin users", async () => {
-    const result = await requireAdminSession(new Request("http://localhost/admin"), {
-      getAuthenticatedSession: () => Promise.resolve(authenticatedSession),
-      store: {
-        findUserRole: () => Promise.resolve("user"),
+  it("throws 403 for authenticated non-admin users", async () => {
+    await expect(
+      requireAdminSession(new Request("http://localhost/admin"), {
+        getAuthenticatedSession: () => Promise.resolve(authenticatedSession),
+        store: {
+          findUserRole: () => Promise.resolve("user"),
+        },
+      }),
+    ).rejects.toMatchObject({
+      data: "Forbidden",
+      init: {
+        status: 403,
+        statusText: "Forbidden",
       },
     });
-
-    expect(result).toBeInstanceOf(Response);
-    expect((result as Response).status).toBe(403);
   });
 });
 

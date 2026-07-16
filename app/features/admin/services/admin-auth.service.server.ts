@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { data } from "react-router";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { authUsers } from "~/db/schema";
@@ -43,7 +44,8 @@ export async function requireAdminSession(
   const role = await store.findUserRole(session.user.id);
 
   if (role !== "admin") {
-    return new Response("Forbidden", {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- React Router catches thrown data responses as route errors.
+    throw data("Forbidden", {
       status: 403,
       statusText: "Forbidden",
     });
@@ -72,7 +74,8 @@ export async function requireAdminSessionFromContext(
   const role = await store.findUserRole(session.user.id);
 
   if (role !== "admin") {
-    return new Response("Forbidden", {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- React Router catches thrown data responses as route errors.
+    throw data("Forbidden", {
       status: 403,
       statusText: "Forbidden",
     });
