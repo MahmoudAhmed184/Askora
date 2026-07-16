@@ -27,6 +27,7 @@ import {
   encodeFeedCursor,
   type FeedCursor,
 } from "~/features/social/validations/social.validations";
+import { isPublicThreadItemVisible } from "~/features/threads/thread-visibility";
 
 export const SOCIAL_FEED_PAGE_SIZE = 20;
 
@@ -44,6 +45,8 @@ export interface SocialFeedRow {
   publishedAt: Date | null;
   createdAt: Date;
   threadStatus: ThreadStatus;
+  initialItemStatus: ThreadItemStatus;
+  initialItemDeletedAt: Date | null;
   ownerProfileId: string;
   ownerUserId: string;
   ownerUsername: string;
@@ -139,6 +142,7 @@ export function createDrizzleSocialFeedStore(
     async findFeedRows({ cursor, limit, viewerProfileId, viewerUserId }) {
       const askerProfiles = alias(profiles, "feed_asker_profiles");
       const ownerBlocks = alias(blocks, "feed_owner_blocks");
+      const initialThreadItems = alias(threadItems, "feed_initial_thread_items");
       const sortExpression = sql<Date>`coalesce(${threadItems.publishedAt}, ${threadItems.createdAt})`;
       const cursorWhere = createCursorWhere(cursor, sortExpression);
       const baseWhere = and(
@@ -146,6 +150,8 @@ export function createDrizzleSocialFeedStore(
         eq(threads.status, "published"),
         eq(threadItems.status, "published"),
         isNull(threadItems.deletedAt),
+        eq(initialThreadItems.status, "published"),
+        isNull(initialThreadItems.deletedAt),
         eq(profiles.isActive, true),
         isNull(authUsers.deletedAt),
         isNull(ownerBlocks.id),
@@ -161,6 +167,8 @@ export function createDrizzleSocialFeedStore(
           publishedAt: threadItems.publishedAt,
           createdAt: threadItems.createdAt,
           threadStatus: threads.status,
+          initialItemStatus: initialThreadItems.status,
+          initialItemDeletedAt: initialThreadItems.deletedAt,
           ownerProfileId: profiles.id,
           ownerUserId: profiles.userId,
           ownerUsername: profiles.username,
@@ -184,6 +192,13 @@ export function createDrizzleSocialFeedStore(
         .innerJoin(profiles, eq(profiles.id, follows.followedProfileId))
         .innerJoin(authUsers, eq(authUsers.id, profiles.userId))
         .innerJoin(threads, eq(threads.ownerProfileId, profiles.id))
+        .innerJoin(
+          initialThreadItems,
+          and(
+            eq(initialThreadItems.threadId, threads.id),
+            eq(initialThreadItems.questionId, threads.initialQuestionId),
+          ),
+        )
         .innerJoin(threadItems, eq(threadItems.threadId, threads.id))
         .innerJoin(questions, eq(questions.id, threadItems.questionId))
         .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
@@ -252,6 +267,15 @@ function toSocialFeedItem(
       },
     }),
   };
+}
+
+export function isVisibleSocialFeedRow(row: SocialFeedRow) {
+  return (
+    isPublicThreadItemVisible(row) &&
+    row.ownerIsActive &&
+    row.ownerUserDeletedAt === null &&
+    !row.blockedByOwner
+  );
 }
 
 function createCursorFromRow(row: SocialFeedRow | undefined): FeedCursor {

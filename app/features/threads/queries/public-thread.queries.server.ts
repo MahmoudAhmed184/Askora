@@ -33,6 +33,7 @@ import {
   getPublicThreadFollowUpState,
   type PublicThreadFollowUpState,
 } from "~/features/threads/services/thread-permissions.service.server";
+import { isPublicThreadItemVisible } from "~/features/threads/thread-visibility";
 import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
 
 type ThreadStatus = "draft" | "published" | "unpublished" | "deleted";
@@ -202,7 +203,16 @@ export async function loadPublicThreadPage({
     (row) => row.questionId === thread.initialQuestionId,
   );
 
-  if (initialItem === undefined || !isVisiblePublishedThreadItem(initialItem)) {
+  if (
+    initialItem === undefined ||
+    !isPublicThreadItemVisible({
+      threadStatus: thread.status,
+      initialItemStatus: initialItem.itemStatus,
+      initialItemDeletedAt: initialItem.itemDeletedAt,
+      itemStatus: initialItem.itemStatus,
+      itemDeletedAt: initialItem.itemDeletedAt,
+    })
+  ) {
     return unavailableThreadResult(
       { threadPublicId: thread.publicId, username: thread.ownerUsername },
       200,

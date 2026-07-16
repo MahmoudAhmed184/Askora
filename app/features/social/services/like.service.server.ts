@@ -1,4 +1,5 @@
 import { and, eq, or } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
@@ -23,6 +24,7 @@ import {
   type LikeIntent,
 } from "~/features/social/validations/social.validations";
 import { createAnswerLikedNotification } from "~/features/notifications/services/notification.service.server";
+import { isPublicThreadItemVisible } from "~/features/threads/thread-visibility";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 
@@ -37,6 +39,8 @@ export interface LikeableAnswer {
   itemStatus: "draft" | "published" | "unpublished" | "deleted";
   itemDeletedAt: Date | null;
   threadStatus: "draft" | "published" | "unpublished" | "deleted";
+  initialItemStatus: "draft" | "published" | "unpublished" | "deleted";
+  initialItemDeletedAt: Date | null;
 }
 
 export interface LikeActionFormValues {
@@ -153,6 +157,7 @@ export function createDrizzleLikeActionStore(
 ): LikeActionStore {
   return {
     async findAnswerForLike(publicId) {
+      const initialThreadItems = alias(threadItems, "like_initial_thread_items");
       const [answer] = await database
         .select({
           id: threadItems.id,
@@ -165,9 +170,18 @@ export function createDrizzleLikeActionStore(
           itemStatus: threadItems.status,
           itemDeletedAt: threadItems.deletedAt,
           threadStatus: threads.status,
+          initialItemStatus: initialThreadItems.status,
+          initialItemDeletedAt: initialThreadItems.deletedAt,
         })
         .from(threadItems)
         .innerJoin(threads, eq(threads.id, threadItems.threadId))
+        .innerJoin(
+          initialThreadItems,
+          and(
+            eq(initialThreadItems.threadId, threads.id),
+            eq(initialThreadItems.questionId, threads.initialQuestionId),
+          ),
+        )
         .innerJoin(profiles, eq(profiles.id, threads.ownerProfileId))
         .leftJoin(authUsers, eq(authUsers.id, profiles.userId))
         .where(eq(threadItems.publicId, publicId))
@@ -449,9 +463,7 @@ function getLikeActionFormValues(formData: FormData): LikeActionFormValues {
 
 function isVisibleLikeableAnswer(answer: LikeableAnswer) {
   return (
-    answer.threadStatus === "published" &&
-    answer.itemStatus === "published" &&
-    answer.itemDeletedAt === null &&
+    isPublicThreadItemVisible(answer) &&
     answer.ownerIsActive &&
     answer.ownerUserDeletedAt === null
   );

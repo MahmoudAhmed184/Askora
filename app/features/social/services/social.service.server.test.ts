@@ -10,6 +10,7 @@ import {
   type FollowTargetProfile
 } from "~/features/social/services/follow.service.server";;
 import {
+  isVisibleSocialFeedRow,
   loadSocialFeed,
   type SocialFeedRow,
   type SocialFeedStore,
@@ -87,6 +88,7 @@ describe("like actions", () => {
 
     for (const answer of [
       createLikeableAnswer({ itemStatus: "unpublished" }),
+      createLikeableAnswer({ initialItemStatus: "unpublished" }),
       createLikeableAnswer({ itemDeletedAt: now }),
       createLikeableAnswer({ threadStatus: "deleted" }),
       createLikeableAnswer({ ownerIsActive: false }),
@@ -186,6 +188,10 @@ describe("social feed", () => {
         }),
         createFeedRow({ blockedByOwner: true, threadItemPublicId: "blocked" }),
         createFeedRow({ itemStatus: "unpublished", threadItemPublicId: "draft" }),
+        createFeedRow({
+          initialItemStatus: "unpublished",
+          threadItemPublicId: "hidden_initial_follow_up",
+        }),
         createFeedRow({ ownerIsActive: false, threadItemPublicId: "inactive" }),
         createFeedRow({
           displayQuestionText: "Secret prompt",
@@ -345,6 +351,8 @@ function createLikeableAnswer(
     itemStatus: "published",
     itemDeletedAt: null,
     threadStatus: "published",
+    initialItemStatus: "published",
+    initialItemDeletedAt: null,
     ...overrides,
   };
 }
@@ -469,24 +477,13 @@ function createFeedStore({
       return Promise.resolve(
         rows
           .filter((row) => followedProfileIds.includes(row.ownerProfileId))
-          .filter(isVisibleFeedRowForTest)
+          .filter(isVisibleSocialFeedRow)
           .filter((row) => isAfterCursor(row, cursor))
           .sort(compareFeedRowsForTest)
           .slice(0, limit),
       );
     },
   };
-}
-
-function isVisibleFeedRowForTest(row: SocialFeedRow) {
-  return (
-    row.threadStatus === "published" &&
-    row.itemStatus === "published" &&
-    row.itemDeletedAt === null &&
-    row.ownerIsActive &&
-    row.ownerUserDeletedAt === null &&
-    !row.blockedByOwner
-  );
 }
 
 function createFeedRow(overrides: Partial<SocialFeedRow> = {}): SocialFeedRow {
@@ -500,6 +497,8 @@ function createFeedRow(overrides: Partial<SocialFeedRow> = {}): SocialFeedRow {
     publishedAt: new Date("2026-05-31T11:00:00.000Z"),
     createdAt: new Date("2026-05-31T10:00:00.000Z"),
     threadStatus: "published",
+    initialItemStatus: "published",
+    initialItemDeletedAt: null,
     ownerProfileId: "profile_owner",
     ownerUserId: "user_owner",
     ownerUsername: "owner",
