@@ -17,6 +17,7 @@ import {
 } from "~/features/auth/services/invite.service.server";
 import { magicLinkRequestSchema } from "~/features/auth/validations/magic-link.validations";
 import { checkMagicLinkRateLimit } from "~/features/auth/services/magic-link-rate-limit.server";
+import { checkInviteValidationRateLimit } from "~/features/auth/services/invite-validation-rate-limit.server";
 import { LoginPanel, type LoginActionData } from "~/features/auth/components/login-panel";
 
 type LoginIntent = "google" | "magic-link";
@@ -52,6 +53,27 @@ export async function action({ request }: Route.ActionArgs) {
 
   if (!authStatus.databaseConfigured) {
     return providerDisabledResponse(clearTemporaryInviteCookieHeader());
+  }
+
+  const inviteRateLimit = await checkInviteValidationRateLimit({
+    inviteCode: getFormString(formData, "inviteCode"),
+    request,
+  });
+
+  if (!inviteRateLimit.allowed) {
+    return data<LoginActionData>(
+      {
+        login: {
+          status: "rate_limited",
+          message: "Too many sign-in attempts. Try again later.",
+          retryAfterSeconds: inviteRateLimit.retryAfterSeconds,
+        },
+      },
+      {
+        status: 429,
+        headers: getHeadersWithInviteCookie(clearTemporaryInviteCookieHeader()),
+      },
+    );
   }
 
   const inviteCookie = await getInviteCookieHeader(formData);
