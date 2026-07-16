@@ -16,18 +16,8 @@ import {
   validateInviteCodeForSignIn,
 } from "~/features/auth/services/invite.service.server";
 import { magicLinkRequestSchema } from "~/features/auth/validations/magic-link.validations";
-import { hashWithHmacSha256 } from "~/lib/crypto.server";
-import { getRequestInfoHashes } from "~/lib/request-info.server";
-import {
-  checkRateLimit,
-  type RateLimitDecision,
-  type RateLimitOptions,
-} from "~/lib/rate-limit.server";
+import { checkMagicLinkRateLimit } from "~/features/auth/services/magic-link-rate-limit.server";
 import { LoginPanel, type LoginActionData } from "~/features/auth/components/login-panel";
-
-const MAGIC_LINK_RATE_LIMIT_WINDOW_SECONDS = 60 * 15;
-const MAGIC_LINK_EMAIL_RATE_LIMIT_MAX = 5;
-const MAGIC_LINK_IP_RATE_LIMIT_MAX = 20;
 
 type LoginIntent = "google" | "magic-link";
 
@@ -318,34 +308,6 @@ async function sendMagicLinkSignIn({
   } catch {
     return genericAuthErrorResponse(inviteCookieHeader);
   }
-}
-
-async function checkMagicLinkRateLimit({
-  email,
-  request,
-  rateLimit = checkRateLimit,
-}: {
-  email: string;
-  request: Request;
-  rateLimit?: (options: RateLimitOptions) => Promise<RateLimitDecision>;
-}) {
-  const requestInfo = getRequestInfoHashes(request);
-  const emailHash = hashWithHmacSha256(email, "magic-link-email");
-  const emailDecision = await rateLimit({
-    key: `magic-link:email:${emailHash}`,
-    max: MAGIC_LINK_EMAIL_RATE_LIMIT_MAX,
-    windowSeconds: MAGIC_LINK_RATE_LIMIT_WINDOW_SECONDS,
-  });
-
-  if (!emailDecision.allowed) {
-    return emailDecision;
-  }
-
-  return rateLimit({
-    key: `magic-link:ip:${requestInfo.ipHash}`,
-    max: MAGIC_LINK_IP_RATE_LIMIT_MAX,
-    windowSeconds: MAGIC_LINK_RATE_LIMIT_WINDOW_SECONDS,
-  });
 }
 
 function providerDisabledResponse(inviteCookieHeader: string) {

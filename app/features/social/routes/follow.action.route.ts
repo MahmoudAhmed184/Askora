@@ -55,7 +55,11 @@ function getFollowActionResponseStatus(result: FollowActionResult) {
     case "invalid":
       return 400;
     case "denied":
-      return result.reason === "not_found" ? 404 : 403;
+      if (result.reason === "not_found") {
+        return 404;
+      }
+
+      return result.reason === "rate_limited" ? 429 : 403;
     case "followed":
     case "unfollowed":
       return 303;

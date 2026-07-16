@@ -18,6 +18,14 @@ import { optionalReportDetailsSchema } from "~/features/moderation/validations/m
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 import { z } from "zod";
+import {
+  checkRateLimit,
+  type RateLimitDecision,
+  type RateLimitOptions,
+} from "~/lib/rate-limit.server";
+
+const REPORT_DAILY_MAX = 10;
+const DAY_SECONDS = 60 * 60 * 24;
 
 const publicReportTargetTypeValues = ["thread_item", "profile"] as const;
 
@@ -80,7 +88,7 @@ export interface PublicReportStore {
   findProfileByUsername(
     username: string,
   ): Promise<PublicProfileReportTarget | undefined>;
-  createReport(report: NewPublicContentReport): Promise<void>;
+  createReport(report: NewPublicContentReport): Promise<boolean>;
 }
 
 export type PublicContentReportResult =
@@ -97,7 +105,14 @@ export type PublicContentReportResult =
   | {
       status: "denied";
       values: PublicContentReportFormValues;
-      reason: "login_required" | "profile_required" | "suspended" | "not_found" | "unavailable";
+      reason:
+        | "login_required"
+        | "profile_required"
+        | "suspended"
+        | "not_found"
+        | "unavailable"
+        | "rate_limited"
+        | "already_reported";
       formError: string;
     };
 
@@ -107,12 +122,14 @@ export async function submitPublicContentReport({
   now = new Date(),
   session,
   store = createDrizzlePublicReportStore(),
+  rateLimiter = checkRateLimit,
 }: {
   formData: FormData;
   session: CurrentSessionSummary;
   store?: PublicReportStore;
   createId?: () => string;
   now?: Date;
+  rateLimiter?: (options: RateLimitOptions) => Promise<RateLimitDecision>;
 }): Promise<PublicContentReportResult> {
   const values = getPublicContentReportFormValues(formData);
   if (session.status === "anonymous") {
@@ -147,7 +164,17 @@ export async function submitPublicContentReport({
     return deniedResult(values, target.reason);
   }
 
-  await store.createReport({
+  const rateLimit = await rateLimiter({
+    key: `reports:profile:${session.profile.id}:daily`,
+    max: REPORT_DAILY_MAX,
+    windowSeconds: DAY_SECONDS,
+  });
+
+  if (!rateLimit.allowed) {
+    return deniedResult(values, "rate_limited");
+  }
+
+  const created = await store.createReport({
     id: createId(),
     reporterUserId: session.user.id,
     reporterProfileId: session.profile.id,
@@ -159,6 +186,10 @@ export async function submitPublicContentReport({
     createdAt: now,
     updatedAt: now,
   });
+
+  if (!created) {
+    return deniedResult(values, "already_reported");
+  }
 
   return {
     status: "created",
@@ -204,7 +235,16 @@ export function createDrizzlePublicReportStore(
       return target;
     },
     async createReport(report) {
-      await database.insert(reports).values(report);
+      try {
+        await database.insert(reports).values(report);
+        return true;
+      } catch (error) {
+        if (isOpenReportUniqueViolation(error)) {
+          return false;
+        }
+
+        throw error;
+      }
     },
   };
 }
@@ -309,7 +349,14 @@ function deniedResult(
 }
 
 function getDeniedMessage(
-  reason: "login_required" | "profile_required" | "suspended" | "not_found" | "unavailable",
+  reason:
+    | "login_required"
+    | "profile_required"
+    | "suspended"
+    | "not_found"
+    | "unavailable"
+    | "rate_limited"
+    | "already_reported",
 ) {
   switch (reason) {
     case "login_required":
@@ -322,7 +369,40 @@ function getDeniedMessage(
       return "The reported content could not be found.";
     case "unavailable":
       return "Only visible public content can be reported.";
+    case "rate_limited":
+      return "Report activity is temporarily limited. Try again later.";
+    case "already_reported":
+      return "You have already reported this content.";
   }
+}
+
+function isOpenReportUniqueViolation(error: unknown) {
+  let current: unknown = error;
+
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (
+      typeof current === "object" &&
+      current !== null &&
+      "code" in current &&
+      current.code === "23505" &&
+      "constraint" in current &&
+      current.constraint === "reports_open_reporter_target_unique"
+    ) {
+      return true;
+    }
+
+    if (
+      typeof current !== "object" ||
+      current === null ||
+      !("cause" in current)
+    ) {
+      return false;
+    }
+
+    current = current.cause;
+  }
+
+  return false;
 }
 
 function getFormText(formData: FormData, key: string) {

@@ -42,5 +42,9 @@ function getReportResponseStatus(result: PublicContentReportResult) {
     case "profile_required":
     case "suspended":
       return 403;
+    case "rate_limited":
+      return 429;
+    case "already_reported":
+      return 409;
   }
 }

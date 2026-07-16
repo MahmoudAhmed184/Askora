@@ -74,6 +74,9 @@ export const reports = pgTable(
     index("reports_reporter_profile_id_idx").on(table.reporterProfileId),
     index("reports_target_idx").on(table.targetType, table.targetId),
     index("reports_status_created_idx").on(table.status, table.createdAt),
+    uniqueIndex("reports_open_reporter_target_unique")
+      .on(table.reporterProfileId, table.targetType, table.targetId)
+      .where(sql`${table.status} = 'open'`),
   ],
 );
 

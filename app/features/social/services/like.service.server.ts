@@ -27,6 +27,16 @@ import { createAnswerLikedNotification } from "~/features/notifications/services
 import { isPublicThreadItemVisible } from "~/features/threads/thread-visibility";
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
+import {
+  checkRateLimit,
+  type RateLimitDecision,
+  type RateLimitOptions,
+} from "~/lib/rate-limit.server";
+
+const LIKE_DAILY_MAX = 100;
+const LIKE_BURST_MAX = 20;
+const DAY_SECONDS = 60 * 60 * 24;
+const BURST_SECONDS = 60;
 
 export interface LikeableAnswer {
   id: string;
@@ -58,7 +68,8 @@ export type LikeActionDeniedReason =
   | "not_found"
   | "own_answer"
   | "blocked"
-  | "suspended";
+  | "suspended"
+  | "rate_limited";
 
 export type LikeActionResult =
   | {
@@ -112,12 +123,14 @@ export async function handleLikeAction({
   now = new Date(),
   session,
   store = createDrizzleLikeActionStore(),
+  rateLimiter = checkRateLimit,
 }: {
   formData: FormData;
   session: CompletedProfileSessionSummary;
   store?: LikeActionStore;
   createId?: () => string;
   now?: Date;
+  rateLimiter?: (options: RateLimitOptions) => Promise<RateLimitDecision>;
 }): Promise<LikeActionResult> {
   const values = getLikeActionFormValues(formData);
 
@@ -140,6 +153,26 @@ export async function handleLikeAction({
 
   if (answer.status === "denied") {
     return deniedResult(values, answer.reason);
+  }
+
+  const dailyLimit = await rateLimiter({
+    key: `likes:profile:${session.profile.id}:daily`,
+    max: LIKE_DAILY_MAX,
+    windowSeconds: DAY_SECONDS,
+  });
+
+  if (!dailyLimit.allowed) {
+    return deniedResult(values, "rate_limited");
+  }
+
+  const burstLimit = await rateLimiter({
+    key: `likes:profile:${session.profile.id}:burst`,
+    max: LIKE_BURST_MAX,
+    windowSeconds: BURST_SECONDS,
+  });
+
+  if (!burstLimit.allowed) {
+    return deniedResult(values, "rate_limited");
   }
 
   return mutateLike({
@@ -427,6 +460,8 @@ function getDeniedMessage(reason: LikeActionDeniedReason) {
       return "This answer is unavailable.";
     case "suspended":
       return "Liking answers is unavailable while this account is suspended.";
+    case "rate_limited":
+      return "Like activity is temporarily limited. Try again later.";
   }
 }
 

@@ -6,6 +6,10 @@ import {
   type NewPublicContentReport,
   type PublicReportStore,
 } from "~/features/moderation/services/public-report.service.server";
+import type {
+  RateLimitDecision,
+  RateLimitOptions,
+} from "~/lib/rate-limit.server";
 
 const now = new Date("2026-06-01T12:00:00.000Z");
 
@@ -74,16 +78,43 @@ describe("submitPublicContentReport", () => {
     ).resolves.toMatchObject({ status: "denied", reason: "unavailable" });
     expect(store.created).toEqual([]);
   });
+
+  it("returns a safe duplicate result when the open-report constraint wins", async () => {
+    const store = createStore();
+    const duplicateStore: PublicReportStore = {
+      ...store.store,
+      createReport: () => Promise.resolve(false),
+    };
+
+    await expect(
+      submitReport({ store: duplicateStore }),
+    ).resolves.toMatchObject({ status: "denied", reason: "already_reported" });
+  });
+
+  it("enforces the per-account daily report limit before insertion", async () => {
+    const store = createStore();
+    const rateLimiter = (
+      _options: RateLimitOptions,
+    ): Promise<RateLimitDecision> =>
+      Promise.resolve({ allowed: false, retryAfterSeconds: 900 });
+
+    await expect(
+      submitReport({ rateLimiter, store: store.store }),
+    ).resolves.toMatchObject({ status: "denied", reason: "rate_limited" });
+    expect(store.created).toEqual([]);
+  });
 });
 
 async function submitReport({
   store,
   targetType,
   targetId = targetType === "profile" ? "person" : "titem_public_1",
+  rateLimiter,
 }: {
   store: PublicReportStore;
   targetType?: "thread_item" | "profile";
   targetId?: string;
+  rateLimiter?: (options: RateLimitOptions) => Promise<RateLimitDecision>;
 }) {
   return submitPublicContentReport({
     formData: createReportFormData({
@@ -93,6 +124,7 @@ async function submitReport({
     now,
     session: completedSession,
     store,
+    ...(rateLimiter === undefined ? {} : { rateLimiter }),
   });
 }
 
@@ -119,7 +151,7 @@ function createStore(overrides: Partial<ReturnType<typeof createStoreData>> = {}
     findThreadItemByPublicId: () => Promise.resolve(data.threadItem),
     createReport: (report) => {
       created.push(report);
-      return Promise.resolve();
+      return Promise.resolve(true);
     },
   };
 

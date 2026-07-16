@@ -16,6 +16,14 @@ import {
 import { createDatabaseId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
 import type { ZodError } from "zod";
+import {
+  checkRateLimit,
+  type RateLimitDecision,
+  type RateLimitOptions,
+} from "~/lib/rate-limit.server";
+
+const FOLLOW_DAILY_MAX = 50;
+const DAY_SECONDS = 60 * 60 * 24;
 
 export interface FollowTargetProfile {
   id: string;
@@ -40,7 +48,8 @@ export type FollowActionDeniedReason =
   | "not_found"
   | "self_follow"
   | "blocked"
-  | "suspended";
+  | "suspended"
+  | "rate_limited";
 
 export type FollowActionResult =
   | {
@@ -95,12 +104,14 @@ export async function handleFollowAction({
   now = new Date(),
   session,
   store = createDrizzleFollowActionStore(),
+  rateLimiter = checkRateLimit,
 }: {
   formData: FormData;
   session: CompletedProfileSessionSummary;
   store?: FollowActionStore;
   createId?: () => string;
   now?: Date;
+  rateLimiter?: (options: RateLimitOptions) => Promise<RateLimitDecision>;
 }): Promise<FollowActionResult> {
   const values = getFollowActionFormValues(formData);
 
@@ -122,6 +133,18 @@ export async function handleFollowAction({
 
   if (target.status === "denied") {
     return deniedResult(values, target.reason);
+  }
+
+  if (parsed.value.intent === "follow") {
+    const rateLimit = await rateLimiter({
+      key: `follows:profile:${session.profile.id}:daily`,
+      max: FOLLOW_DAILY_MAX,
+      windowSeconds: DAY_SECONDS,
+    });
+
+    if (!rateLimit.allowed) {
+      return deniedResult(values, "rate_limited");
+    }
   }
 
   return mutateFollow({
@@ -355,6 +378,8 @@ function getDeniedMessage(reason: FollowActionDeniedReason) {
       return "This profile is unavailable.";
     case "suspended":
       return "Following profiles is unavailable while this account is suspended.";
+    case "rate_limited":
+      return "Follow activity is temporarily limited. Try again later.";
   }
 }
 

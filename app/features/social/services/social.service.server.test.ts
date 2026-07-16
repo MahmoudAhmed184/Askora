@@ -22,6 +22,10 @@ import {
   type LikeableAnswer
 } from "~/features/social/services/like.service.server";;
 import { decodeFeedCursor, type FeedCursor } from "~/features/social/validations/social.validations";
+import type {
+  RateLimitDecision,
+  RateLimitOptions,
+} from "~/lib/rate-limit.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -101,6 +105,23 @@ describe("like actions", () => {
       ).resolves.toMatchObject({ status: "denied", reason: "not_found" });
     }
   });
+
+  it("denies like bursts before mutating the answer", async () => {
+    const likes = createLikeStore();
+    const rateLimiter = (
+      options: RateLimitOptions,
+    ): Promise<RateLimitDecision> =>
+      Promise.resolve(
+        options.key.endsWith(":burst")
+          ? { allowed: false, retryAfterSeconds: 30 }
+          : { allowed: true },
+      );
+
+    await expect(
+      submitLike({ rateLimiter, store: likes.store }),
+    ).resolves.toMatchObject({ status: "denied", reason: "rate_limited" });
+    expect(likes.likeKeys()).toEqual([]);
+  });
 });
 
 describe("follow actions", () => {
@@ -173,6 +194,17 @@ describe("follow actions", () => {
         submitFollow({ store: unavailable.store }),
       ).resolves.toMatchObject({ status: "denied", reason: "not_found" });
     }
+  });
+
+  it("denies daily follow limits before mutating the relationship", async () => {
+    const follows = createFollowStore();
+    const rateLimiter = (): Promise<RateLimitDecision> =>
+      Promise.resolve({ allowed: false, retryAfterSeconds: 600 });
+
+    await expect(
+      submitFollow({ rateLimiter, store: follows.store }),
+    ).resolves.toMatchObject({ status: "denied", reason: "rate_limited" });
+    expect(follows.followKeys()).toEqual([]);
   });
 });
 
@@ -248,10 +280,12 @@ async function submitLike({
   intent = "like",
   session = completedSession,
   store,
+  rateLimiter,
 }: {
   intent?: "like" | "unlike";
   session?: CompletedProfileSessionSummary;
   store: LikeActionStore;
+  rateLimiter?: (options: RateLimitOptions) => Promise<RateLimitDecision>;
 }) {
   const formData = new FormData();
 
@@ -265,6 +299,7 @@ async function submitLike({
     now,
     session,
     store,
+    ...(rateLimiter === undefined ? {} : { rateLimiter }),
   });
 }
 
@@ -362,11 +397,13 @@ async function submitFollow({
   session = completedSession,
   store,
   username = "target",
+  rateLimiter,
 }: {
   intent?: "follow" | "unfollow";
   session?: CompletedProfileSessionSummary;
   store: FollowActionStore;
   username?: string;
+  rateLimiter?: (options: RateLimitOptions) => Promise<RateLimitDecision>;
 }) {
   const formData = new FormData();
 
@@ -380,6 +417,7 @@ async function submitFollow({
     now,
     session,
     store,
+    ...(rateLimiter === undefined ? {} : { rateLimiter }),
   });
 }
 
