@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { Form } from "react-router";
 
+import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import { Button } from "~/components/ui/button/button";
 import type { StarterPromptCategory } from "~/features/prompts/starter-prompts";
 import { cn } from "~/lib/utils";
@@ -55,31 +56,34 @@ export function StarterPromptPicker({
                 {category.prompts.length} prompts
               </span>
             </header>
-            <div className="grid gap-3 px-5 py-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid gap-3 px-5 py-5 sm:grid-cols-2 lg:grid-cols-3">
               {category.prompts.map((prompt, index) => (
                 <Form
                   className={cn(
-                    "group flex min-w-0 items-center justify-between gap-3 rounded-xl border bg-card px-3.5 py-3.5 text-card-foreground transition-[background-color,border-color,box-shadow,transform] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:border-primary hover:bg-secondary/60 hover:shadow-[0_8px_20px_var(--accent-glow)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:min-h-36 sm:flex-col sm:items-start sm:gap-4",
+                    "flex min-w-0 items-center justify-between gap-3 rounded-xl border bg-card px-3.5 py-3.5 text-card-foreground sm:min-h-36 sm:flex-col sm:items-start sm:gap-4",
                     index < 2 ? "sm:min-h-32" : "",
                   )}
                   data-testid={`starter-prompt-card-${prompt.id}`}
                   key={prompt.id}
                   method="post"
                 >
-                  <p className="line-clamp-3 min-w-0 text-sm font-semibold leading-6 text-foreground/85 transition-colors group-hover:text-primary sm:line-clamp-4">
+                  <p className="line-clamp-3 min-w-0 text-sm font-semibold leading-6 text-foreground/85 sm:line-clamp-4">
                     {prompt.text}
                   </p>
                   <input name="promptId" type="hidden" value={prompt.id} />
-                  <Button
+                  <PendingButton
                     aria-label={`Use starter prompt: ${prompt.text}`}
                     className="shrink-0 justify-center sm:w-full"
                     disabled={disabled}
+                    pendingName="promptId"
+                    pendingText="Creating…"
+                    pendingValue={prompt.id}
                     size="sm"
                     type="submit"
                   >
                     <Sparkles data-icon="inline-start" />
                     Use prompt
-                  </Button>
+                  </PendingButton>
                 </Form>
               ))}
             </div>

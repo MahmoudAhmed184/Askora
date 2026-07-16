@@ -1,6 +1,7 @@
 import { data, redirect, useActionData } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { PageHeader } from "~/components/shared/page-header/page-header";
 import { Badge } from "~/components/ui/badge/badge";
 import {
   isSessionSuspended,
@@ -68,22 +69,16 @@ export default function PromptsRoute({ loaderData }: Route.ComponentProps) {
         tone="error"
         trigger={actionData?.starterPrompt}
       />
-      <div className="flex flex-col gap-6">
-        <header className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">Starter prompts</Badge>
-            {loaderData.isSuspended ? <Badge variant="outline">Locked</Badge> : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            <h1 className="font-serif text-4xl font-extrabold text-foreground">
-              Pick a question to answer
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Casual, deep, funny, friends, work, school, and random questions for
-              a first answer.
-            </p>
-          </div>
-        </header>
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <PageHeader
+          actions={
+            loaderData.isSuspended ? (
+              <Badge variant="outline">Locked</Badge>
+            ) : undefined
+          }
+          description="Casual, deep, funny, friends, work, school, and random questions for a first answer."
+          title="Prompts"
+        />
 
         <StarterPromptPicker
           categories={loaderData.categories}
