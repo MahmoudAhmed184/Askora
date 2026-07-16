@@ -163,7 +163,7 @@ export function QuestionModerationNoScriptFallback({
   "action" | "disabled" | "questionPublicId"
 >) {
   return (
-    <noscript>
+    <noscript suppressHydrationWarning>
       <details className="mt-3 rounded-xl border bg-secondary p-4">
         <summary className="cursor-pointer font-bold">Safety actions</summary>
         <div className="mt-4 flex flex-col gap-5">
