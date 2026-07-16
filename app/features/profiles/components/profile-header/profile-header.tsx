@@ -21,11 +21,11 @@ export function ProfileHeader({
   profile,
 }: ProfileHeaderProps) {
   return (
-    <section className="overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong">
+    <section className="overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong">
       {/* Banner — purple gradient with grid overlay */}
       <div
         aria-hidden="true"
-        className="relative h-40 overflow-hidden bg-[linear-gradient(135deg,oklch(0.70_0.13_310)_0%,oklch(0.50_0.15_295)_100%)] sm:h-52"
+        className="relative h-40 overflow-hidden bg-[image:var(--gradient-brand)] sm:h-52"
       >
         <div className="absolute inset-0 opacity-15 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px),linear-gradient(to_bottom,var(--primary)_1px,transparent_1px)] [background-size:20px_20px]" />
       </div>

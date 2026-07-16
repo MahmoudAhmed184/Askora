@@ -235,7 +235,7 @@ describe("public profile components", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Edit silently" }));
 
     expect(
-      screen.getByRole("dialog", { name: "Edit published answer" }),
+      screen.getByRole("dialog", { name: "Silent edit" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save answer" })).toBeEnabled();
 

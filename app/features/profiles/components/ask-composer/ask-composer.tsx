@@ -7,7 +7,7 @@ import { PendingButton } from "~/components/shared/pending-button/pending-button
 import { Button } from "~/components/ui/button/button";
 import {
   Field,
-  FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field/field";
@@ -104,7 +104,7 @@ export function AskComposer({
 
           <div className="border-b border-dashed px-5 pb-2 pt-5">
             <p className="mb-1 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-primary">
-              Question ceremony
+              Ask a question
             </p>
             <p className="font-serif text-lg font-bold leading-tight text-foreground">
               Pick a prompt or write your own.
@@ -135,20 +135,20 @@ export function AskComposer({
               required
               rows={4}
             />
-            {error?.fieldErrors?.question === undefined ? null : (
-              <p className="px-5 pb-4 text-sm leading-6 text-destructive" id="public-question-error">
-                {error.fieldErrors.question}
-              </p>
-            )}
-            <FieldDescription className="sr-only" id="public-question-description">
-              500 characters max. Incoming questions stay private unless answered.
-            </FieldDescription>
+            <FieldError
+              className="px-5 pb-4"
+              id="public-question-error"
+              message={error?.fieldErrors?.question}
+            />
           </Field>
 
           <IdentityControls ask={ask} error={error} />
 
           <div className="flex flex-col gap-3 border-t bg-secondary px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-medium leading-5 text-muted-foreground">
+            <p
+              className="text-xs font-medium leading-5 text-muted-foreground"
+              id="public-question-description"
+            >
               500 characters max. Incoming questions stay private unless answered.
             </p>
             <PendingButton className="w-full px-6 sm:w-fit" pendingText="Sending">
@@ -254,7 +254,7 @@ function PromptSuggestionGrid({
         <Button
           aria-label={`Use prompt: ${prompt}`}
           className={cn(
-            "h-auto min-h-24 w-40 shrink-0 justify-start whitespace-normal rounded-[12px] border-border bg-card px-3.5 py-3.5 text-left text-[0.82rem] font-medium leading-[1.4] text-muted-foreground shadow-[0_2px_8px_rgb(0_0_0/0.02)] transition-[border-color,box-shadow,color,transform] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:rotate-0 hover:scale-[1.03] hover:border-primary hover:bg-card hover:text-primary hover:shadow-[0_8px_20px_var(--accent-glow)] disabled:opacity-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100",
+            "h-auto min-h-24 w-40 shrink-0 justify-start whitespace-normal rounded-[12px] border-border bg-card px-3.5 py-3.5 text-left text-[0.82rem] font-medium leading-[1.4] text-muted-foreground transition-[border-color,box-shadow,color,transform] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:rotate-0 hover:scale-[1.03] hover:border-primary hover:bg-card hover:text-primary hover:shadow-[0_8px_20px_var(--accent-glow)] disabled:opacity-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100",
             promptSuggestionTilt[index % promptSuggestionTilt.length],
           )}
           disabled={readOnly}
