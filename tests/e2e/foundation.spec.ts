@@ -4,13 +4,13 @@ test("public foundation routes render", async ({ page }) => {
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: /one public link for questions worth answering/i,
+      name: /one link for people to ask you anything/i,
     }),
   ).toBeVisible();
 
   await page.goto("/login");
   await expect(
-    page.getByRole("heading", { name: /sign in to continue/i }),
+    page.getByRole("heading", { name: /sign in to q&a platform/i }),
   ).toBeVisible();
 
   await page.goto("/terms");
