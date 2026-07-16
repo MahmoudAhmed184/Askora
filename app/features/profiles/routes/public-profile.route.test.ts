@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { meta } from "~/features/profiles/routes/public-profile.route";
-import type {
-  PublicProfilePageData
-} from "~/features/profiles/queries/profile.queries.server";;
+import type { PublicProfilePageData } from "~/features/profiles/queries/profile.queries.server";
 import type { PublicAppConfig } from "~/lib/config.types";
 
 describe("public profile route metadata", () => {
@@ -36,6 +34,40 @@ describe("public profile route metadata", () => {
       content: "noindex,nofollow",
     });
   });
+
+  it("emits canonical Open Graph and Twitter metadata", () => {
+    const page = createAvailablePage();
+    page.profile.bio = "Questions, software, and thoughtful answers.";
+    page.profile.avatarUrl = "https://images.example.com/person.jpg";
+
+    const tags = createMeta({
+      app: createAppConfig(),
+      page,
+    });
+
+    const title = "Person (@person) | Q&A";
+    const description = "Questions, software, and thoughtful answers.";
+
+    expect(tags).toEqual(
+      expect.arrayContaining([
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "profile" },
+        { property: "og:url", content: "https://app.example.com/person" },
+        {
+          property: "og:image",
+          content: "https://images.example.com/person.jpg",
+        },
+        { name: "twitter:card", content: "summary" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        {
+          name: "twitter:image",
+          content: "https://images.example.com/person.jpg",
+        },
+      ]),
+    );
+  });
 });
 
 function createMeta(loaderData: {
@@ -47,7 +79,10 @@ function createMeta(loaderData: {
   } as Parameters<typeof meta>[0]);
 }
 
-function createAvailablePage(): PublicProfilePageData {
+function createAvailablePage(): Extract<
+  PublicProfilePageData,
+  { status: "available" }
+> {
   return {
     status: "available",
     profile: {

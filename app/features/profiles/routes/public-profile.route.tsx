@@ -181,15 +181,26 @@ export function meta({ loaderData }: Route.MetaArgs) {
   }
 
   const { profile } = loaderData.page;
+  const title = `${profile.displayName} (@${profile.username}) | ${appName}`;
+  const description =
+    profile.bio ?? `Ask ${profile.displayName} a question on ${appName}.`;
+  const profileUrl = `${loaderData.app.appUrl.replace(/\/$/, "")}/${profile.username}`;
   const tags = [
-    { title: `${profile.displayName} (@${profile.username}) | ${appName}` },
-    {
-      name: "description",
-      content:
-        profile.bio ??
-        `Ask ${profile.displayName} a question on ${appName}.`,
-    },
+    { title },
+    { name: "description", content: description },
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "profile" },
+    { property: "og:url", content: profileUrl },
+    { name: "twitter:card", content: "summary" },
+    { name: "twitter:title", content: title },
+    { name: "twitter:description", content: description },
   ];
+
+  if (profile.avatarUrl !== null) {
+    tags.push({ property: "og:image", content: profile.avatarUrl });
+    tags.push({ name: "twitter:image", content: profile.avatarUrl });
+  }
 
   const robotsMeta = createRobotsMetaTag(loaderData.app.betaNoindex);
 
