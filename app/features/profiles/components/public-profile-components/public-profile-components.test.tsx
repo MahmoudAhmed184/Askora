@@ -198,6 +198,21 @@ describe("public profile components", () => {
     expect(container.querySelector("script")).toBeNull();
   });
 
+  it("links to the next stable answer page without requiring JavaScript", () => {
+    renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer()]}
+        nextCursor="opaque-cursor"
+        profileUsername="person"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Older answers" })).toHaveAttribute(
+      "href",
+      "/?answers=opaque-cursor#published-answers",
+    );
+  });
+
   it("omits question text entirely for hidden public answers", () => {
     renderWithRouter(
       <PublicAnswerList

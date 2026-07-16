@@ -69,6 +69,7 @@ export type PublicProfilePageData =
       askFlash: PublicAskFlash | undefined;
       timingToken: string | undefined;
       publishedAnswers: PublicPublishedAnswer[];
+      nextAnswerCursor: string | undefined;
       publishedAnswerControls: PublishedAnswerControlState;
       follow: FollowControlState;
       canReport: boolean;
@@ -157,6 +158,9 @@ export function createPublicProfilePageData({
   social = emptyPublicProfileSocialStats,
   now = new Date(),
   publishedAnswers = [],
+  publishedAnswerCount = publishedAnswers.length,
+  publishedReactionCount = sumVisibleLikeCounts(publishedAnswers),
+  nextAnswerCursor,
 }: {
   askFlash: PublicAskFlash | undefined;
   profile: PublicProfile;
@@ -164,6 +168,9 @@ export function createPublicProfilePageData({
   social?: PublicProfileSocialStats | undefined;
   now?: Date | undefined;
   publishedAnswers?: PublicPublishedAnswer[] | undefined;
+  publishedAnswerCount?: number | undefined;
+  publishedReactionCount?: number | undefined;
+  nextAnswerCursor?: string | undefined;
   publishedAnswerControls?: PublishedAnswerControlState | undefined;
 }): PublicProfilePageData {
   const ask = getPublicAskState({
@@ -178,7 +185,8 @@ export function createPublicProfilePageData({
     status: "available",
     profile: getPublicProfileView({
       profile,
-      publishedAnswers,
+      publishedAnswerCount,
+      publishedReactionCount,
       social,
     }),
     ask,
@@ -192,6 +200,7 @@ export function createPublicProfilePageData({
           })
         : undefined,
     publishedAnswers,
+    nextAnswerCursor,
     publishedAnswerControls,
     canReport: canSubmitPublicReport(session),
     follow: getFollowControlState({
@@ -303,11 +312,13 @@ function isStillReserved(reservation: PublicUsernameReservation, now: Date) {
 
 function getPublicProfileView({
   profile,
-  publishedAnswers,
+  publishedAnswerCount,
+  publishedReactionCount,
   social,
 }: {
   profile: PublicProfile;
-  publishedAnswers: PublicPublishedAnswer[];
+  publishedAnswerCount: number;
+  publishedReactionCount: number;
   social: PublicProfileSocialStats;
 }): PublicProfileView {
   return {
@@ -321,11 +332,11 @@ function getPublicProfileView({
       permission: profile.askPermission,
     },
     counts: {
-      answers: publishedAnswers.length,
+      answers: publishedAnswerCount,
       followers: profile.showFollowerCounts ? social.followerCount : undefined,
       following: profile.showFollowerCounts ? social.followingCount : undefined,
       reactions: profile.showLikeCounts
-        ? sumVisibleLikeCounts(publishedAnswers)
+        ? publishedReactionCount
         : undefined,
     },
   };

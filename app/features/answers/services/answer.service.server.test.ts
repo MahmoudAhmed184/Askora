@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createPublicPublishedAnswerPage,
   createPublicPublishedAnswers,
+  decodePublicAnswerCursor,
+  PUBLIC_PROFILE_ANSWER_PAGE_SIZE,
   handleAnswerSubmission,
   isConcurrentAnswerPublishConflict,
   loadAnswerEditor,
@@ -657,7 +660,8 @@ describe("createPublicPublishedAnswers", () => {
     ]);
     const serializedAnswers = JSON.stringify(answers);
 
-    expect(answers).toEqual([
+    expect(answers).toHaveLength(4);
+    expect(answers).toEqual(expect.arrayContaining([
       expect.objectContaining({
         publicId: "visible",
         threadPublicId: "thr_1",
@@ -676,13 +680,70 @@ describe("createPublicPublishedAnswers", () => {
         publicId: "draft_question",
         questionText: null,
       }),
-    ]);
+    ]));
     expect(serializedAnswers).not.toContain("Secret question");
     expect(serializedAnswers).not.toContain("Deleted question");
     expect(serializedAnswers).not.toContain("Draft question");
     expect(serializedAnswers).not.toContain("Deleted answer");
     expect(serializedAnswers).not.toContain("Unpublished answer");
     expect(serializedAnswers).not.toContain("Thread hidden answer");
+  });
+});
+
+describe("createPublicPublishedAnswerPage", () => {
+  it("bounds chronological answers while retaining the separately fetched pins", () => {
+    const pinned = createPublicAnswerRow({
+      publicId: "pinned",
+      pinPosition: 1,
+    });
+    const chronological = Array.from(
+      { length: PUBLIC_PROFILE_ANSWER_PAGE_SIZE + 1 },
+      (_, index) =>
+        createPublicAnswerRow({
+          threadItemId: `item_${String(index)}`,
+          publicId: `answer_${String(index)}`,
+          publishedAt: new Date(Date.UTC(2026, 4, 31 - index, 12)),
+          createdAt: new Date(Date.UTC(2026, 4, 31 - index, 11)),
+        }),
+    );
+
+    const page = createPublicPublishedAnswerPage({
+      chronologicalRows: chronological,
+      pinnedRows: [pinned],
+      totalAnswerCount: 42,
+      totalReactionCount: 73,
+    });
+
+    expect(page.answers).toHaveLength(PUBLIC_PROFILE_ANSWER_PAGE_SIZE + 1);
+    expect(page.answers[0]?.publicId).toBe("pinned");
+    expect(page.answers.at(-1)?.publicId).toBe("answer_19");
+    expect(page.totalAnswerCount).toBe(42);
+    expect(page.totalReactionCount).toBe(73);
+    expect(decodePublicAnswerCursor(page.nextCursor)).toEqual({
+      publishedAt: new Date(Date.UTC(2026, 4, 12, 12)),
+      createdAt: new Date(Date.UTC(2026, 4, 12, 11)),
+      publicId: "answer_19",
+    });
+  });
+
+  it("omits a cursor after the final chronological page", () => {
+    const page = createPublicPublishedAnswerPage({
+      chronologicalRows: [
+        createPublicAnswerRow({
+          publicId: "final_answer",
+          publishedAt: new Date("2026-05-01T12:00:00.000Z"),
+          createdAt: new Date("2026-05-01T11:00:00.000Z"),
+        }),
+      ],
+      pinnedRows: [],
+      totalAnswerCount: 1,
+      totalReactionCount: 0,
+    });
+
+    expect(page.answers.map((answer) => answer.publicId)).toEqual([
+      "final_answer",
+    ]);
+    expect(page.nextCursor).toBeUndefined();
   });
 });
 

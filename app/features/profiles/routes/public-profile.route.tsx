@@ -21,7 +21,10 @@ import {
 import { ProfileSideRail } from "~/features/profiles/components/profile-side-rail";
 import { PublicAnswerList } from "~/features/profiles/components/public-answer-list";
 import { UnavailableProfile } from "~/features/profiles/components/unavailable-profile";
-import { findPublishedAnswersForProfile } from "~/features/answers/services/answer.service.server";
+import {
+  decodePublicAnswerCursor,
+  findPublishedAnswerPageForProfile,
+} from "~/features/answers/services/answer.service.server";
 import {
   clearPublicAskFlashCookieHeader,
   hasPublicAskFlashCookie,
@@ -101,8 +104,12 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
     session.status === "authenticated" && session.profileStatus === "complete"
       ? session
       : undefined;
-  const [publishedAnswers, social, shell] = await Promise.all([
-    findPublishedAnswersForProfile({
+  const answerCursor = decodePublicAnswerCursor(
+    new URL(request.url).searchParams.get("answers") ?? undefined,
+  );
+  const [answerPage, social, shell] = await Promise.all([
+    findPublishedAnswerPageForProfile({
+      cursor: answerCursor,
       profileId: resolution.profile.id,
       session,
     }),
@@ -125,7 +132,10 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
           owner: resolution.profile,
           session,
         }),
-        publishedAnswers,
+        nextAnswerCursor: answerPage.nextCursor,
+        publishedAnswerCount: answerPage.totalAnswerCount,
+        publishedAnswers: answerPage.answers,
+        publishedReactionCount: answerPage.totalReactionCount,
         session,
         social,
       }),
@@ -246,6 +256,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
               canReport={page.canReport}
               controls={page.publishedAnswerControls}
               profileUsername={page.profile.username}
+              nextCursor={page.nextAnswerCursor}
             />
           </div>
         </div>

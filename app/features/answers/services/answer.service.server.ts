@@ -8,6 +8,7 @@ import {
   pinnedAnswers,
   profiles,
   questions,
+  likes,
   threadItems,
   threads,
 } from "~/db/schema";
@@ -27,7 +28,6 @@ import {
   createFollowUpAnsweredNotification,
   createQuestionAnsweredNotificationForQuestion,
 } from "~/features/notifications/services/notification.service.server";
-import { findThreadItemLikeSummaries } from "~/features/social/services/social-data.service.server";
 import {
   getLikeControlState,
   type LikeControlState,
@@ -41,6 +41,12 @@ import type { PublicThreadItemRow } from "~/features/threads/queries/public-thre
 import { MAX_PUBLISHED_THREAD_ITEMS } from "~/features/threads/services/thread-permissions.service.server";
 import { createDatabaseId, createPublicId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
+import {
+  encodePublicAnswerCursor,
+  type PublicAnswerCursor,
+} from "~/features/answers/validations/public-answer-pagination.server";
+
+export { decodePublicAnswerCursor } from "~/features/answers/validations/public-answer-pagination.server";
 
 export type AnswerQuestionStatus =
   | "inbox"
@@ -1377,38 +1383,86 @@ export interface PublicPublishedAnswerRow {
   viewerLiked: boolean;
 }
 
-export async function findPublishedAnswersForProfile({
+export const PUBLIC_PROFILE_ANSWER_PAGE_SIZE = 20;
+const PUBLIC_PROFILE_PIN_LIMIT = 3;
+
+export interface PublicPublishedAnswerPage {
+  answers: PublicPublishedAnswer[];
+  totalAnswerCount: number;
+  totalReactionCount: number;
+  nextCursor: string | undefined;
+}
+
+export async function findPublishedAnswerPageForProfile({
   database = getRuntimeDatabase(),
   profileId,
   session = anonymousSession,
+  cursor,
 }: {
   profileId: string;
   database?: RuntimeDatabase;
   session?: CurrentSessionSummary | undefined;
-}): Promise<PublicPublishedAnswer[]> {
+  cursor?: PublicAnswerCursor | undefined;
+}): Promise<PublicPublishedAnswerPage> {
   const askerProfiles = alias(profiles, "answer_asker_profiles");
-  const rows = await database
+  const viewerProfileId = getViewerProfileId(session);
+  const sortExpression = sql<Date>`coalesce(${threadItems.publishedAt}, ${threadItems.createdAt})`;
+  const visibleWhere = and(
+    eq(threads.ownerProfileId, profileId),
+    eq(threads.status, "published"),
+    eq(threadItems.status, "published"),
+    isNull(threadItems.deletedAt),
+  );
+  const cursorWhere = createPublicAnswerCursorWhere(cursor, sortExpression);
+  const selectedFields = {
+    threadItemId: threadItems.id,
+    publicId: threadItems.publicId,
+    threadPublicId: threads.publicId,
+    answerText: threadItems.answerText,
+    itemStatus: threadItems.status,
+    itemDeletedAt: threadItems.deletedAt,
+    publishedAt: threadItems.publishedAt,
+    createdAt: threadItems.createdAt,
+    pinPosition: pinnedAnswers.position,
+    threadStatus: threads.status,
+    questionStatus: questions.status,
+    questionDeletedAt: questions.deletedAt,
+    questionTextMode: threadItems.questionTextMode,
+    displayQuestionText: threadItems.displayQuestionText,
+    identityMode: questions.identityMode,
+    askerDisplayName: askerProfiles.displayName,
+    askerUsername: askerProfiles.username,
+    ownerProfileId: profiles.id,
+    ownerUserId: profiles.userId,
+    ownerShowLikeCounts: profiles.showLikeCounts,
+    likeCount: sql<number>`coalesce((select count(*)::int from ${likes} where ${likes.threadItemId} = ${threadItems.id}), 0)`,
+    viewerLiked:
+      viewerProfileId === undefined
+        ? sql<boolean>`false`
+        : sql<boolean>`exists(select 1 from ${likes} where ${likes.threadItemId} = ${threadItems.id} and ${likes.profileId} = ${viewerProfileId})`,
+  };
+  const pinnedQuery = database
     .select({
-      threadItemId: threadItems.id,
-      publicId: threadItems.publicId,
-      threadPublicId: threads.publicId,
-      answerText: threadItems.answerText,
-      itemStatus: threadItems.status,
-      itemDeletedAt: threadItems.deletedAt,
-      publishedAt: threadItems.publishedAt,
-      createdAt: threadItems.createdAt,
-      pinPosition: pinnedAnswers.position,
-      threadStatus: threads.status,
-      questionStatus: questions.status,
-      questionDeletedAt: questions.deletedAt,
-      questionTextMode: threadItems.questionTextMode,
-      displayQuestionText: threadItems.displayQuestionText,
-      identityMode: questions.identityMode,
-      askerDisplayName: askerProfiles.displayName,
-      askerUsername: askerProfiles.username,
-      ownerProfileId: profiles.id,
-      ownerUserId: profiles.userId,
-      ownerShowLikeCounts: profiles.showLikeCounts,
+      ...selectedFields,
+    })
+    .from(threadItems)
+    .innerJoin(threads, eq(threads.id, threadItems.threadId))
+    .innerJoin(profiles, eq(profiles.id, threads.ownerProfileId))
+    .innerJoin(questions, eq(questions.id, threadItems.questionId))
+    .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
+    .innerJoin(
+      pinnedAnswers,
+      and(
+        eq(pinnedAnswers.profileId, threads.ownerProfileId),
+        eq(pinnedAnswers.threadItemId, threadItems.id),
+      ),
+    )
+    .where(visibleWhere)
+    .orderBy(asc(pinnedAnswers.position))
+    .limit(PUBLIC_PROFILE_PIN_LIMIT);
+  const chronologicalQuery = database
+    .select({
+      ...selectedFields,
     })
     .from(threadItems)
     .innerJoin(threads, eq(threads.id, threadItems.threadId))
@@ -1424,36 +1478,70 @@ export async function findPublishedAnswersForProfile({
     )
     .where(
       and(
-        eq(threads.ownerProfileId, profileId),
-        eq(threads.status, "published"),
-        eq(threadItems.status, "published"),
-        isNull(threadItems.deletedAt),
+        visibleWhere,
+        isNull(pinnedAnswers.threadItemId),
+        cursorWhere,
       ),
     )
     .orderBy(
-      sql`${pinnedAnswers.position} asc nulls last`,
-      desc(threadItems.publishedAt),
+      desc(sortExpression),
       desc(threadItems.createdAt),
-    );
+      desc(threadItems.publicId),
+    )
+    .limit(PUBLIC_PROFILE_ANSWER_PAGE_SIZE + 1);
+  const statsQuery = database
+    .select({
+      totalAnswerCount: sql<number>`count(distinct ${threadItems.id})::int`,
+      totalReactionCount: sql<number>`count(${likes.threadItemId})::int`,
+    })
+    .from(threadItems)
+    .innerJoin(threads, eq(threads.id, threadItems.threadId))
+    .leftJoin(likes, eq(likes.threadItemId, threadItems.id))
+    .where(visibleWhere);
+  const [pinnedRows, chronologicalRows, statsRows] = await Promise.all([
+    pinnedQuery,
+    chronologicalQuery,
+    statsQuery,
+  ]);
+  const stats = statsRows[0];
 
-  const summaries = await findThreadItemLikeSummaries({
-    database,
-    threadItemIds: rows.map((row) => row.threadItemId),
-    viewerProfileId: getViewerProfileId(session),
+  return createPublicPublishedAnswerPage({
+    chronologicalRows,
+    pinnedRows,
+    session,
+    totalAnswerCount: stats?.totalAnswerCount ?? 0,
+    totalReactionCount: stats?.totalReactionCount ?? 0,
   });
+}
 
-  return createPublicPublishedAnswers(
-    rows.map((row) => {
-      const summary = summaries.get(row.threadItemId);
+export function createPublicPublishedAnswerPage({
+  chronologicalRows,
+  pinnedRows,
+  session = anonymousSession,
+  totalAnswerCount,
+  totalReactionCount,
+}: {
+  chronologicalRows: PublicPublishedAnswerRow[];
+  pinnedRows: PublicPublishedAnswerRow[];
+  session?: CurrentSessionSummary | undefined;
+  totalAnswerCount: number;
+  totalReactionCount: number;
+}): PublicPublishedAnswerPage {
+  const pageRows = chronologicalRows.slice(0, PUBLIC_PROFILE_ANSWER_PAGE_SIZE);
+  const lastRow = pageRows.at(-1);
 
-      return {
-        ...row,
-        likeCount: summary?.count ?? 0,
-        viewerLiked: summary?.isLikedByViewer ?? false,
-      };
+  return {
+    answers: createPublicPublishedAnswers([...pinnedRows, ...pageRows], {
+      session,
     }),
-    { session },
-  );
+    totalAnswerCount,
+    totalReactionCount,
+    nextCursor:
+      chronologicalRows.length > PUBLIC_PROFILE_ANSWER_PAGE_SIZE &&
+      lastRow !== undefined
+        ? encodePublicAnswerCursor(createPublicAnswerCursor(lastRow))
+        : undefined,
+  };
 }
 
 export function createPublicPublishedAnswers(
@@ -1532,7 +1620,34 @@ function comparePublicPublishedAnswerRows(
     return publishedOrder;
   }
 
-  return right.createdAt.getTime() - left.createdAt.getTime();
+  const createdOrder = right.createdAt.getTime() - left.createdAt.getTime();
+
+  if (createdOrder !== 0) {
+    return createdOrder;
+  }
+
+  return right.publicId.localeCompare(left.publicId);
+}
+
+function createPublicAnswerCursorWhere(
+  cursor: PublicAnswerCursor | undefined,
+  sortExpression: ReturnType<typeof sql<Date>>,
+) {
+  if (cursor === undefined) {
+    return undefined;
+  }
+
+  return sql`(${sortExpression}, ${threadItems.createdAt}, ${threadItems.publicId}) < (${cursor.publishedAt}, ${cursor.createdAt}, ${cursor.publicId})`;
+}
+
+function createPublicAnswerCursor(
+  row: Pick<PublicPublishedAnswerRow, "publishedAt" | "createdAt" | "publicId">,
+): PublicAnswerCursor {
+  return {
+    publishedAt: row.publishedAt ?? row.createdAt,
+    createdAt: row.createdAt,
+    publicId: row.publicId,
+  };
 }
 
 function comparePinPositions(left: number | null, right: number | null) {

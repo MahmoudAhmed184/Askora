@@ -17,6 +17,7 @@ interface PublicAnswerListProps {
   answers: PublicPublishedAnswer[];
   canReport?: boolean | undefined;
   controls?: PublishedAnswerControlState;
+  nextCursor?: string | undefined;
   profileUsername: string;
 }
 
@@ -24,6 +25,7 @@ export function PublicAnswerList({
   answers,
   canReport = false,
   controls = hiddenPublishedAnswerControls,
+  nextCursor,
   profileUsername,
 }: PublicAnswerListProps) {
   if (answers.length === 0) {
@@ -70,6 +72,16 @@ export function PublicAnswerList({
           />
         ))}
       </div>
+      {nextCursor === undefined ? null : (
+        <div className="flex justify-center pt-2">
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-full border bg-background px-5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
+            to={`?answers=${encodeURIComponent(nextCursor)}#published-answers`}
+          >
+            Older answers
+          </Link>
+        </div>
+      )}
     </section>
   );
 }

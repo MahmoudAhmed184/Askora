@@ -77,6 +77,7 @@ function createAvailablePage(): PublicProfilePageData {
     askFlash: undefined,
     timingToken: undefined,
     publishedAnswers: [],
+    nextAnswerCursor: undefined,
     publishedAnswerControls: {
       canManage: false,
       disabled: false,

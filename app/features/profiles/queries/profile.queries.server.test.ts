@@ -216,16 +216,18 @@ describe("createPublicProfilePageData", () => {
         followingCount: 4,
         isFollowedByViewer: true,
       },
+      publishedAnswerCount: 27,
+      publishedReactionCount: 91,
     });
 
     expect(page).toMatchObject({
       status: "available",
       profile: {
         counts: {
-          answers: 2,
+          answers: 27,
           followers: 7,
           following: 4,
-          reactions: 5,
+          reactions: 91,
         },
       },
       follow: {
