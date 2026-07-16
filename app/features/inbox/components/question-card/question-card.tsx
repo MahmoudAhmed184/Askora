@@ -3,7 +3,19 @@ import type { ReactNode } from "react";
 import { Link, useFetcher, useLocation } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog/alert-dialog";
 import { Button } from "~/components/ui/button/button";
+import { buttonVariants } from "~/components/ui/button/button-variants";
 import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
 import type { InboxActionResult } from "~/features/inbox/types/inbox.types";
 import type { InboxQuestionView } from "~/features/inbox/types/inbox.types";
@@ -107,18 +119,80 @@ function QuestionCardFrame({
           />
         ) : undefined}
 
-        <InlineActionForm
+        <DeleteQuestionAction
           disabled={disabled || isPending}
           fetcher={fetcher}
-          icon={<Trash2 data-icon="inline-start" />}
-          intent="delete"
           label={restoreAction ? "Delete" : "Drop"}
           questionPublicId={question.publicId}
-          variant="destructive"
         />
       </div>
     </article>
   );
+}
+
+function DeleteQuestionAction({
+  disabled,
+  fetcher,
+  label,
+  questionPublicId,
+}: {
+  disabled: boolean;
+  fetcher: InboxFetcher;
+  label: string;
+  questionPublicId: string;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          aria-label="Delete question"
+          className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={disabled}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
+          <Trash2 data-icon="inline-start" />
+          {label}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this question?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This permanently removes the question. It cannot be answered or
+            restored afterwards.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "destructive" })}
+            onClick={() => {
+              submitDeleteQuestion({ fetcher, questionPublicId });
+            }}
+          >
+            {label}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function submitDeleteQuestion({
+  fetcher,
+  questionPublicId,
+}: {
+  fetcher: InboxFetcher;
+  questionPublicId: string;
+}) {
+  const formData = new FormData();
+
+  formData.set("intent", "delete");
+  formData.set("questionPublicId", questionPublicId);
+
+  void fetcher.submit(formData, { method: "post" });
 }
 
 function InlineActionForm({
@@ -128,27 +202,24 @@ function InlineActionForm({
   intent,
   label,
   questionPublicId,
-  variant = "default",
 }: {
   disabled: boolean;
   fetcher: InboxFetcher;
   icon: ReactNode;
-  intent: "delete" | "restore" | "block";
+  intent: "restore" | "block";
   label: string;
   questionPublicId: string;
-  variant?: "default" | "destructive" | "outline";
 }) {
   return (
     <fetcher.Form method="post">
       <input name="intent" type="hidden" value={intent} />
       <input name="questionPublicId" type="hidden" value={questionPublicId} />
       <Button
-        aria-label={intent === "delete" ? "Delete question" : undefined}
         className="w-full"
         disabled={disabled}
         size="sm"
         type="submit"
-        variant={variant}
+        variant="default"
       >
         {icon}
         {label}

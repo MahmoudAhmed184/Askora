@@ -1,9 +1,17 @@
-import { Ban, Flag, MoreHorizontal, Send } from "lucide-react";
+import { Ban, Flag, LoaderCircle, MoreHorizontal, Send } from "lucide-react";
 import { useId, useState } from "react";
 import { useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import { Button } from "~/components/ui/button/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu/dropdown-menu";
+import { Field, FieldLabel } from "~/components/ui/field/field";
+import { Select } from "~/components/ui/select/select";
 import { Textarea } from "~/components/ui/textarea/textarea";
 import {
   moderationReportReasonValues,
@@ -55,16 +65,28 @@ export function QuestionModerationControls({
   variant = "menu",
 }: QuestionModerationControlsProps) {
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
+  const [handledResult, setHandledResult] = useState<
+    InboxActionResult | undefined
+  >(undefined);
   const fetcher = useFetcher<InboxFetcherData>();
   const isPending = fetcher.state !== "idle";
   const result = fetcher.data?.inbox;
   const actionProps = getActionProps(action);
 
-  const panelPositionClassName =
-    variant === "inline" ? "bottom-12 left-0" : "right-0 top-11";
+  if (result !== handledResult) {
+    setHandledResult(result);
+
+    if (
+      result !== undefined &&
+      result.status !== "invalid" &&
+      result.status !== "denied"
+    ) {
+      setActivePanel(null);
+    }
+  }
 
   return (
-    <div className="relative">
+    <div>
       {variant === "inline" ? (
         <InlineActions
           disabled={disabled || isPending}
@@ -97,35 +119,31 @@ export function QuestionModerationControls({
         />
       )}
 
-      {activePanel === "report" ? (
-        <ReportPanel
-          actionProps={actionProps}
-          disabled={disabled}
-          fetcher={fetcher}
-          isPending={isPending}
-          onClose={() => {
-            setActivePanel(null);
-          }}
-          panelPositionClassName={panelPositionClassName}
-          questionPublicId={questionPublicId}
-          result={result}
-        />
-      ) : null}
+      <ReportDialog
+        actionProps={actionProps}
+        disabled={disabled}
+        fetcher={fetcher}
+        isPending={isPending}
+        onOpenChange={(open) => {
+          setActivePanel(open ? "report" : null);
+        }}
+        open={activePanel === "report"}
+        questionPublicId={questionPublicId}
+      />
 
-      {activePanel === "block" ? (
-        <BlockPanel
-          actionProps={actionProps}
-          disabled={disabled}
-          fetcher={fetcher}
-          isPending={isPending}
-          onClose={() => {
-            setActivePanel(null);
-          }}
-          panelPositionClassName={panelPositionClassName}
-          questionPublicId={questionPublicId}
-          result={result}
-        />
-      ) : null}
+      <BlockDialog
+        actionProps={actionProps}
+        disabled={disabled}
+        fetcher={fetcher}
+        isPending={isPending}
+        onOpenChange={(open) => {
+          setActivePanel(open ? "block" : null);
+        }}
+        open={activePanel === "block"}
+        questionPublicId={questionPublicId}
+      />
+
+      <ActionResultToast result={result} />
     </div>
   );
 }
@@ -218,192 +236,182 @@ function QuestionActionsMenu({
   );
 }
 
-function BlockPanel({
+function BlockDialog({
   actionProps,
   disabled,
   fetcher,
   isPending,
-  onClose,
-  panelPositionClassName,
+  onOpenChange,
+  open,
   questionPublicId,
-  result,
 }: {
   actionProps: Record<string, string>;
   disabled: boolean;
   fetcher: InboxFetcher;
   isPending: boolean;
-  onClose: () => void;
-  panelPositionClassName: string;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
   questionPublicId: string;
-  result: InboxActionResult | undefined;
 }) {
-  const descriptionId = useId();
-  const titleId = useId();
-
   return (
-    <div
-      aria-describedby={descriptionId}
-      aria-labelledby={titleId}
-      className={`absolute ${panelPositionClassName} z-[60] flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 rounded-2xl border bg-card p-4 text-card-foreground shadow-[var(--shadow-card-hover)] max-sm:pb-8`}
-      role="dialog"
-    >
-      <PanelHeader
-        descriptionId={descriptionId}
-        description="Future private questions from this sender will be handled by the safety filter."
-        title="Block sender?"
-        titleId={titleId}
-      />
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Block sender?</DialogTitle>
+          <DialogDescription>
+            Future private questions from this sender will be handled by the
+            safety filter. They are not notified.
+          </DialogDescription>
+        </DialogHeader>
 
-      <fetcher.Form className="flex flex-wrap gap-2" method="post" {...actionProps}>
-        <input name="intent" type="hidden" value="block" />
-        <input name="questionPublicId" type="hidden" value={questionPublicId} />
-        <Button disabled={disabled || isPending} size="sm" type="submit">
-          <Ban data-icon="inline-start" />
-          Confirm block
-        </Button>
-        <Button
-          disabled={isPending}
-          onClick={onClose}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          Cancel
-        </Button>
-      </fetcher.Form>
-
-      <ActionResultToast result={result} />
-    </div>
-  );
-}
-
-function ReportPanel({
-  actionProps,
-  disabled,
-  fetcher,
-  isPending,
-  onClose,
-  panelPositionClassName,
-  questionPublicId,
-  result,
-}: {
-  actionProps: Record<string, string>;
-  disabled: boolean;
-  fetcher: InboxFetcher;
-  isPending: boolean;
-  onClose: () => void;
-  panelPositionClassName: string;
-  questionPublicId: string;
-  result: InboxActionResult | undefined;
-}) {
-  const descriptionId = useId();
-  const titleId = useId();
-
-  return (
-    <div
-      aria-describedby={descriptionId}
-      aria-labelledby={titleId}
-      className={`absolute ${panelPositionClassName} z-[60] flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 rounded-2xl border bg-card p-4 text-card-foreground shadow-[var(--shadow-card-hover)]`}
-      role="dialog"
-    >
-      <PanelHeader
-        descriptionId={descriptionId}
-        description="Reports stay private and are only available for moderation review."
-        title="Report question"
-        titleId={titleId}
-      />
-
-      <fetcher.Form
-        aria-label="Report question"
-        className="flex flex-col gap-3"
-        method="post"
-        {...actionProps}
-      >
-        <input name="intent" type="hidden" value="report" />
-        <input name="questionPublicId" type="hidden" value={questionPublicId} />
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Reason
-          <select
-            className="h-10 rounded-xl border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30"
-            defaultValue=""
-            disabled={disabled || isPending}
-            name="reason"
-            required
-          >
-            <option disabled value="">
-              Choose a reason
-            </option>
-            {moderationReportReasonValues.map((reason) => (
-              <option key={reason} value={reason}>
-                {reportReasonLabels[reason]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Details
-          <Textarea
-            disabled={disabled || isPending}
-            maxLength={500}
-            name="details"
-            placeholder="Optional context for moderators"
-            rows={3}
-          />
-        </label>
-        <label className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+        <fetcher.Form method="post" {...actionProps}>
+          <input name="intent" type="hidden" value="block" />
           <input
-            className="mt-1 size-4 accent-primary"
-            defaultChecked
-            disabled={disabled || isPending}
-            name="alsoBlockSender"
-            type="checkbox"
+            name="questionPublicId"
+            type="hidden"
+            value={questionPublicId}
           />
-          Also block sender
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={disabled || isPending} size="sm" type="submit">
-            <Send data-icon="inline-start" />
-            Submit report
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={onClose}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Cancel
-          </Button>
-        </div>
-      </fetcher.Form>
-
-      <ActionResultToast result={result} />
-    </div>
+          <DialogFooter>
+            <Button
+              disabled={isPending}
+              onClick={() => {
+                onOpenChange(false);
+              }}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={disabled || isPending}
+              type="submit"
+              variant="destructive"
+            >
+              {isPending ? (
+                <LoaderCircle
+                  className="animate-spin motion-reduce:animate-none"
+                  data-icon="inline-start"
+                />
+              ) : (
+                <Ban data-icon="inline-start" />
+              )}
+              Confirm block
+            </Button>
+          </DialogFooter>
+        </fetcher.Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function PanelHeader({
-  description,
-  descriptionId,
-  title,
-  titleId,
+function ReportDialog({
+  actionProps,
+  disabled,
+  fetcher,
+  isPending,
+  onOpenChange,
+  open,
+  questionPublicId,
 }: {
-  description: string;
-  descriptionId: string;
-  title: string;
-  titleId: string;
+  actionProps: Record<string, string>;
+  disabled: boolean;
+  fetcher: InboxFetcher;
+  isPending: boolean;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  questionPublicId: string;
 }) {
+  const reasonId = useId();
+  const detailsId = useId();
+
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-semibold" id={titleId}>
-          {title}
-        </h3>
-        <p className="text-sm leading-6 text-muted-foreground" id={descriptionId}>
-          {description}
-        </p>
-      </div>
-    </div>
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Report question</DialogTitle>
+          <DialogDescription>
+            Reports stay private and are only available for moderation review.
+          </DialogDescription>
+        </DialogHeader>
+
+        <fetcher.Form
+          aria-label="Report question"
+          className="flex flex-col gap-4"
+          method="post"
+          {...actionProps}
+        >
+          <input name="intent" type="hidden" value="report" />
+          <input
+            name="questionPublicId"
+            type="hidden"
+            value={questionPublicId}
+          />
+          <Field>
+            <FieldLabel htmlFor={reasonId}>Reason</FieldLabel>
+            <Select
+              defaultValue=""
+              disabled={disabled || isPending}
+              id={reasonId}
+              name="reason"
+              required
+            >
+              <option disabled value="">
+                Choose a reason
+              </option>
+              {moderationReportReasonValues.map((reason) => (
+                <option key={reason} value={reason}>
+                  {reportReasonLabels[reason]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={detailsId}>Details</FieldLabel>
+            <Textarea
+              disabled={disabled || isPending}
+              id={detailsId}
+              maxLength={500}
+              name="details"
+              placeholder="Optional context for moderators"
+              rows={3}
+            />
+          </Field>
+          <label className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+            <input
+              className="mt-1 size-4 accent-primary"
+              defaultChecked
+              disabled={disabled || isPending}
+              name="alsoBlockSender"
+              type="checkbox"
+            />
+            Also block sender
+          </label>
+          <DialogFooter>
+            <Button
+              disabled={isPending}
+              onClick={() => {
+                onOpenChange(false);
+              }}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button disabled={disabled || isPending} type="submit">
+              {isPending ? (
+                <LoaderCircle
+                  className="animate-spin motion-reduce:animate-none"
+                  data-icon="inline-start"
+                />
+              ) : (
+                <Send data-icon="inline-start" />
+              )}
+              Submit report
+            </Button>
+          </DialogFooter>
+        </fetcher.Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

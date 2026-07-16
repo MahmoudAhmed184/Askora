@@ -185,7 +185,7 @@ test.describe("beta seeded smoke", () => {
 
     await page.goto("/inbox");
     await page.getByRole("button", { name: "Question actions" }).first().click();
-    await page.getByRole("button", { name: "Report" }).first().click();
+    await page.getByRole("menuitem", { name: "Report" }).first().click();
     await page.getByLabel("Reason").selectOption("other");
     await page.getByLabel("Details").fill("Beta smoke report.");
     await page.getByRole("button", { name: "Submit report" }).click();

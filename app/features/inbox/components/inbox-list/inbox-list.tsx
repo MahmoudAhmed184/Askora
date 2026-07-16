@@ -1,3 +1,4 @@
+import { Filter, Inbox } from "lucide-react";
 import { Link } from "react-router";
 
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
@@ -53,6 +54,7 @@ function InboxEmptyState({ folder }: { folder: InboxFolder }) {
           </Button>
         }
         description="Filtered questions from muted phrases and safety checks will appear here."
+        icon={<Filter aria-hidden="true" />}
         title="No filtered questions"
       />
     );
@@ -66,6 +68,7 @@ function InboxEmptyState({ folder }: { folder: InboxFolder }) {
         </Button>
       }
       description="New private questions that need attention will appear here."
+      icon={<Inbox aria-hidden="true" />}
       title="No inbox questions"
     />
   );

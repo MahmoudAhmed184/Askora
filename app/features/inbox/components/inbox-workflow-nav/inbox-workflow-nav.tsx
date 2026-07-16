@@ -57,17 +57,21 @@ export function InboxWorkflowShell({
       <header className="sticky top-0 z-30 -mx-4 border-b bg-background/85 px-4 pt-8 backdrop-blur-md supports-[backdrop-filter]:bg-background/76 sm:-mx-6 sm:px-6 sm:pt-10 lg:-mx-8 lg:px-8">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-3">
           <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
-            <h1 className="font-serif text-3xl font-bold leading-none text-primary">
+            <h1 className="font-serif text-3xl font-bold leading-none text-foreground">
               Inbox
             </h1>
             {locked ? <Badge variant="outline">Locked</Badge> : null}
           </div>
-          <p className="sr-only">{description}</p>
           <InboxWorkflowNav active={active} counts={counts} />
         </div>
       </header>
 
-      <div className="flex flex-col gap-6 pt-8">{children}</div>
+      <div className="flex flex-col gap-6 pt-6">
+        <p className="text-center text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
+        {children}
+      </div>
     </div>
   );
 }
