@@ -7,6 +7,7 @@ import {
   type StoredAdminReport,
   type StoredReportRelatedActivity,
 } from "~/features/admin/queries/admin.queries.server";
+import { decodeAdminReportCursor } from "~/features/admin/validations/admin-pagination.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -35,6 +36,37 @@ describe("admin report loaders", () => {
     expect(JSON.stringify(queue)).not.toContain("asker_user_sensitive");
     expect(JSON.stringify(queue)).not.toContain("raw_ip_hash_sensitive");
     expect(JSON.stringify(queue)).not.toContain("raw_fingerprint_sensitive");
+  });
+
+  it("paginates the report queue with a stable created-at and ID cursor", async () => {
+    const reports = Array.from({ length: 21 }, (_, index) =>
+      createStoredReportAt(index),
+    );
+    const store = createAdminLoaderStore({ reports });
+
+    const firstPage = await loadAdminReportQueue({
+      status: "open",
+      store: store.store,
+    });
+
+    expect(firstPage.reports).toHaveLength(20);
+    expect(firstPage.reports.at(-1)?.id).toBe("report_19");
+    expect(decodeAdminReportCursor(firstPage.nextCursor)).toEqual({
+      createdAt: new Date("2026-05-31T11:59:41.000Z"),
+      id: "report_19",
+    });
+
+    const secondPage = await loadAdminReportQueue({
+      cursor: decodeAdminReportCursor(firstPage.nextCursor),
+      status: "open",
+      store: store.store,
+    });
+
+    expect(secondPage.reports.map((report) => report.id)).toEqual([
+      "report_20",
+    ]);
+    expect(secondPage.nextCursor).toBeUndefined();
+    expect(secondPage.counts.open).toBe(21);
   });
 
   it("does not expose anonymous asker IDs or raw safety hashes in detail data", async () => {
@@ -96,9 +128,25 @@ function createAdminLoaderStore({
         reports.find((report) => report.report.id === reportId),
       );
     },
-    findReportsByStatus(status) {
+    findReportsByStatus({ cursor, limit, status }) {
+      const page = reports
+        .filter((report) => report.report.status === status)
+        .sort(
+          (left, right) =>
+            right.report.createdAt.getTime() - left.report.createdAt.getTime() ||
+            right.report.id.localeCompare(left.report.id),
+        )
+        .filter(
+          (report) =>
+            cursor === undefined ||
+            report.report.createdAt.getTime() < cursor.createdAt.getTime() ||
+            (report.report.createdAt.getTime() === cursor.createdAt.getTime() &&
+              report.report.id < cursor.id),
+        )
+        .slice(0, limit);
+
       return Promise.resolve(
-        reports.filter((report) => report.report.status === status),
+        page,
       );
     },
     findRelatedActivity() {
@@ -107,6 +155,19 @@ function createAdminLoaderStore({
   };
 
   return { store };
+}
+
+function createStoredReportAt(index: number) {
+  const report = createStoredReport();
+
+  return {
+    ...report,
+    report: {
+      ...report.report,
+      id: `report_${String(index)}`,
+      createdAt: new Date(now.getTime() - index * 1_000),
+    },
+  };
 }
 
 function createStoredReport(

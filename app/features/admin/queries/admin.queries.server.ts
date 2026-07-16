@@ -1,4 +1,4 @@
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, lt, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
@@ -21,6 +21,10 @@ import {
   type AdminActionType,
   type AdminQueueStatus,
 } from "~/features/admin/validations/admin.validations";
+import {
+  encodeAdminReportCursor,
+  type AdminReportCursor,
+} from "~/features/admin/validations/admin-pagination.server";
 
 export type AdminReportTargetType =
   (typeof moderationReportTargetTypeValues)[number];
@@ -137,7 +141,11 @@ export interface StoredReportRelatedActivity {
 export interface AdminReportLoaderStore {
   countReportsByStatus(): Promise<Record<AdminQueueStatus, number>>;
   findReportById(reportId: string): Promise<StoredAdminReport | undefined>;
-  findReportsByStatus(status: AdminQueueStatus): Promise<StoredAdminReport[]>;
+  findReportsByStatus(params: {
+    cursor: AdminReportCursor | undefined;
+    limit: number;
+    status: AdminQueueStatus;
+  }): Promise<StoredAdminReport[]>;
   findRelatedActivity(report: StoredAdminReport): Promise<StoredReportRelatedActivity>;
 }
 
@@ -159,6 +167,7 @@ export interface AdminReportQueueViewData {
   status: AdminQueueStatus;
   counts: Record<AdminQueueStatus, number>;
   reports: AdminReportQueueItemView[];
+  nextCursor: string | undefined;
 }
 
 export type AdminReportTargetDetailView =
@@ -249,24 +258,40 @@ export type AdminReportDetailLoadResult =
       status: "not_found";
     };
 
-const queueLimit = 100;
+const ADMIN_REPORT_PAGE_SIZE = 20;
 
 export async function loadAdminReportQueue({
+  cursor,
   status,
   store = createDrizzleAdminReportLoaderStore(),
 }: {
+  cursor?: AdminReportCursor | undefined;
   status: AdminQueueStatus;
   store?: AdminReportLoaderStore;
 }): Promise<AdminReportQueueViewData> {
   const [counts, reportsForStatus] = await Promise.all([
     store.countReportsByStatus(),
-    store.findReportsByStatus(status),
+    store.findReportsByStatus({
+      cursor,
+      limit: ADMIN_REPORT_PAGE_SIZE + 1,
+      status,
+    }),
   ]);
+  const pageReports = reportsForStatus.slice(0, ADMIN_REPORT_PAGE_SIZE);
+  const lastReport = pageReports.at(-1);
 
   return {
     status,
     counts,
-    reports: reportsForStatus.map(toQueueItemView),
+    reports: pageReports.map(toQueueItemView),
+    nextCursor:
+      reportsForStatus.length > ADMIN_REPORT_PAGE_SIZE &&
+      lastReport !== undefined
+        ? encodeAdminReportCursor({
+            createdAt: lastReport.report.createdAt,
+            id: lastReport.report.id,
+          })
+        : undefined,
   };
 }
 
@@ -352,13 +377,23 @@ export function createDrizzleAdminReportLoaderStore(
         ? undefined
         : resolveStoredAdminReport(database, report);
     },
-    async findReportsByStatus(status) {
+    async findReportsByStatus({ cursor, limit, status }) {
+      const cursorWhere =
+        cursor === undefined
+          ? undefined
+          : or(
+              lt(reports.createdAt, cursor.createdAt),
+              and(
+                eq(reports.createdAt, cursor.createdAt),
+                lt(reports.id, cursor.id),
+              ),
+            );
       const reportRows = await database
         .select(reportSelect)
         .from(reports)
-        .where(eq(reports.status, status))
-        .orderBy(desc(reports.createdAt))
-        .limit(queueLimit);
+        .where(and(eq(reports.status, status), cursorWhere))
+        .orderBy(desc(reports.createdAt), desc(reports.id))
+        .limit(limit);
 
       return Promise.all(
         reportRows.map((report) => resolveStoredAdminReport(database, report)),

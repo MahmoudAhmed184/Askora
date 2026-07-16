@@ -36,14 +36,37 @@ export function ReportQueue({ queue }: ReportQueueProps) {
       {queue.reports.length === 0 ? (
         <EmptyQueueState />
       ) : (
-        <div className="divide-y divide-border">
-          {queue.reports.map((report) => (
-            <ReportQueueRow key={report.id} report={report} />
-          ))}
-        </div>
+        <>
+          <div className="divide-y divide-border">
+            {queue.reports.map((report) => (
+              <ReportQueueRow key={report.id} report={report} />
+            ))}
+          </div>
+          {queue.nextCursor === undefined ? null : (
+            <div className="border-t px-5 py-4 sm:px-6">
+              <Button asChild variant="outline">
+                <Link to={createNextQueueHref(queue)}>Older reports</Link>
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
+}
+
+function createNextQueueHref(queue: AdminReportQueueViewData) {
+  const searchParams = new URLSearchParams();
+
+  if (queue.status !== "open") {
+    searchParams.set("status", queue.status);
+  }
+
+  if (queue.nextCursor !== undefined) {
+    searchParams.set("cursor", queue.nextCursor);
+  }
+
+  return `/admin?${searchParams.toString()}`;
 }
 
 function ReportStatusFilters({ queue }: ReportQueueProps) {

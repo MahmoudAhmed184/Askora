@@ -17,6 +17,7 @@ import {
   type AdminReportLoaderStore,
 } from "~/features/admin/queries/admin.queries.server";
 import { parseAdminQueueStatus } from "~/features/admin/validations/admin.validations";
+import { decodeAdminReportCursor } from "~/features/admin/validations/admin-pagination.server";
 import type {
   CurrentSessionContextReader
 } from "~/features/auth/services/auth.service.server";;
@@ -50,10 +51,14 @@ export async function loadAdminIndexRoute({
 
   const url = new URL(request.url);
   const status = parseAdminQueueStatus(url.searchParams.get("status"));
+  const cursor = decodeAdminReportCursor(
+    url.searchParams.get("cursor") ?? undefined,
+  );
 
   return {
     shell: await loadAdminShellData(session),
     queue: await loadAdminReportQueue({
+      cursor,
       status,
       ...(store === undefined ? {} : { store }),
     }),
