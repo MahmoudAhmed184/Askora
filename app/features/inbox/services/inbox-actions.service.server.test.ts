@@ -422,9 +422,23 @@ function createInboxActionStore({
       restored.push(params);
       return Promise.resolve();
     },
-    createReport(report) {
+    async createReportWithSafetyActions({
+      block,
+      report,
+      retainUntil,
+      updatedAt,
+    }) {
       reports.push(report);
-      return Promise.resolve();
+
+      if (block !== undefined) {
+        await store.createBlock(block);
+      }
+
+      retentionUpdates.push({
+        questionId: report.targetId,
+        retainUntil,
+        updatedAt,
+      });
     },
     createBlock(block) {
       const key =

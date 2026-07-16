@@ -88,7 +88,12 @@ export interface InboxActionStore {
     questionId: string;
     updatedAt: Date;
   }): Promise<void>;
-  createReport(report: NewQuestionReport): Promise<void>;
+  createReportWithSafetyActions(params: {
+    report: NewQuestionReport;
+    block: NewSenderBlock | undefined;
+    retainUntil: Date;
+    updatedAt: Date;
+  }): Promise<void>;
   createBlock(block: NewSenderBlock): Promise<"created" | "existing">;
   extendQuestionSafetyMetadataRetention(params: {
     questionId: string;
@@ -276,35 +281,31 @@ export function createDrizzleInboxActionStore(
         })
         .where(eq(questions.id, questionId));
     },
-    async createReport(report) {
-      await database.insert(reports).values(report);
+    async createReportWithSafetyActions({
+      block,
+      report,
+      retainUntil,
+      updatedAt,
+    }) {
+      await database.transaction(async (transaction) => {
+        await transaction.insert(reports).values(report).onConflictDoNothing();
+
+        if (block !== undefined) {
+          await createBlockWithTransaction({ block, transaction });
+        }
+
+        await transaction
+          .update(questions)
+          .set({
+            safetyMetadataRetainUntil: retainUntil,
+            updatedAt,
+          })
+          .where(eq(questions.id, report.targetId));
+      });
     },
     async createBlock(block) {
       return database.transaction(async (transaction) => {
-        const [created] = await transaction
-          .insert(blocks)
-          .values(block)
-          .onConflictDoNothing()
-          .returning({ id: blocks.id });
-
-        if (block.blockedProfileId !== null) {
-          await transaction
-            .delete(follows)
-            .where(
-              or(
-                and(
-                  eq(follows.followerProfileId, block.ownerProfileId),
-                  eq(follows.followedProfileId, block.blockedProfileId),
-                ),
-                and(
-                  eq(follows.followerProfileId, block.blockedProfileId),
-                  eq(follows.followedProfileId, block.ownerProfileId),
-                ),
-              ),
-            );
-        }
-
-        return created === undefined ? "existing" : "created";
+        return createBlockWithTransaction({ block, transaction });
       });
     },
     async extendQuestionSafetyMetadataRetention({
@@ -398,36 +399,60 @@ async function executeInboxAction({
     session,
   });
 
-  await store.createReport(report);
-  await retainQuestionSafetyMetadata({ now, question, store });
+  const block = form.alsoBlockSender
+    ? createSenderBlock({ createId, now, question, session })
+    : undefined;
+  const blockToCreate = block?.status === "blockable" ? block.block : undefined;
 
-  if (!form.alsoBlockSender) {
-    return {
-      status: "reported",
-      questionPublicId: question.publicId,
-    };
-  }
-
-  const block = createSenderBlock({
-    createId,
-    now,
-    question,
-    session,
+  await store.createReportWithSafetyActions({
+    report,
+    block: blockToCreate,
+    retainUntil: getQuestionSafetyRetentionDate({ now, question }),
+    updatedAt: now,
   });
 
-  if (block.status === "denied") {
-    return {
-      status: "reported",
-      questionPublicId: question.publicId,
-    };
-  }
-
-  await store.createBlock(block.block);
-
   return {
-    status: "reported_and_blocked",
+    status:
+      blockToCreate === undefined ? "reported" : "reported_and_blocked",
     questionPublicId: question.publicId,
   };
+}
+
+type DatabaseTransaction = Parameters<
+  Parameters<RuntimeDatabase["transaction"]>[0]
+>[0];
+
+async function createBlockWithTransaction({
+  block,
+  transaction,
+}: {
+  block: NewSenderBlock;
+  transaction: DatabaseTransaction;
+}) {
+  const [created] = await transaction
+    .insert(blocks)
+    .values(block)
+    .onConflictDoNothing()
+    .returning({ id: blocks.id });
+
+  if (block.blockedProfileId !== null) {
+    await transaction
+      .delete(follows)
+      .where(
+        or(
+          and(
+            eq(follows.followerProfileId, block.ownerProfileId),
+            eq(follows.followedProfileId, block.blockedProfileId),
+          ),
+          and(
+            eq(follows.followerProfileId, block.blockedProfileId),
+            eq(follows.followedProfileId, block.ownerProfileId),
+          ),
+        ),
+      );
+  }
+
+  return created === undefined ? "existing" as const : "created" as const;
 }
 
 async function findActionableQuestion({
@@ -582,12 +607,22 @@ async function retainQuestionSafetyMetadata({
 }) {
   await store.extendQuestionSafetyMetadataRetention({
     questionId: question.id,
-    retainUntil: maxDate(
-      question.safetyMetadataRetainUntil,
-      addDays(now, QUESTION_REPORT_RETENTION_DAYS),
-    ),
+    retainUntil: getQuestionSafetyRetentionDate({ now, question }),
     updatedAt: now,
   });
+}
+
+function getQuestionSafetyRetentionDate({
+  now,
+  question,
+}: {
+  now: Date;
+  question: InboxActionQuestion;
+}) {
+  return maxDate(
+    question.safetyMetadataRetainUntil,
+    addDays(now, QUESTION_REPORT_RETENTION_DAYS),
+  );
 }
 
 function deniedResult(
