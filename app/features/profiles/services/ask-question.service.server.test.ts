@@ -4,7 +4,8 @@ import type {
   CurrentSessionSummary
 } from "~/features/auth/services/auth.service.server";;
 import {
-  createAskTimingToken
+  ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS,
+  createAskTimingToken,
 } from "~/features/profiles/services/ask-friction.service.server";;
 import {
   decideQuestionSafety,
@@ -96,6 +97,32 @@ describe("submitPublicQuestion", () => {
       },
     });
 
+    expect(questions.created).toEqual([]);
+  });
+
+  it("preserves question text and returns an error for an expired timing token", async () => {
+    const questions = createQuestionStore();
+    const result = await submitQuestion({
+      formData: createQuestionFormData({
+        question: "Please keep this question",
+        timingToken: createAskTimingToken({
+          profileId: "profile_1",
+          username: "person",
+          now: new Date(now.getTime() - ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS - 1),
+        }),
+      }),
+      questionStore: questions.store,
+    });
+
+    expect(result).toMatchObject({
+      status: "invalid",
+      values: { question: "Please keep this question" },
+      formError: "Your question was not sent. Please try again.",
+    });
+    expect(getPublicAskFlashForResult({ result, session: anonymousSession })).toMatchObject({
+      status: "error",
+      values: { question: "Please keep this question" },
+    });
     expect(questions.created).toEqual([]);
   });
 

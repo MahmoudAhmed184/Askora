@@ -197,6 +197,17 @@ export async function submitPublicQuestion({
   });
 
   if (timing.status === "invalid") {
+    if (timing.reason === "expired") {
+      return {
+        status: "invalid",
+        values,
+        fieldErrors: {
+          timingToken: "This question form expired. Try submitting it again.",
+        },
+        formError: "Your question was not sent. Please try again.",
+      };
+    }
+
     return { status: "dropped", values, reason: "timing", timing };
   }
 

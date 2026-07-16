@@ -360,6 +360,17 @@ export async function submitThreadFollowUp({
   });
 
   if (timing.status === "invalid") {
+    if (timing.reason === "expired") {
+      return {
+        status: "invalid",
+        values,
+        fieldErrors: {
+          timingToken: "This follow-up form expired. Try submitting it again.",
+        },
+        formError: "Your follow-up was not sent. Please try again.",
+      };
+    }
+
     return { status: "dropped", values, reason: "timing", timing };
   }
 

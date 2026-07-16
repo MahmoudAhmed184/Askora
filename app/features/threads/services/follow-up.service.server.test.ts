@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type {
   CurrentSessionSummary
 } from "~/features/auth/services/auth.service.server";;
+import { ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS } from "~/features/profiles/services/ask-friction.service.server";
 import {
   createFollowUpTimingToken,
   getFollowUpFlashForResult,
@@ -72,6 +73,33 @@ describe("submitThreadFollowUp", () => {
       fieldErrors: {
         question: "Enter a question.",
       },
+    });
+    expect(followUps.created).toEqual([]);
+  });
+
+  it("preserves follow-up text and returns an error for an expired timing token", async () => {
+    const followUps = createFollowUpStore();
+    const result = await submitFollowUp({
+      followUpStore: followUps.store,
+      formData: createFollowUpFormData({
+        question: "Please keep this follow-up",
+        timingToken: createFollowUpTimingToken({
+          profileId: "profile_1",
+          threadPublicId: "thr_1",
+          username: "person",
+          now: new Date(now.getTime() - ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS - 1),
+        }),
+      }),
+    });
+
+    expect(result).toMatchObject({
+      status: "invalid",
+      values: { question: "Please keep this follow-up" },
+      formError: "Your follow-up was not sent. Please try again.",
+    });
+    expect(getFollowUpFlashForResult({ result, session: anonymousSession })).toMatchObject({
+      status: "error",
+      values: { question: "Please keep this follow-up" },
     });
     expect(followUps.created).toEqual([]);
   });
