@@ -213,35 +213,32 @@ export function AnswerEditor({
               />
             </Field>
 
-            {questionTextMode === "edited" ? (
-              <Field
-                data-invalid={
-                  fieldErrors.editedQuestionText !== undefined ? true : undefined
-                }
-              >
-                <FieldLabel htmlFor="editedQuestionText">
-                  Edited question
-                </FieldLabel>
-                <Textarea
-                  aria-describedby="editedQuestionText-description editedQuestionText-message"
-                  aria-invalid={fieldErrors.editedQuestionText !== undefined}
-                  defaultValue={initialValues.editedQuestionText}
-                  id="editedQuestionText"
-                  maxLength={500}
-                  name="editedQuestionText"
-                  rows={4}
-                />
-                <FieldDescription id="editedQuestionText-description">
-                  500 characters max. The original remains private for context.
-                </FieldDescription>
-                <FieldError
-                  id="editedQuestionText-message"
-                  message={fieldErrors.editedQuestionText}
-                />
-              </Field>
-            ) : (
-              <input name="editedQuestionText" type="hidden" value="" />
-            )}
+            <Field
+              data-invalid={
+                fieldErrors.editedQuestionText !== undefined ? true : undefined
+              }
+            >
+              <FieldLabel htmlFor="editedQuestionText">
+                Edited question
+              </FieldLabel>
+              <Textarea
+                aria-describedby="editedQuestionText-description editedQuestionText-message"
+                aria-invalid={fieldErrors.editedQuestionText !== undefined}
+                defaultValue={initialValues.editedQuestionText}
+                id="editedQuestionText"
+                maxLength={500}
+                name="editedQuestionText"
+                rows={4}
+              />
+              <FieldDescription id="editedQuestionText-description">
+                Used only when Edited is selected. 500 characters max; the
+                original remains private for context.
+              </FieldDescription>
+              <FieldError
+                id="editedQuestionText-message"
+                message={fieldErrors.editedQuestionText}
+              />
+            </Field>
 
             <Field data-invalid={fieldErrors.answerText !== undefined ? true : undefined}>
               <div className="flex items-center justify-between gap-4">
