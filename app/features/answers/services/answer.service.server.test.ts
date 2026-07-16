@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createPublicPublishedAnswers,
   handleAnswerSubmission,
+  isConcurrentAnswerPublishConflict,
   loadAnswerEditor,
   loadDraftAnswers,
   type AnswerMutationParams,
@@ -128,6 +129,74 @@ describe("answer workflows", () => {
       status: "published",
       publishedAt: now,
     });
+  });
+
+  it("maps a concurrent duplicate publish to an already-answered denial", async () => {
+    const answers = createAnswerStore();
+    let publishAttempts = 0;
+    const store: AnswerStore = {
+      ...answers.store,
+      publishAnswer: () => {
+        publishAttempts += 1;
+
+        if (publishAttempts === 2) {
+          return Promise.reject(createUniqueConstraintError(
+            "thread_items_question_id_unique",
+          ));
+        }
+
+        return Promise.resolve({
+          status: "published",
+          notified: false,
+          threadPublicId: "thr_1",
+          threadItemPublicId: "titem_1",
+        });
+      },
+    };
+
+    const results = await Promise.all([
+      submitAnswer({
+        formData: createAnswerFormData({
+          answerText: "Concurrent answer",
+          intent: "publish",
+        }),
+        store,
+      }),
+      submitAnswer({
+        formData: createAnswerFormData({
+          answerText: "Concurrent answer",
+          intent: "publish",
+        }),
+        store,
+      }),
+    ]);
+
+    expect(results.map((result) => result.status).sort()).toEqual([
+      "denied",
+      "published",
+    ]);
+    expect(results).toContainEqual(
+      expect.objectContaining({
+        status: "denied",
+        reason: "already_answered",
+        formError: "This question was already answered.",
+      }),
+    );
+  });
+
+  it("recognizes only answer ownership unique conflicts, including wrapped errors", () => {
+    expect(
+      isConcurrentAnswerPublishConflict(
+        new Error("transaction failed", {
+          cause: createUniqueConstraintError("threads_initial_question_id_unique"),
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isConcurrentAnswerPublishConflict(
+        createUniqueConstraintError("threads_public_id_unique"),
+      ),
+    ).toBe(false);
   });
 
   it("denies suspended sessions before saving or publishing content", async () => {
@@ -1175,6 +1244,13 @@ function createFollowUpQuestion(
 
 function addDays(date: Date, days: number) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function createUniqueConstraintError(constraint: string) {
+  return Object.assign(new Error(`duplicate key violates ${constraint}`), {
+    code: "23505",
+    constraint,
+  });
 }
 
 const completedSession = {

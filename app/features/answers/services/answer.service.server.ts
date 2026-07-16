@@ -114,7 +114,7 @@ export interface AnswerPublishResult {
 
 export interface AnswerPublishDeniedResult {
   status: "denied";
-  reason: Extract<AnswerDeniedReason, "thread_full">;
+  reason: Extract<AnswerDeniedReason, "already_answered" | "thread_full">;
 }
 
 export interface AnswerStore {
@@ -186,6 +186,7 @@ export interface AnswerFieldErrors {
 export type AnswerDeniedReason =
   | "not_found"
   | "closed"
+  | "already_answered"
   | "suspended"
   | "thread_full";
 
@@ -392,7 +393,17 @@ export async function handleAnswerSubmission({
     };
   }
 
-  const publish = await store.publishAnswer(mutationParams);
+  let publish: Awaited<ReturnType<AnswerStore["publishAnswer"]>>;
+
+  try {
+    publish = await store.publishAnswer(mutationParams);
+  } catch (error) {
+    if (isConcurrentAnswerPublishConflict(error)) {
+      return deniedResult(values, "already_answered");
+    }
+
+    throw error;
+  }
 
   if (publish.status === "denied") {
     return deniedResult(values, publish.reason);
@@ -570,6 +581,13 @@ export function createDrizzleAnswerStore(
           question: params.question,
           transaction,
         });
+
+        if (isFollowUpQuestion(params.question) && existingThread !== undefined) {
+          await lockThreadForPublishing({
+            threadId: existingThread.id,
+            transaction,
+          });
+        }
 
         if (
           firstPublish &&
@@ -938,6 +956,20 @@ async function getVisiblePublishedThreadItemCount({
   return row?.count ?? 0;
 }
 
+async function lockThreadForPublishing({
+  threadId,
+  transaction,
+}: {
+  threadId: string;
+  transaction: Parameters<Parameters<RuntimeDatabase["transaction"]>[0]>[0];
+}) {
+  await transaction
+    .select({ id: threads.id })
+    .from(threads)
+    .where(eq(threads.id, threadId))
+    .for("update");
+}
+
 async function createFollowUpAnsweredNotifications({
   currentAskerUserId,
   item,
@@ -1182,11 +1214,47 @@ function getDeniedMessage(reason: AnswerDeniedReason) {
       return "Question could not be found.";
     case "closed":
       return "This question is no longer available for answering.";
+    case "already_answered":
+      return "This question was already answered.";
     case "suspended":
       return "Answering is unavailable while this account is suspended.";
     case "thread_full":
       return "This thread already has the maximum number of published answers.";
   }
+}
+
+const answerPublishConflictConstraints = new Set([
+  "threads_initial_question_id_unique",
+  "thread_items_question_id_unique",
+]);
+
+export function isConcurrentAnswerPublishConflict(error: unknown) {
+  let current: unknown = error;
+
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (
+      typeof current === "object" &&
+      current !== null &&
+      "code" in current &&
+      current.code === "23505" &&
+      "constraint" in current &&
+      typeof current.constraint === "string"
+    ) {
+      return answerPublishConflictConstraints.has(current.constraint);
+    }
+
+    if (
+      typeof current !== "object" ||
+      current === null ||
+      !("cause" in current)
+    ) {
+      return false;
+    }
+
+    current = current.cause;
+  }
+
+  return false;
 }
 
 function getPublishRedirect({
