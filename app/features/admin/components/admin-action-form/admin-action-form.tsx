@@ -22,12 +22,17 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card/card";
+import {
+  Field,
+  FieldError,
+  FieldLabel,
+} from "~/components/ui/field/field";
+import { Select } from "~/components/ui/select/select";
 import { Textarea } from "~/components/ui/textarea/textarea";
 import type { AdminActionType } from "~/features/admin/validations/admin.validations";
 import { requiresAdminActionNotes } from "~/features/admin/validations/admin.validations";
 import type { AdminReportActionResult } from "~/features/admin/types/admin.types";
 import { adminActionLabels } from "~/features/admin/components/admin-labels";
-import { cn } from "~/lib/utils";
 
 interface AdminActionFormProps {
   actionResult: AdminReportActionResult | undefined;
@@ -94,18 +99,11 @@ export function AdminActionForm({
           }}
           ref={formRef}
         >
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium" htmlFor="actionType">
-              Action
-            </label>
-            <select
+          <Field data-invalid={fieldErrors.actionType !== undefined ? true : undefined}>
+            <FieldLabel htmlFor="actionType">Action</FieldLabel>
+            <Select
+              aria-describedby="actionType-error"
               aria-invalid={fieldErrors.actionType === undefined ? undefined : true}
-              className={cn(
-                "flex h-10 w-full min-w-0 rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-                fieldErrors.actionType !== undefined
-                  ? "border-destructive focus-visible:ring-destructive/20"
-                  : "",
-              )}
               id="actionType"
               name="actionType"
               onChange={(event) => {
@@ -123,19 +121,14 @@ export function AdminActionForm({
                   {requiresAdminActionNotes(action) ? " *" : ""}
                 </option>
               ))}
-            </select>
-            {fieldErrors.actionType !== undefined ? (
-              <p className="text-sm leading-6 text-destructive">
-                {fieldErrors.actionType}
-              </p>
-            ) : null}
-          </div>
+            </Select>
+            <FieldError id="actionType-error" message={fieldErrors.actionType} />
+          </Field>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium" htmlFor="notes">
-              Notes
-            </label>
+          <Field data-invalid={notesError !== undefined ? true : undefined}>
+            <FieldLabel htmlFor="notes">Notes</FieldLabel>
             <Textarea
+              aria-describedby="notes-error"
               aria-invalid={notesError === undefined ? undefined : true}
               id="notes"
               name="notes"
@@ -146,12 +139,8 @@ export function AdminActionForm({
               placeholder="Internal moderation note"
               value={notes}
             />
-            {notesError !== undefined ? (
-              <p className="text-sm leading-6 text-destructive">
-                {notesError}
-              </p>
-            ) : null}
-          </div>
+            <FieldError id="notes-error" message={notesError} />
+          </Field>
 
           <Button className="w-fit gap-2" disabled={isSubmitting} type="submit">
             <ShieldCheck data-icon="inline-start" />

@@ -73,6 +73,7 @@ export default function AdminReportDetailRoute({
     <AdminShell shell={loaderData.shell}>
       <div className="flex flex-col gap-6">
         <AdminHero
+          title="Report review"
           stats={[
             {
               value: reportStatusLabels[loaderData.detail.report.status],
@@ -92,7 +93,7 @@ export default function AdminReportDetailRoute({
         <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
           <AdminReportQueuePreview detail={loaderData.detail} />
 
-          <div className="flex flex-col gap-6 pt-44 sm:pt-0">
+          <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild className="gap-2" size="sm" variant="outline">
                 <Link to="/admin">
@@ -101,7 +102,7 @@ export default function AdminReportDetailRoute({
                 </Link>
               </Button>
               <h2 className="mr-auto font-serif text-2xl font-extrabold leading-tight text-foreground">
-                Report review
+                Report detail
               </h2>
               <Badge variant="secondary">Report</Badge>
               <Badge variant="outline">{loaderData.detail.report.id}</Badge>
