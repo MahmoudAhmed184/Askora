@@ -8,9 +8,11 @@ import { PendingButton } from "~/components/shared/pending-button/pending-button
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field/field";
+import { Select } from "~/components/ui/select/select";
 import { Textarea } from "~/components/ui/textarea/textarea";
 import type {
   AnswerActionResult,
@@ -27,9 +29,9 @@ import { cn } from "~/lib/utils";
 
 interface AnswerEditorProps {
   actionResult: AnswerActionResult | undefined;
-
   disabled: boolean;
   editor: AnswerEditorViewData;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const questionTextModeOptions = [
@@ -64,19 +66,35 @@ const answerCharacterLimit = 3_000;
 
 export function AnswerEditor({
   actionResult,
-
   disabled,
   editor,
+  onDirtyChange,
 }: AnswerEditorProps) {
   const formId = useId();
   const initialValues =
     actionResult?.status === "invalid" || actionResult?.status === "denied"
       ? actionResult.values
       : editor.values;
+  const initialQuestionTextMode = normalizeQuestionTextMode(
+    initialValues.questionTextMode,
+  );
   const [questionTextMode, setQuestionTextMode] = useState(
-    normalizeQuestionTextMode(initialValues.questionTextMode),
+    initialQuestionTextMode,
   );
   const [answerText, setAnswerText] = useState(initialValues.answerText);
+
+  function reportDirty({
+    nextAnswerText = answerText,
+    nextQuestionTextMode = questionTextMode,
+  }: {
+    nextAnswerText?: string;
+    nextQuestionTextMode?: QuestionTextMode;
+  }) {
+    onDirtyChange?.(
+      nextAnswerText !== initialValues.answerText ||
+        nextQuestionTextMode !== initialQuestionTextMode,
+    );
+  }
   const fieldErrors = getFieldErrors(actionResult);
   const formError = getFormError(actionResult);
   const answerCharactersRemaining = answerCharacterLimit - answerText.length;
@@ -132,10 +150,11 @@ export function AnswerEditor({
                 fieldErrors.questionTextMode !== undefined ? true : undefined
               }
             >
-              <span className="sr-only">
-                Public question text
-              </span>
-              <div className="flex flex-wrap gap-2">
+              <div
+                aria-label="Public question text"
+                className="flex flex-wrap gap-2"
+                role="radiogroup"
+              >
                 {questionTextModeOptions.map((option) => {
                   const Icon = option.icon;
                   return (
@@ -154,6 +173,7 @@ export function AnswerEditor({
                         name="questionTextMode"
                         onChange={() => {
                           setQuestionTextMode(option.value);
+                          reportDirty({ nextQuestionTextMode: option.value });
                         }}
                         type="radio"
                         value={option.value}
@@ -248,6 +268,7 @@ export function AnswerEditor({
                 name="answerText"
                 onChange={(event) => {
                   setAnswerText(event.target.value);
+                  reportDirty({ nextAnswerText: event.target.value });
                 }}
                 placeholder="Write the answer you will publish..."
                 rows={4}
@@ -269,12 +290,11 @@ export function AnswerEditor({
               <FieldLabel htmlFor="followUpPermissionOverride">
                 Follow-up override
               </FieldLabel>
-              <select
+              <Select
                 aria-describedby="followUpPermissionOverride-description followUpPermissionOverride-message"
                 aria-invalid={
                   fieldErrors.followUpPermissionOverride !== undefined
                 }
-                className="flex h-10 w-full min-w-0 rounded-xl border border-input bg-card px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20"
                 defaultValue={normalizeFollowUpPermissionOverride(
                   initialValues.followUpPermissionOverride,
                 )}
@@ -289,7 +309,7 @@ export function AnswerEditor({
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
               <FieldDescription id="followUpPermissionOverride-description">
                 Applies once this answer is published.
               </FieldDescription>
@@ -368,24 +388,6 @@ function QuestionSender({
       <span aria-hidden="true">·</span>
       <time dateTime={question.createdAt}>{formatDate(question.createdAt)}</time>
     </div>
-  );
-}
-
-function FieldError({
-  id,
-  message,
-}: {
-  id: string;
-  message: string | undefined;
-}) {
-  if (message === undefined) {
-    return <span id={id} />;
-  }
-
-  return (
-    <p className="text-sm leading-6 text-destructive" id={id} role="alert">
-      {message}
-    </p>
   );
 }
 

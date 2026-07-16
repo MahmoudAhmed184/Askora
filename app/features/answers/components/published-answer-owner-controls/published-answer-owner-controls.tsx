@@ -25,6 +25,14 @@ import {
 import { Button } from "~/components/ui/button/button";
 import { buttonVariants } from "~/components/ui/button/button-variants";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -152,17 +160,14 @@ export function PublishedAnswerOwnerControls({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {editOpen ? (
-        <EditPublishedAnswerPanel
-          action={action}
-          answer={answer}
-          disabled={disabled}
-          fetcher={fetcher}
-          onClose={() => {
-            setEditOpen(false);
-          }}
-        />
-      ) : undefined}
+      <EditPublishedAnswerDialog
+        action={action}
+        answer={answer}
+        disabled={disabled}
+        fetcher={fetcher}
+        onOpenChange={setEditOpen}
+        open={editOpen}
+      />
 
       <ConfirmPublishedAnswerActionDialog
         action={action}
@@ -179,75 +184,76 @@ export function PublishedAnswerOwnerControls({
   );
 }
 
-function EditPublishedAnswerPanel({
+function EditPublishedAnswerDialog({
   action,
   answer,
   disabled,
   fetcher,
-  onClose,
+  onOpenChange,
+  open,
 }: {
   action: string;
   answer: PublishedAnswerOwnerControlAnswer;
   disabled: boolean;
   fetcher: PublishedAnswerActionFetcher;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
 }) {
-  // TODO: Migrate this inline editor, the answer editor overlay, and moderation panels to the shared Dialog primitive after their fetcher/route lifecycles are split.
   return (
-    <div
-      aria-label="Edit published answer"
-      className="fixed inset-x-4 bottom-24 z-[70] mx-auto flex max-h-[min(34rem,calc(100vh-7rem))] max-w-md flex-col gap-3 overflow-auto rounded-2xl border bg-card p-4 text-card-foreground shadow-[var(--shadow-card-hover)] sm:inset-x-auto sm:left-1/2 sm:w-[28rem] sm:-translate-x-1/2"
-      role="dialog"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold">Silent edit</h3>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Update the answer without notifying followers or thread participants.
-          </p>
-        </div>
-      </div>
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Silent edit</DialogTitle>
+          <DialogDescription>
+            Update the answer without notifying followers or thread
+            participants.
+          </DialogDescription>
+        </DialogHeader>
 
-      <fetcher.Form
-        action={action}
-        aria-label="Edit published answer"
-        className="flex flex-col gap-3"
-        method="post"
-        onSubmit={onClose}
-      >
-        <ToastResultInput />
-        <input name="intent" type="hidden" value="edit" />
-        <label
-          className="flex flex-col gap-2 text-sm font-medium"
-          htmlFor={`answerText-${answer.publicId}`}
+        <fetcher.Form
+          action={action}
+          aria-label="Edit published answer"
+          className="flex flex-col gap-4"
+          method="post"
+          onSubmit={() => {
+            onOpenChange(false);
+          }}
         >
-          Answer text
-          <Textarea
-            defaultValue={answer.answerText}
-            disabled={disabled}
-            id={`answerText-${answer.publicId}`}
-            maxLength={3_000}
-            name="answerText"
-            rows={6}
-          />
-        </label>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button disabled={disabled} size="sm" type="submit">
-            <Save data-icon="inline-start" />
-            Save answer
-          </Button>
-          <Button
-            disabled={disabled}
-            onClick={onClose}
-            size="sm"
-            type="button"
-            variant="outline"
+          <ToastResultInput />
+          <input name="intent" type="hidden" value="edit" />
+          <label
+            className="flex flex-col gap-2 text-sm font-medium"
+            htmlFor={`answerText-${answer.publicId}`}
           >
-            Cancel
-          </Button>
-        </div>
-      </fetcher.Form>
-    </div>
+            Answer text
+            <Textarea
+              defaultValue={answer.answerText}
+              disabled={disabled}
+              id={`answerText-${answer.publicId}`}
+              maxLength={3_000}
+              name="answerText"
+              rows={6}
+            />
+          </label>
+          <DialogFooter>
+            <Button
+              disabled={disabled}
+              onClick={() => {
+                onOpenChange(false);
+              }}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button disabled={disabled} type="submit">
+              <Save data-icon="inline-start" />
+              Save answer
+            </Button>
+          </DialogFooter>
+        </fetcher.Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

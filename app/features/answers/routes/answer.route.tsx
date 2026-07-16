@@ -1,6 +1,9 @@
+import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
 import { data, Link, redirect, useActionData } from "react-router";
 
-import { Badge } from "~/components/ui/badge/badge";
+import { Button } from "~/components/ui/button/button";
+import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
 import { AnswerEditor } from "~/features/answers/components/answer-editor";
 import {
   handleAnswerSubmission,
@@ -76,18 +79,22 @@ export function meta() {
 
 export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
+  const [isDirty, setIsDirty] = useState(false);
 
   if (loaderData.status === "not_found") {
     return (
-      <div className="flex flex-col gap-3 border-b pb-5">
-        <Badge variant="secondary">Answer</Badge>
-        <h1 className="font-serif text-4xl font-bold text-primary">
-          Question not found
-        </h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          This question is not available for answering.
-        </p>
-      </div>
+      <UnavailableState
+        action={
+          <Button asChild variant="outline">
+            <Link to="/inbox">
+              <ArrowLeft data-icon="inline-start" />
+              Back to inbox
+            </Link>
+          </Button>
+        }
+        description="This question is not available for answering. It may have been removed or already handled."
+        title="Question not found"
+      />
     );
   }
 
@@ -96,6 +103,16 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
       <Link
         aria-label="Dismiss answer editor"
         className="absolute inset-0 bg-background/92"
+        onClick={(event) => {
+          if (
+            isDirty &&
+            !window.confirm(
+              "Discard this answer? Unsaved changes will be lost.",
+            )
+          ) {
+            event.preventDefault();
+          }
+        }}
         to={loaderData.closeHref}
       />
       <div className="relative z-10 flex max-h-[calc(100svh_-_9rem_-_env(safe-area-inset-bottom))] w-full max-w-[53rem] sm:max-h-[calc(100svh_-_9rem)]">
@@ -104,6 +121,7 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
           disabled={loaderData.isSuspended}
           editor={loaderData.editor}
           key={loaderData.editor.question.publicId}
+          onDirtyChange={setIsDirty}
         />
       </div>
     </div>

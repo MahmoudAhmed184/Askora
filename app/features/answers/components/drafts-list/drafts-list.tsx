@@ -22,6 +22,7 @@ export function DraftsList({ drafts }: DraftsListProps) {
           </Button>
         }
         description="Saved answer drafts will appear here."
+        icon={<FileText aria-hidden="true" />}
         title="No drafts"
       />
     );
