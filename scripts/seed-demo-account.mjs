@@ -7,9 +7,11 @@ import pg from "pg";
 
 const { Pool } = pg;
 
-const DEFAULT_TARGET_EMAIL = "mahmoudbahnasawy820@gmail.com";
+const DEFAULT_TARGET_EMAIL = "local.target@example.test";
 const DEVELOPMENT_AUTH_SECRET =
   "development-only-better-auth-secret-change-before-production";
+const LOCAL_TARGET_NAME = "Local Demo Target";
+const LOCAL_TARGET_DISPLAY_NAME = "Local Demo Target";
 
 const demoUsers = {
   curator: {
@@ -139,6 +141,7 @@ export function assertDemoSeedAllowed(environment = process.env) {
 
 export async function seedDemoAccount({
   appUrl = process.env.APP_URL ?? process.env.BETTER_AUTH_URL ?? "http://localhost:5173",
+  bootstrapTarget = shouldBootstrapTarget(process.env),
   now = new Date(),
   pool,
   secret = process.env.BETTER_AUTH_SECRET ?? DEVELOPMENT_AUTH_SECRET,
@@ -149,7 +152,12 @@ export async function seedDemoAccount({
   try {
     await client.query("begin");
 
-    const target = await findTargetAccount(client, targetEmail);
+    const target = await findOrCreateTargetAccount({
+      bootstrapTarget,
+      client,
+      now,
+      targetEmail,
+    });
     await resetDemoFixtures(client, target);
     await prepareTargetProfile({ client, now, target });
     await insertDemoUsers({ client, now });
@@ -192,9 +200,7 @@ async function findTargetAccount(client, targetEmail) {
   const target = result.rows[0];
 
   if (target === undefined) {
-    throw new Error(
-      `No active completed profile was found for ${targetEmail}. Sign in and finish setup first.`,
-    );
+    return undefined;
   }
 
   return {
@@ -205,6 +211,181 @@ async function findTargetAccount(client, targetEmail) {
     userId: target.user_id,
     username: target.username,
   };
+}
+
+async function findOrCreateTargetAccount({
+  bootstrapTarget,
+  client,
+  now,
+  targetEmail,
+}) {
+  const target = await findTargetAccount(client, targetEmail);
+
+  if (target !== undefined) {
+    return target;
+  }
+
+  if (!bootstrapTarget) {
+    throw new Error(
+      `No active completed profile was found for ${targetEmail}. Sign in and finish setup first.`,
+    );
+  }
+
+  return createLocalTargetAccount({ client, now, targetEmail });
+}
+
+async function createLocalTargetAccount({ client, now, targetEmail }) {
+  const existingUser = await findTargetUser(client, targetEmail);
+  const targetIdentity = createLocalTargetIdentity(targetEmail);
+  const user = existingUser ?? {
+    id: targetIdentity.userId,
+    email: targetEmail,
+    name: LOCAL_TARGET_NAME,
+  };
+
+  if (existingUser === undefined) {
+    await insertLocalTargetUser({ client, now, target: user });
+  }
+
+  await insertLocalTargetProfile({
+    client,
+    now,
+    target: {
+      ...user,
+      profileId: targetIdentity.profileId,
+      username: targetIdentity.username,
+      displayName: LOCAL_TARGET_DISPLAY_NAME,
+    },
+  });
+
+  return {
+    email: user.email,
+    displayName: LOCAL_TARGET_DISPLAY_NAME,
+    name: user.name,
+    profileId: targetIdentity.profileId,
+    userId: user.id,
+    username: targetIdentity.username,
+  };
+}
+
+async function findTargetUser(client, targetEmail) {
+  const result = await client.query(
+    `
+      select id, email, name
+      from users
+      where lower(email) = lower($1)
+      limit 1
+    `,
+    [targetEmail],
+  );
+
+  const user = result.rows[0];
+
+  if (user === undefined) {
+    return undefined;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+  };
+}
+
+async function insertLocalTargetUser({ client, now, target }) {
+  await client.query(
+    `
+      insert into users (
+        id,
+        name,
+        email,
+        email_verified,
+        image,
+        role,
+        suspension_status,
+        suspended_until,
+        created_at,
+        updated_at
+      )
+      values ($1, $2, $3, true, null, 'user', null, null, $4, $4)
+    `,
+    [target.id, target.name, target.email, now],
+  );
+}
+
+async function insertLocalTargetProfile({ client, now, target }) {
+  await client.query(
+    `
+      insert into profiles (
+        id,
+        user_id,
+        username,
+        display_name,
+        avatar_url,
+        bio,
+        is_active,
+        accepting_questions,
+        anonymous_questions_enabled,
+        ask_permission,
+        follow_up_permission_default,
+        show_follower_counts,
+        show_like_counts,
+        created_at,
+        updated_at
+      )
+      values ($1, $2, $3, $4, null, $5, true, true, true, 'everyone', 'anyone', true, true, $6, $6)
+    `,
+    [
+      target.profileId,
+      target.id,
+      target.username,
+      target.displayName,
+      "Local demo target profile for seeded manual testing.",
+      now,
+    ],
+  );
+
+  await client.query(
+    `
+      insert into username_reservations (
+        id,
+        username,
+        profile_id,
+        redirect_to_username,
+        reserved_until,
+        redirect_until,
+        created_at
+      )
+      values ($1, $2, $3, null, null, null, $4)
+    `,
+    [
+      `seed_target_reservation_${getStableSeedHash(target.email).slice(0, 12)}`,
+      target.username,
+      target.profileId,
+      now,
+    ],
+  );
+
+  await client.query(
+    `
+      insert into events (
+        id,
+        user_id,
+        profile_id,
+        type,
+        metadata,
+        created_at
+      )
+      values ($1, $2, $3, 'profile_setup_completed', $4, $5)
+    `,
+    [
+      `seed_target_event_${getStableSeedHash(target.email).slice(0, 12)}`,
+      target.id,
+      target.profileId,
+      JSON.stringify({ username: target.username, source: "demo-seed" }),
+      now,
+    ],
+  );
 }
 
 async function resetDemoFixtures(client, target) {
@@ -1211,6 +1392,30 @@ function createMagicLoginLink({ appUrl, callbackPath, token }) {
   url.searchParams.set("callbackURL", callbackPath);
   url.searchParams.set("errorCallbackURL", "/login");
   return url.toString();
+}
+
+function shouldBootstrapTarget(environment) {
+  if (environment.DEMO_SEED_BOOTSTRAP_TARGET !== undefined) {
+    return environment.DEMO_SEED_BOOTSTRAP_TARGET === "true";
+  }
+
+  return ["local", "test"].includes(environment.DEMO_SEED_SCOPE ?? "");
+}
+
+function createLocalTargetIdentity(targetEmail) {
+  const hash = getStableSeedHash(targetEmail);
+
+  return {
+    userId: `seed_target_user_${hash.slice(0, 12)}`,
+    profileId: `seed_target_profile_${hash.slice(0, 12)}`,
+    username: `seed_target_${hash.slice(0, 8)}`,
+  };
+}
+
+function getStableSeedHash(value) {
+  return createHash("sha256")
+    .update(value.trim().toLowerCase())
+    .digest("hex");
 }
 
 function createSignedBetterAuthSessionCookie({ secret, sessionToken }) {
