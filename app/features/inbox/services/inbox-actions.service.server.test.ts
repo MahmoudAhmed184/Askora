@@ -174,7 +174,8 @@ describe("handleInboxAction", () => {
         id: "block_1",
         blockedUserId: "user_2",
         blockedProfileId: "profile_2",
-        safetyFingerprintHash: null,
+        safetyFingerprintHash: "fingerprint_hash_1",
+        ipHash: "ip_hash_1",
       }),
     ]);
 
@@ -195,6 +196,11 @@ describe("handleInboxAction", () => {
 
   it("creates account/profile and anonymous fingerprint blocks idempotently", async () => {
     const accountBlock = createInboxActionStore({
+      follows: [
+        { followerProfileId: "profile_1", followedProfileId: "profile_2" },
+        { followerProfileId: "profile_2", followedProfileId: "profile_1" },
+        { followerProfileId: "profile_3", followedProfileId: "profile_1" },
+      ],
       question: createQuestion({
         askerUserId: "user_2",
         askerProfileId: "profile_2",
@@ -212,9 +218,12 @@ describe("handleInboxAction", () => {
       expect.objectContaining({
         blockedUserId: "user_2",
         blockedProfileId: "profile_2",
-        safetyFingerprintHash: null,
-        ipHash: null,
+        safetyFingerprintHash: "fingerprint_hash_1",
+        ipHash: "ip_hash_1",
       }),
+    ]);
+    expect(accountBlock.follows).toEqual([
+      { followerProfileId: "profile_3", followedProfileId: "profile_1" },
     ]);
 
     const anonymousBlock = createInboxActionStore();
@@ -354,8 +363,13 @@ function createActionFormData({
 }
 
 function createInboxActionStore({
+  follows: initialFollows = [],
   question = createQuestion(),
 }: {
+  follows?: {
+    followerProfileId: string;
+    followedProfileId: string;
+  }[];
   question?: InboxActionQuestion;
 } = {}) {
   const deleted: Parameters<InboxActionStore["deleteQuestionByRecipient"]>[0][] = [];
@@ -366,6 +380,7 @@ function createInboxActionStore({
     InboxActionStore["extendQuestionSafetyMetadataRetention"]
   >[0][] = [];
   const blockKeys = new Set<string>();
+  const follows = [...initialFollows];
 
   const store: InboxActionStore = {
     findQuestionForAction(publicId) {
@@ -395,6 +410,23 @@ function createInboxActionStore({
 
       blockKeys.add(key);
       blocks.push(block);
+
+      if (block.blockedProfileId !== null) {
+        for (let index = follows.length - 1; index >= 0; index -= 1) {
+          const follow = follows[index];
+
+          if (
+            follow !== undefined &&
+            ((follow.followerProfileId === block.ownerProfileId &&
+              follow.followedProfileId === block.blockedProfileId) ||
+              (follow.followerProfileId === block.blockedProfileId &&
+                follow.followedProfileId === block.ownerProfileId))
+          ) {
+            follows.splice(index, 1);
+          }
+        }
+      }
+
       return Promise.resolve("created");
     },
     extendQuestionSafetyMetadataRetention(params) {
@@ -406,6 +438,7 @@ function createInboxActionStore({
   return {
     blocks,
     deleted,
+    follows,
     reports,
     restored,
     retentionUpdates,

@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
-import { blocks, questions, reports } from "~/db/schema";
+import { blocks, follows, questions, reports } from "~/db/schema";
 import type {
   CompletedProfileSessionSummary
 } from "~/features/auth/services/auth.service.server";;
@@ -236,8 +236,32 @@ export function createDrizzleInboxActionStore(
       await database.insert(reports).values(report);
     },
     async createBlock(block) {
-      await database.insert(blocks).values(block).onConflictDoNothing();
-      return "created";
+      return database.transaction(async (transaction) => {
+        const [created] = await transaction
+          .insert(blocks)
+          .values(block)
+          .onConflictDoNothing()
+          .returning({ id: blocks.id });
+
+        if (block.blockedProfileId !== null) {
+          await transaction
+            .delete(follows)
+            .where(
+              or(
+                and(
+                  eq(follows.followerProfileId, block.ownerProfileId),
+                  eq(follows.followedProfileId, block.blockedProfileId),
+                ),
+                and(
+                  eq(follows.followerProfileId, block.blockedProfileId),
+                  eq(follows.followedProfileId, block.ownerProfileId),
+                ),
+              ),
+            );
+        }
+
+        return created === undefined ? "existing" : "created";
+      });
     },
     async extendQuestionSafetyMetadataRetention({
       questionId,
@@ -470,8 +494,8 @@ function createSenderBlock({
         ownerUserId: session.user.id,
         blockedUserId: question.askerUserId,
         blockedProfileId: question.askerProfileId,
-        safetyFingerprintHash: null,
-        ipHash: null,
+        safetyFingerprintHash: question.safetyFingerprintHash,
+        ipHash: question.ipHash,
         sourceQuestionId: question.id,
         createdAt: now,
         updatedAt: now,
