@@ -26,11 +26,11 @@ describe("HomeRoute", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: /one public link for questions worth answering/i,
+        name: /one link for people to ask you anything/i,
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /request or sign in/i }),
+      screen.getByRole("link", { name: /have an invite\? sign in/i }),
     ).toHaveAttribute("href", "/login");
     expect(
       screen.getByRole("form", { name: /request beta access/i }),

@@ -1,34 +1,38 @@
 import {
   ArrowRight,
-  Mail,
+  CheckCircle2,
+  EyeOff,
+  Flag,
+  Heart,
+  Inbox,
+  Link2,
   MessageCircle,
-  ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  data,
-  Form,
-  Link,
-  redirect,
-  useActionData,
-} from "react-router";
+import { data, Form, Link, redirect, useActionData } from "react-router";
 
-import {
-  ActionToast,
-  type ActionToastTone,
-} from "~/components/shared/action-toast/action-toast";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "~/components/ui/alert/alert";
+import {
+  Avatar,
+  AvatarFallback,
+} from "~/components/ui/avatar/avatar";
 import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
 import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "~/components/ui/field/field";
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card/card";
+import { Field, FieldError, FieldLabel } from "~/components/ui/field/field";
 import { Input } from "~/components/ui/input/input";
+import { Separator } from "~/components/ui/separator/separator";
 import { getAuthProviderStatus } from "~/lib/config.server";
 import { getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
 import { parseFormData } from "~/lib/zod-form";
@@ -114,224 +118,341 @@ export function meta() {
 
 export default function HomeRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
-  const waitlistToast = getWaitlistToast({
-    databaseConfigured: loaderData.auth.databaseConfigured,
-    result: actionData?.waitlist,
-  });
 
   return (
     <PublicShell>
-      <ActionToast
-        message={waitlistToast?.message}
-        tone={waitlistToast?.tone ?? "info"}
-        trigger={waitlistToast?.trigger}
-      />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10">
-        <section className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1fr)] lg:items-center">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 sm:gap-24">
+        <section className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.85fr)] lg:items-center">
           <div className="flex min-w-0 flex-col gap-6">
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">Invite-only beta</Badge>
-              <Badge variant="outline">Private questions first</Badge>
             </div>
             <div className="flex flex-col gap-4">
-              <h1 className="max-w-3xl font-serif text-4xl font-extrabold leading-tight text-foreground sm:text-5xl lg:text-[3.7rem]">
-                One public link for questions worth answering.
+              <h1 className="max-w-2xl font-serif text-4xl font-extrabold leading-tight text-foreground sm:text-5xl lg:text-[3.4rem]">
+                One link for people to ask you anything.
               </h1>
-              <p className="max-w-2xl text-base leading-8 text-muted-foreground">
-                Receive questions privately, choose what becomes public, and
-                turn the best answers into readable threads without opening a
-                full social inbox.
+              <p className="max-w-xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+                Share your profile link anywhere. Questions arrive in a private
+                inbox, and only the answers you publish become public threads.
               </p>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild className="px-6">
-                <Link to="/login">
-                  Request or sign in
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
-              </Button>
-              <Button asChild className="px-6" variant="outline">
-                <Link to="/privacy">Read privacy stance</Link>
-              </Button>
-            </div>
-            <FlowRail />
+            <WaitlistForm
+              disabled={!loaderData.auth.databaseConfigured}
+              result={actionData?.waitlist}
+            />
           </div>
 
-          <LandingPreview />
+          <HeroDemo />
         </section>
 
-        <section className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] lg:items-start">
-          <div className="px-1 py-3 sm:px-0 lg:py-8">
-            <Badge variant="secondary">How it works</Badge>
-            <h2 className="mt-4 max-w-2xl font-serif text-3xl font-extrabold leading-tight text-foreground">
-              A profile, an inbox, and public threads only when you choose.
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
-              Q&A Platform keeps the intake small: no public discovery feed, no
-              anonymous identity reveal for visitors, and no published answer
-              unless the profile owner decides it should exist.
-            </p>
-          </div>
+        <HowItWorks />
 
-          <WaitlistForm disabled={!loaderData.auth.databaseConfigured} />
-        </section>
+        <TrustPoints />
+
+        <ClosingCallToAction />
       </div>
     </PublicShell>
   );
 }
 
-function getWaitlistToast({
-  databaseConfigured,
-  result,
-}: {
-  databaseConfigured: boolean;
-  result: WaitlistActionData["waitlist"] | undefined;
-}):
-  | {
-      message: string;
-      tone: ActionToastTone;
-      trigger: unknown;
-    }
-  | undefined {
-  if (result !== undefined) {
-    return {
-      message: result.message,
-      tone: result.status === "submitted" ? "success" : "error",
-      trigger: result,
-    };
-  }
-
-  if (!databaseConfigured) {
-    return {
-      message: "Waitlist storage is disabled until the database is configured.",
-      tone: "warning",
-      trigger: "waitlist-disabled",
-    };
-  }
-
-  return undefined;
-}
-
-function FlowRail() {
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border bg-card/70 p-2 shadow-[0_6px_20px_oklch(0.17_0.035_292_/_0.05)] sm:w-fit sm:flex-row sm:rounded-full">
-      <FlowStep icon={<Sparkles data-icon="inline-start" />} label="Ask" />
-      <FlowStep icon={<ShieldCheck data-icon="inline-start" />} label="Review" />
-      <FlowStep icon={<MessageCircle data-icon="inline-start" />} label="Thread" />
-    </div>
-  );
-}
-
-function FlowStep({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <span className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-foreground">
-      {icon}
-      {label}
-    </span>
-  );
-}
-
-function LandingPreview() {
-  return (
-    <div className="flex flex-col gap-4">
-      <section className="relative overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
-        <div
-          aria-hidden="true"
-          className="relative z-0 h-32 bg-[linear-gradient(135deg,oklch(0.70_0.13_310),oklch(0.50_0.15_295))] sm:h-40"
-        >
-          <div className="absolute inset-0 opacity-15 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px),linear-gradient(to_bottom,var(--primary)_1px,transparent_1px)] [background-size:20px_20px]" />
-        </div>
-        <div className="absolute left-6 top-32 z-20 flex size-24 -translate-y-1/2 items-center justify-center rounded-full border-4 border-card bg-secondary font-serif text-3xl font-extrabold text-primary shadow-[0_8px_22px_oklch(0.17_0.035_292_/_0.16)] sm:left-7 sm:top-40">
-          QA
-        </div>
-        <div className="relative z-10 p-6 pt-14 sm:p-7 sm:pt-16">
-          <div className="min-w-0 pl-28 sm:pl-32">
-            <h2 className="truncate font-serif text-3xl font-extrabold text-foreground">
-              Maya Chen
-            </h2>
-            <p className="font-mono text-xs text-muted-foreground">
-              @mayachen
-            </p>
-          </div>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
-            Notes on studying, quiet ambition, and internet life. Ask direct
-            questions. I answer the useful ones.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant="secondary">142 answers</Badge>
-            <Badge variant="secondary">2.4k followers</Badge>
-            <Badge variant="secondary">18k reactions</Badge>
-          </div>
-        </div>
-      </section>
-
-      <article className="rounded-3xl border bg-card p-5 text-card-foreground shadow-[var(--shadow-card)] sm:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <Badge variant="secondary">New question</Badge>
-          <span className="font-mono text-[0.68rem] text-muted-foreground">
-            private
-          </span>
-        </div>
-        <p className="mt-4 font-serif text-xl font-bold italic leading-8 text-foreground">
-          "What changed your mind recently?"
-        </p>
-        <div className="mt-5 border-t border-dashed pt-4">
-          <Button className="w-full justify-center">
-            <MessageCircle data-icon="inline-start" />
-            Answer privately
-          </Button>
-        </div>
-      </article>
-    </div>
-  );
-}
-
 function WaitlistForm({
   disabled,
+  result,
 }: {
   disabled: boolean;
+  result: WaitlistActionData["waitlist"] | undefined;
 }) {
+  const submitted = result?.status === "submitted";
+  const errorMessage =
+    result !== undefined && result.status !== "submitted"
+      ? result.message
+      : undefined;
+
   return (
     <Form
       aria-label="Request beta access"
-      className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7"
+      className="flex max-w-xl flex-col gap-3"
+      id="request-access"
       method="post"
     >
-      <header className="mb-5 border-b pb-5">
-        <h2 className="text-base font-bold text-foreground">Request access</h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          The form records interest. It does not imply instant access.
-        </p>
-      </header>
-      <FieldGroup>
-        <Field data-disabled={disabled ? true : undefined}>
-          <FieldLabel htmlFor="waitlist-email">Email</FieldLabel>
-          <div className="flex flex-col gap-3">
-            <Input
-              aria-describedby="waitlist-description"
-              disabled={disabled}
-              id="waitlist-email"
-              inputMode="email"
-              name="email"
-              placeholder="you@example.com"
-              type="email"
-            />
-            <PendingButton
-              className="w-full"
-              disabled={disabled}
-              pendingText="Requesting"
-              type="submit"
-            >
-              <Mail data-icon="inline-start" />
-              Join waitlist
-            </PendingButton>
-          </div>
-          <FieldDescription id="waitlist-description">
-            Invites are reviewed in batches. Joining the waitlist does not
-            create an account or grant instant access.
-          </FieldDescription>
-        </Field>
-      </FieldGroup>
+      {submitted ? (
+        <Alert variant="success">
+          <CheckCircle2 aria-hidden="true" />
+          <AlertTitle>You&apos;re on the list.</AlertTitle>
+          <AlertDescription>
+            Invites go out in batches — we&apos;ll email you when yours is
+            ready.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <>
+          <Field data-disabled={disabled ? true : undefined}>
+            <FieldLabel className="sr-only" htmlFor="waitlist-email">
+              Email
+            </FieldLabel>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                aria-describedby="waitlist-note waitlist-error"
+                aria-invalid={errorMessage !== undefined || undefined}
+                autoComplete="email"
+                className="h-11 sm:flex-1"
+                disabled={disabled}
+                id="waitlist-email"
+                inputMode="email"
+                name="email"
+                placeholder="you@example.com"
+                required
+                type="email"
+              />
+              <PendingButton
+                className="h-11 px-6"
+                disabled={disabled}
+                pendingText="Requesting…"
+                type="submit"
+              >
+                Request an invite
+                <ArrowRight data-icon="inline-end" />
+              </PendingButton>
+            </div>
+            <FieldError id="waitlist-error" message={errorMessage} />
+          </Field>
+          {disabled ? (
+            <Alert variant="warning">
+              <AlertDescription>
+                Access requests are temporarily unavailable.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+        </>
+      )}
+      <p className="text-sm leading-6 text-muted-foreground" id="waitlist-note">
+        Invites are reviewed in batches — joining the waitlist doesn&apos;t
+        create an account.{" "}
+        <Link
+          className="font-semibold text-primary underline-offset-4 hover:underline"
+          to="/login"
+        >
+          Have an invite? Sign in
+        </Link>
+      </p>
     </Form>
+  );
+}
+
+function HeroDemo() {
+  return (
+    <div aria-hidden="true" className="relative mx-auto w-full max-w-md">
+      <div className="flex flex-col gap-3">
+        <article className="rounded-3xl border bg-card p-5 text-card-foreground shadow-[var(--shadow-card)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Avatar className="size-8">
+                <AvatarFallback className="text-sm">?</AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-semibold">Anonymous</span>
+            </div>
+            <Badge variant="outline">
+              <EyeOff aria-hidden="true" className="mr-1 size-3" />
+              Only you see this
+            </Badge>
+          </div>
+          <p className="mt-3 font-serif text-lg font-bold italic leading-7">
+            &ldquo;What changed your mind recently?&rdquo;
+          </p>
+        </article>
+
+        <div className="flex items-center gap-3 px-4">
+          <Separator className="flex-1" />
+          <span className="font-mono text-[0.68rem] font-bold uppercase tracking-wide text-primary">
+            You publish
+          </span>
+          <Separator className="flex-1" />
+        </div>
+
+        <article className="rounded-3xl border border-primary/25 bg-card p-5 text-card-foreground shadow-[var(--shadow-card-hover)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Avatar className="size-8">
+                <AvatarFallback className="text-sm">M</AvatarFallback>
+              </Avatar>
+              <div className="leading-tight">
+                <p className="text-sm font-semibold">Maya Chen</p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  @mayachen
+                </p>
+              </div>
+            </div>
+            <Badge variant="secondary">Public thread</Badge>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            I used to think a bigger audience meant better questions. A
+            smaller room, where people ask because they actually want the
+            answer, changed that.
+          </p>
+          <div className="mt-4 flex items-center gap-4 border-t border-dashed pt-3 text-xs font-semibold text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <Heart aria-hidden="true" className="size-3.5 text-primary" />
+              128
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <MessageCircle aria-hidden="true" className="size-3.5" />
+              4 follow-ups
+            </span>
+          </div>
+        </article>
+      </div>
+    </div>
+  );
+}
+
+const howItWorksSteps = [
+  {
+    title: "Share your link",
+    description:
+      "Put your profile link wherever people already follow you. Anyone can ask — no account needed.",
+    icon: <Link2 aria-hidden="true" />,
+  },
+  {
+    title: "Answer in private",
+    description:
+      "New questions land in an inbox only you can see. Skip, filter, or block anything you don't want.",
+    icon: <Inbox aria-hidden="true" />,
+  },
+  {
+    title: "Publish the best",
+    description:
+      "Turn an answer into a public thread when it's worth reading. Readers can like it and ask follow-ups.",
+    icon: <MessageCircle aria-hidden="true" />,
+  },
+] as const;
+
+function HowItWorks() {
+  return (
+    <section aria-labelledby="how-it-works-heading" className="flex flex-col gap-8">
+      <div className="mx-auto flex max-w-2xl flex-col gap-3 text-center">
+        <h2
+          className="font-serif text-3xl font-extrabold leading-tight text-foreground sm:text-4xl"
+          id="how-it-works-heading"
+        >
+          Questions in private. Answers on your terms.
+        </h2>
+        <p className="text-base leading-7 text-muted-foreground">
+          There is no discovery feed and no pressure to perform. Your profile
+          grows from the answers you choose to share.
+        </p>
+      </div>
+      <ol className="grid gap-4 sm:grid-cols-3">
+        {howItWorksSteps.map((step, index) => (
+          <li className="flex" key={step.title}>
+            <Card className="flex w-full flex-col">
+              <CardHeader>
+                <div className="mb-2 flex items-center gap-3">
+                  <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary [&_svg]:size-4">
+                    {step.icon}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-muted-foreground">
+                    Step {index + 1}
+                  </span>
+                </div>
+                <CardTitle>{step.title}</CardTitle>
+                <CardDescription>{step.description}</CardDescription>
+              </CardHeader>
+            </Card>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+const trustPoints = [
+  {
+    title: "You control what's public",
+    description:
+      "Nothing appears on your profile until you decide to publish it. Drafts and skipped questions stay private.",
+    icon: <CheckCircle2 aria-hidden="true" />,
+  },
+  {
+    title: "Anonymous, with accountability",
+    description:
+      "Askers are anonymous to you and to readers — never to the platform. Abuse is traceable and actionable.",
+    icon: <EyeOff aria-hidden="true" />,
+  },
+  {
+    title: "Safety tools built in",
+    description:
+      "Block senders, filter unwanted questions, and report abuse without leaving your inbox.",
+    icon: <Flag aria-hidden="true" />,
+  },
+] as const;
+
+function TrustPoints() {
+  return (
+    <section
+      aria-labelledby="trust-heading"
+      className="rounded-3xl border bg-surface p-6 sm:p-10"
+    >
+      <h2
+        className="font-serif text-2xl font-extrabold leading-tight text-foreground sm:text-3xl"
+        id="trust-heading"
+      >
+        Built to feel safe to ask — and safe to answer.
+      </h2>
+      <div className="mt-8 grid gap-8 sm:grid-cols-3">
+        {trustPoints.map((point) => (
+          <TrustPoint key={point.title} {...point} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TrustPoint({
+  description,
+  icon,
+  title,
+}: {
+  title: string;
+  description: string;
+  icon: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary [&_svg]:size-4">
+        {icon}
+      </span>
+      <h3 className="text-base font-bold text-foreground">{title}</h3>
+      <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function ClosingCallToAction() {
+  return (
+    <section
+      aria-labelledby="closing-cta-heading"
+      className="flex flex-col items-center gap-5 py-4 text-center"
+    >
+      <h2
+        className="max-w-xl font-serif text-3xl font-extrabold leading-tight text-foreground sm:text-4xl"
+        id="closing-cta-heading"
+      >
+        Open your own question inbox.
+      </h2>
+      <p className="max-w-lg text-base leading-7 text-muted-foreground">
+        Request an invite, claim your username, and share one link.
+      </p>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button asChild className="px-6" size="lg">
+          <a href="#request-access">
+            Request an invite
+            <ArrowRight data-icon="inline-end" />
+          </a>
+        </Button>
+        <Button asChild className="px-6" size="lg" variant="outline">
+          <Link to="/login">Sign in</Link>
+        </Button>
+      </div>
+    </section>
   );
 }
