@@ -79,10 +79,8 @@ export function AnswerEditorModalHost({ modal }: AnswerEditorModalHostProps) {
           aria-describedby="answer-editor-modal-description"
           aria-labelledby="answer-editor-modal-title"
           className="max-h-[calc(100svh-2rem)] w-[calc(100%-1rem)] max-w-[53rem] overflow-hidden border-0 bg-transparent p-0 shadow-none sm:w-[calc(100%-3rem)]"
-          closeLabel="Close answer editor"
           key={modal.questionPublicId}
           overlayClassName="bg-background/20 backdrop-blur-[2px]"
-          showCloseButton
         >
           <DialogTitle className="sr-only" id="answer-editor-modal-title">
             Answer editor

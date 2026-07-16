@@ -1,8 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
 import * as React from "react";
 
-import { buttonVariants } from "~/components/ui/button/button-variants";
 import { cn } from "~/lib/utils";
 
 function Dialog({
@@ -48,14 +46,10 @@ function DialogOverlay({
 function DialogContent({
   children,
   className,
-  closeLabel = "Close dialog",
   overlayClassName,
-  showCloseButton = false,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  closeLabel?: string;
   overlayClassName?: string;
-  showCloseButton?: boolean;
 }) {
   return (
     <DialogPortal>
@@ -69,18 +63,6 @@ function DialogContent({
         {...props}
       >
         {children}
-        {showCloseButton ? (
-          <DialogPrimitive.Close
-            aria-label={closeLabel}
-            className={cn(
-              buttonVariants({ size: "icon", variant: "ghost" }),
-              "absolute right-3 top-3",
-            )}
-            data-slot="dialog-close-button"
-          >
-            <X data-icon="inline-start" />
-          </DialogPrimitive.Close>
-        ) : null}
       </DialogPrimitive.Content>
     </DialogPortal>
   );

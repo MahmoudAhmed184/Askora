@@ -7,7 +7,6 @@ import {
   PenLine,
   ShieldAlert,
   Trash2,
-  X,
 } from "lucide-react";
 
 import { GeminiNotification } from "../components/notifications/gemini-notification";
@@ -567,15 +566,6 @@ function AnswerEditor({
             </div>
             <div className="flex items-start gap-3">
               <QuestionSender question={question} />
-              <Button
-                aria-label="Close answer editor"
-                onClick={onClose}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <X data-icon="inline-start" />
-              </Button>
             </div>
           </div>
         </CardHeader>

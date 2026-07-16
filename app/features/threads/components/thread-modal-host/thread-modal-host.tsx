@@ -68,9 +68,7 @@ export function ThreadModalHost({ modal }: ThreadModalHostProps) {
           aria-labelledby="thread-modal-title"
           className="top-0 block h-svh max-h-none w-[calc(100%-1rem)] max-w-3xl translate-y-0 overflow-y-scroll overscroll-contain border-0 bg-transparent p-2 pb-[calc(6rem+env(safe-area-inset-bottom))] shadow-none sm:w-[calc(100%-3rem)] sm:p-6 sm:pb-16"
           key={modal.canonicalPath}
-          closeLabel="Close thread"
           overlayClassName="bg-background/20 backdrop-blur-[2px]"
-          showCloseButton
         >
           <DialogTitle className="sr-only" id="thread-modal-title">
             Public thread

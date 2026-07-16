@@ -43,6 +43,9 @@ describe("AnswerRoute", () => {
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(
+      screen.queryByRole("button", { name: "Close answer editor" }),
+    ).not.toBeInTheDocument();
 
     fireEvent.keyDown(dialog, { key: "Escape" });
 

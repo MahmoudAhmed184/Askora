@@ -1,4 +1,4 @@
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -127,25 +127,7 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
   }
 
   const editor = (
-    <div className="relative flex min-h-0 w-full max-w-[53rem]">
-      <Button
-        asChild
-        className="absolute right-3 top-3 z-10"
-        size="icon"
-        variant="ghost"
-      >
-        <Link
-          aria-label="Close answer editor"
-          onClick={(event) => {
-            if (!canClose()) {
-              event.preventDefault();
-            }
-          }}
-          to={closeHref}
-        >
-          <X aria-hidden="true" />
-        </Link>
-      </Button>
+    <div className="flex min-h-0 w-full max-w-[53rem]">
       <AnswerEditor
         actionResult={actionData?.answer}
         disabled={isSuspended}
