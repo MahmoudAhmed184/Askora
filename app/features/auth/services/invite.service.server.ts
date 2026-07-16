@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
@@ -44,8 +44,7 @@ export interface InviteStore {
     inviteId: string,
     now: Date,
   ): Promise<{ inviteId: string } | undefined>;
-  markInviteUsedByUser(inviteId: string, userId: string): Promise<void>;
-  recordInviteAccepted(event: InviteAcceptedEvent): Promise<void>;
+  completeInvite(event: InviteAcceptedEvent): Promise<void>;
 }
 
 interface InviteAcceptedEvent {
@@ -128,8 +127,7 @@ export async function completeInviteForCreatedUser(
     return;
   }
 
-  await store.markInviteUsedByUser(consumedInvite.inviteId, user.id);
-  await store.recordInviteAccepted({
+  await store.completeInvite({
     inviteId: consumedInvite.inviteId,
     userId: user.id,
   });
@@ -178,20 +176,32 @@ export function createDrizzleInviteStore(
 
       return invite;
     },
-    async markInviteUsedByUser(inviteId, userId) {
-      await database
-        .update(inviteCodes)
-        .set({ usedByUserId: userId })
-        .where(eq(inviteCodes.id, inviteId));
-    },
-    async recordInviteAccepted({ inviteId, userId }) {
-      await database.insert(events).values({
-        id: createDatabaseId(),
-        userId,
-        type: "invite_accepted",
-        metadata: {
-          inviteId,
-        },
+    async completeInvite({ inviteId, userId }) {
+      await database.transaction(async (transaction) => {
+        const [completed] = await transaction
+          .update(inviteCodes)
+          .set({ usedByUserId: userId })
+          .where(
+            and(
+              eq(inviteCodes.id, inviteId),
+              isNotNull(inviteCodes.usedAt),
+              isNull(inviteCodes.usedByUserId),
+            ),
+          )
+          .returning({ id: inviteCodes.id });
+
+        if (completed === undefined) {
+          return;
+        }
+
+        await transaction.insert(events).values({
+          id: createDatabaseId(),
+          userId,
+          type: "invite_accepted",
+          metadata: {
+            inviteId,
+          },
+        });
       });
     },
   };

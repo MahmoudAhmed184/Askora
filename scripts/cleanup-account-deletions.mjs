@@ -8,6 +8,7 @@ const { Pool } = pg;
 
 const DEFAULT_LIMIT = 100;
 const RATE_LIMIT_RETENTION_MILLISECONDS = 2 * 24 * 60 * 60 * 1000;
+const INVITE_CLAIM_RETENTION_MILLISECONDS = 30 * 60 * 1000;
 const REDACTED_QUESTION_TEXT = "[redacted after safety retention]";
 
 export async function cleanupExpiredAccountDeletions({
@@ -89,6 +90,15 @@ export function createPoolCleanupStore(pool) {
         `delete from rate_limits where last_request < $1`,
         [now.getTime() - RATE_LIMIT_RETENTION_MILLISECONDS],
       );
+      const releasedInviteClaims = await pool.query(
+        `
+          update invite_codes
+          set used_at = null
+          where used_by_user_id is null
+            and used_at <= $1
+        `,
+        [new Date(now.getTime() - INVITE_CLAIM_RETENTION_MILLISECONDS)],
+      );
       const scrubbedQuestions = await pool.query(
         `
           update questions
@@ -113,6 +123,7 @@ export function createPoolCleanupStore(pool) {
       return {
         expiredNotifications: expiredNotifications.rowCount ?? 0,
         staleRateLimits: staleRateLimits.rowCount ?? 0,
+        releasedInviteClaims: releasedInviteClaims.rowCount ?? 0,
         scrubbedQuestions: scrubbedQuestions.rowCount ?? 0,
       };
     },

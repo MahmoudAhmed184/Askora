@@ -146,17 +146,13 @@ function createFakeInviteStore(initialInvites: FakeInvite[]) {
       invite.usedAt = now;
       return Promise.resolve({ inviteId });
     },
-    markInviteUsedByUser(inviteId, userId) {
-      const invite = invites.get(inviteId);
+    completeInvite(event) {
+      const invite = invites.get(event.inviteId);
 
-      if (invite !== undefined) {
-        invite.usedByUserId = userId;
+      if (invite !== undefined && invite.usedByUserId === undefined) {
+        invite.usedByUserId = event.userId;
+        acceptedEvents.push(event);
       }
-
-      return Promise.resolve();
-    },
-    recordInviteAccepted(event) {
-      acceptedEvents.push(event);
 
       return Promise.resolve();
     },

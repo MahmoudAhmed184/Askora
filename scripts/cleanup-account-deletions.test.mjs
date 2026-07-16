@@ -84,6 +84,19 @@ describe("cleanupExpiredAccountDeletions", () => {
         last_request: now.getTime(),
       },
     ]);
+    expect(state.invite_codes).toEqual([
+      expect.objectContaining({
+        id: "invite_1",
+        used_at: now,
+        used_by_user_id: null,
+      }),
+      expect.objectContaining({
+        id: "failed_signup",
+        used_at: null,
+        used_by_user_id: null,
+      }),
+    ]);
+    expect(result.retention.releasedInviteClaims).toBe(1);
     expect(state.questions.find((question) => question.id === "stale_safety"))
       .toMatchObject({
         original_text: "[redacted after safety retention]",
@@ -255,7 +268,14 @@ function createState(overrides = {}) {
       },
     ],
     events: [{ id: "event_1", user_id: "user_1", profile_id: "profile_1" }],
-    invite_codes: [{ id: "invite_1", used_by_user_id: "user_1" }],
+    invite_codes: [
+      { id: "invite_1", used_at: now, used_by_user_id: "user_1" },
+      {
+        id: "failed_signup",
+        used_at: new Date("2026-05-31T11:00:00.000Z"),
+        used_by_user_id: null,
+      },
+    ],
     ...overrides,
   };
 }
@@ -322,6 +342,23 @@ function handleQuery(state, sql, values) {
       (rateLimit) => rateLimit.last_request >= values[0],
     );
     return commandResult(before - state.rate_limits.length);
+  }
+
+  if (text.startsWith("update invite_codes set used_at = null")) {
+    let count = 0;
+
+    for (const inviteCode of state.invite_codes) {
+      if (
+        inviteCode.used_by_user_id === null &&
+        inviteCode.used_at !== null &&
+        inviteCode.used_at <= values[0]
+      ) {
+        inviteCode.used_at = null;
+        count += 1;
+      }
+    }
+
+    return commandResult(count);
   }
 
   if (text.startsWith("update questions set ip_hash")) {

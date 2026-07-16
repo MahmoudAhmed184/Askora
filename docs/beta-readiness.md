@@ -122,8 +122,9 @@ Current redesign QA evidence:
 Vercel runs `/api/cron/cleanup` daily at 03:00 UTC. The route requires the
 `Authorization: Bearer $CRON_SECRET` header and uses `DIRECT_DATABASE_URL` (or
 the runtime database URL as a fallback). It anonymizes expired deletion
-requests, deletes expired notifications and stale rate-limit counters, and
-scrubs expired question safety metadata. Configure the same `CRON_SECRET` in
+requests, deletes expired notifications and stale rate-limit counters, releases
+failed-signup invite claims after 30 minutes, and scrubs expired question safety
+metadata. Configure the same `CRON_SECRET` in
 the Vercel project before enabling the beta; a missing secret causes production
 startup validation to fail.
 
