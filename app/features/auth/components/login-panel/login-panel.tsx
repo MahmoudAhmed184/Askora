@@ -1,12 +1,23 @@
-import { KeyRound, LogIn, Mail } from "lucide-react";
-import { Form } from "react-router";
+import { AlertCircle, ChevronDown, KeyRound, MailCheck } from "lucide-react";
+import { Form, Link } from "react-router";
 
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
-import { Badge } from "~/components/ui/badge/badge";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "~/components/ui/alert/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card/card";
 import {
   Field,
   FieldDescription,
-  FieldGroup,
   FieldLabel,
 } from "~/components/ui/field/field";
 import { Input } from "~/components/ui/input/input";
@@ -33,72 +44,54 @@ export interface LoginActionData {
 
 interface LoginPanelProps {
   auth: AuthProviderStatus;
+  result?: LoginActionData["login"] | undefined;
 }
 
-export function LoginPanel({ auth }: LoginPanelProps) {
+export function LoginPanel({ auth, result }: LoginPanelProps) {
   const googleReady = auth.databaseConfigured && auth.googleConfigured;
   const emailReady = auth.databaseConfigured && auth.emailMagicLinkConfigured;
+  const hasInviteError = result?.status === "invalid_invite";
 
   return (
-    <section
-      aria-labelledby="login-heading"
-      className="rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] sm:p-7"
-    >
-      <header>
-        <h2
-          className="font-serif text-3xl font-extrabold leading-tight text-foreground"
-          id="login-heading"
-        >
-          Sign in to continue
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Use Google for the fastest route in. Magic links are available when
-          email is easier.
-        </p>
-      </header>
-      <Separator className="mt-5" />
+    <Card className="hover:translate-y-0 hover:border-border hover:shadow-[var(--shadow-card)]">
+      <CardHeader className="gap-2 p-6 sm:p-7">
+        <CardTitle className="font-serif text-2xl font-extrabold leading-tight">
+          Sign in to Q&amp;A Platform
+        </CardTitle>
+        <CardDescription>
+          Existing accounts sign in directly. New accounts need an unused
+          invite code.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-6 pt-0 sm:p-7 sm:pt-0">
+        <LoginResultAlert result={result} />
 
-      <Form className="mt-6" method="post">
-        <FieldGroup className="gap-5">
-          <Field>
-            <FieldLabel htmlFor="inviteCode">
-              Invite code <span className="text-muted-foreground">(required for new accounts)</span>
-            </FieldLabel>
-            <div className="relative">
-              <KeyRound
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                autoComplete="one-time-code"
-                className="pl-9 uppercase"
-                id="inviteCode"
-                name="inviteCode"
-                placeholder="BETA-ACCESS-2026"
-              />
+        <Form method="post">
+          <div className="flex flex-col gap-5">
+            <PendingButton
+              className="h-11 w-full"
+              disabled={!googleReady}
+              name="intent"
+              pendingText="Connecting to Google…"
+              type="submit"
+              value="google"
+            >
+              Continue with Google
+            </PendingButton>
+
+            <div className="flex items-center gap-3">
+              <Separator className="flex-1" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                or
+              </span>
+              <Separator className="flex-1" />
             </div>
-            <FieldDescription>
-              Existing accounts can sign in without a new invite.
-            </FieldDescription>
-          </Field>
 
-          <PendingButton
-            disabled={!googleReady}
-            name="intent"
-            pendingText="Connecting"
-            type="submit"
-            value="google"
-          >
-            <LogIn data-icon="inline-start" />
-            Continue with Google
-          </PendingButton>
-
-          <Separator />
-
-          <Field data-disabled={!emailReady ? true : undefined}>
-            <FieldLabel htmlFor="email">Email magic link</FieldLabel>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <Field data-disabled={!emailReady ? true : undefined}>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
               <Input
+                aria-describedby="email-description"
+                autoComplete="email"
                 disabled={!emailReady}
                 id="email"
                 inputMode="email"
@@ -107,55 +100,130 @@ export function LoginPanel({ auth }: LoginPanelProps) {
                 type="email"
               />
               <PendingButton
-                className="sm:w-40"
+                className="w-full"
                 disabled={!emailReady}
                 name="intent"
-                pendingText="Sending"
+                pendingText="Sending link…"
                 type="submit"
                 value="magic-link"
                 variant="secondary"
               >
-                <Mail data-icon="inline-start" />
-                Send link
+                Email me a magic link
               </PendingButton>
-            </div>
-            <FieldDescription>
-              Magic links use the same invite gate when a new account is created.
-            </FieldDescription>
-          </Field>
+              <FieldDescription id="email-description">
+                No password — we&apos;ll send a one-time sign-in link.
+              </FieldDescription>
+            </Field>
 
-        </FieldGroup>
-      </Form>
+            <details
+              className="group rounded-2xl border bg-surface px-4 py-3"
+              open={hasInviteError || undefined}
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-foreground outline-none [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2">
+                  <KeyRound
+                    aria-hidden="true"
+                    className="size-4 text-primary"
+                  />
+                  New here? Add your invite code
+                </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-4 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                />
+              </summary>
+              <Field className="mt-3">
+                <FieldLabel className="sr-only" htmlFor="inviteCode">
+                  Invite code
+                </FieldLabel>
+                <Input
+                  aria-describedby="invite-description"
+                  aria-invalid={hasInviteError || undefined}
+                  autoComplete="one-time-code"
+                  className="uppercase placeholder:normal-case"
+                  id="inviteCode"
+                  name="inviteCode"
+                  placeholder="BETA-ACCESS-2026"
+                />
+                <FieldDescription id="invite-description">
+                  Required once to create an account. Existing accounts can
+                  leave this closed.
+                </FieldDescription>
+              </Field>
+            </details>
+          </div>
+        </Form>
 
-      <AuthConfigurationStatus auth={auth} />
-    </section>
+        <AuthConfigurationStatus auth={auth} />
+      </CardContent>
+      <CardFooter className="p-6 pt-0 sm:p-7 sm:pt-0">
+        <p className="text-xs leading-5 text-muted-foreground">
+          By continuing, you agree to the{" "}
+          <Link
+            className="font-semibold text-foreground underline underline-offset-4 hover:text-primary"
+            to="/terms"
+          >
+            Terms
+          </Link>{" "}
+          and acknowledge the{" "}
+          <Link
+            className="font-semibold text-foreground underline underline-offset-4 hover:text-primary"
+            to="/privacy"
+          >
+            Privacy policy
+          </Link>
+          .
+        </p>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function LoginResultAlert({
+  result,
+}: {
+  result: LoginActionData["login"] | undefined;
+}) {
+  if (result === undefined) {
+    return null;
+  }
+
+  if (result.status === "magic_link_sent") {
+    return (
+      <Alert className="mb-5" variant="success">
+        <MailCheck aria-hidden="true" />
+        <AlertTitle>Check your email</AlertTitle>
+        <AlertDescription>{result.message}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <Alert className="mb-5" variant="destructive">
+      <AlertCircle aria-hidden="true" />
+      <AlertTitle>Could not sign you in</AlertTitle>
+      <AlertDescription>{result.message}</AlertDescription>
+    </Alert>
   );
 }
 
 function AuthConfigurationStatus({ auth }: { auth: AuthProviderStatus }) {
-  if (
-    auth.databaseConfigured &&
-    auth.googleConfigured &&
-    auth.emailMagicLinkConfigured
-  ) {
+  const missing = [
+    auth.databaseConfigured ? undefined : "database",
+    auth.googleConfigured ? undefined : "Google sign-in",
+    auth.emailMagicLinkConfigured ? undefined : "email magic links",
+  ].filter((entry): entry is string => entry !== undefined);
+
+  if (missing.length === 0) {
     return null;
   }
 
   return (
-    <div className="mt-6 flex flex-col gap-5">
-      <Separator />
-      <div className="flex flex-wrap gap-2 text-sm leading-6 text-muted-foreground">
-        <Badge variant={auth.databaseConfigured ? "secondary" : "outline"}>
-          Database {auth.databaseConfigured ? "configured" : "not configured"}
-        </Badge>
-        <Badge variant={auth.googleConfigured ? "secondary" : "outline"}>
-          Google OAuth {auth.googleConfigured ? "configured" : "not configured"}
-        </Badge>
-        <Badge variant={auth.emailMagicLinkConfigured ? "secondary" : "outline"}>
-          Email magic links{" "}
-          {auth.emailMagicLinkConfigured ? "configured" : "not configured"}
-        </Badge>
-      </div>
-    </div>
+    <Alert className="mt-5" variant="warning">
+      <AlertCircle aria-hidden="true" />
+      <AlertDescription>
+        Not configured in this environment: {missing.join(", ")}.
+      </AlertDescription>
+    </Alert>
   );
 }

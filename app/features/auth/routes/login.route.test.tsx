@@ -25,9 +25,11 @@ describe("LoginRoute", () => {
     });
 
     expect(
-      screen.getByRole("heading", { name: /sign in to continue/i }),
+      screen.getByRole("heading", { name: /sign in to q&a platform/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/database not configured/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/not configured in this environment/i),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/secret/i)).not.toBeInTheDocument();
   });
 
@@ -41,8 +43,10 @@ describe("LoginRoute", () => {
     expect(
       screen.getByRole("button", { name: /continue with google/i }),
     ).toBeDisabled();
-    expect(screen.getByRole("textbox", { name: /email magic link/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /send link/i })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: /^email$/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /email me a magic link/i }),
+    ).toBeDisabled();
   });
 
   it("enables configured providers", () => {
@@ -55,8 +59,10 @@ describe("LoginRoute", () => {
     expect(
       screen.getByRole("button", { name: /continue with google/i }),
     ).toBeEnabled();
-    expect(screen.getByRole("textbox", { name: /email magic link/i })).toBeEnabled();
-    expect(screen.getByRole("button", { name: /send link/i })).toBeEnabled();
+    expect(screen.getByRole("textbox", { name: /^email$/i })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /email me a magic link/i }),
+    ).toBeEnabled();
   });
 
   it("normalizes magic-link email requests", () => {

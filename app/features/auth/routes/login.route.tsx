@@ -1,20 +1,9 @@
-import {
-  ArrowRight,
-  CheckCircle2,
-  Inbox,
-  MessageCircle,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowLeft, Inbox, MessageCircle, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { data, Link, redirect, useActionData } from "react-router";
 
 import type { Route } from "./+types/login.route";
-import {
-  ActionToast,
-  type ActionToastTone,
-} from "~/components/shared/action-toast/action-toast";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
-import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
 import { getAuthProviderStatus } from "~/lib/config.server";
 import { getFormString, parseFormData } from "~/lib/zod-form";
@@ -115,128 +104,61 @@ export function meta() {
 
 export default function LoginRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
-  const loginToast = getLoginToast(actionData?.login);
 
   return (
     <PublicShell showSessionEntry={false}>
-      <ActionToast
-        message={loginToast?.message}
-        tone={loginToast?.tone ?? "info"}
-        trigger={loginToast?.trigger}
-      />
-      <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.78fr)] lg:items-center">
-        <section className="relative min-w-0 overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
-          <div
-            aria-hidden="true"
-            className="h-36 bg-[linear-gradient(135deg,oklch(0.72_0.13_310),oklch(0.47_0.15_294))] sm:h-44"
-          >
-            <div className="size-full opacity-15 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px),linear-gradient(to_bottom,var(--primary)_1px,transparent_1px)] [background-size:22px_22px]" />
-          </div>
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+        <Button asChild className="w-fit" size="sm" variant="ghost">
+          <Link to="/">
+            <ArrowLeft data-icon="inline-start" />
+            Back to home
+          </Link>
+        </Button>
 
-          <div className="p-6 pt-0 sm:p-8 sm:pt-0">
-            <div className="-mt-12 flex flex-wrap items-end justify-between gap-4">
-              <div className="flex size-24 items-center justify-center rounded-full border-4 border-card bg-secondary font-serif text-3xl font-extrabold text-primary shadow-[0_8px_22px_oklch(0.17_0.035_292_/_0.16)]">
-                QA
-              </div>
-              <div className="flex flex-wrap gap-2 pb-1">
-                <Badge variant="secondary">Private beta</Badge>
-                <Badge variant="outline">Invite gate</Badge>
-              </div>
-            </div>
-
-            <h1 className="mt-7 max-w-2xl font-serif text-4xl font-extrabold leading-tight text-foreground sm:text-5xl">
-              Enter the private side of the public profile.
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(380px,1fr)] lg:items-start lg:gap-14">
+          <section className="flex min-w-0 flex-col gap-6 lg:pt-10">
+            <h1 className="max-w-md font-serif text-3xl font-extrabold leading-tight text-foreground sm:text-4xl">
+              Your questions are waiting.
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-              Review incoming questions, draft answers, and publish only the
-              threads you want readers to see.
+            <p className="max-w-md text-base leading-7 text-muted-foreground">
+              Sign in to review your inbox, keep drafts moving, and publish the
+              threads worth reading.
             </p>
+            <ul className="hidden flex-col gap-4 sm:flex">
+              <SignInReason icon={<Inbox aria-hidden="true" />}>
+                New questions land in a private inbox only you can see.
+              </SignInReason>
+              <SignInReason icon={<MessageCircle aria-hidden="true" />}>
+                Drafts stay private until you choose to publish.
+              </SignInReason>
+              <SignInReason icon={<ShieldCheck aria-hidden="true" />}>
+                Blocking, filtering, and reporting are one tap away.
+              </SignInReason>
+            </ul>
+          </section>
 
-            <div className="mt-7 border-y border-dashed py-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="flex items-center gap-2 font-mono text-xs font-bold text-primary">
-                  <Inbox data-icon="inline-start" />
-                  Waiting in inbox
-                </p>
-                <Badge variant="secondary">3 private questions</Badge>
-              </div>
-              <p className="mt-4 max-w-xl font-serif text-2xl font-bold italic leading-9 text-primary">
-                "Which answer should stay private until it is actually useful?"
-              </p>
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <AccessSignal
-                icon={<ShieldCheck data-icon="inline-start" />}
-                label="Invite"
-                text="Beta codes create new accounts."
-              />
-              <AccessSignal
-                icon={<MessageCircle data-icon="inline-start" />}
-                label="Draft"
-                text="Answers stay private first."
-              />
-              <AccessSignal
-                icon={<CheckCircle2 data-icon="inline-start" />}
-                label="Publish"
-                text="Threads appear by choice."
-              />
-            </div>
-          </div>
-        </section>
-
-        <div className="flex w-full flex-col gap-4">
-          <LoginPanel auth={loaderData.auth} />
-          <Button asChild className="w-fit px-6" variant="outline">
-            <Link to="/">
-              Back to landing
-              <ArrowRight data-icon="inline-end" />
-            </Link>
-          </Button>
+          <LoginPanel auth={loaderData.auth} result={actionData?.login} />
         </div>
       </div>
     </PublicShell>
   );
 }
 
-function AccessSignal({
+function SignInReason({
+  children,
   icon,
-  label,
-  text,
 }: {
+  children: ReactNode;
   icon: ReactNode;
-  label: string;
-  text: string;
 }) {
   return (
-    <div className="min-w-0">
-      <p className="flex items-center gap-1.5 font-mono text-[0.68rem] font-bold text-primary">
+    <li className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
+      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary [&_svg]:size-4">
         {icon}
-        {label}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
-    </div>
+      </span>
+      <span className="pt-1">{children}</span>
+    </li>
   );
-}
-
-function getLoginToast(
-  result: LoginActionData["login"] | undefined,
-):
-  | {
-      message: string;
-      tone: ActionToastTone;
-      trigger: unknown;
-    }
-  | undefined {
-  if (result === undefined) {
-    return undefined;
-  }
-
-  return {
-    message: result.message,
-    tone: result.status === "magic_link_sent" ? "success" : "error",
-    trigger: result,
-  };
 }
 
 function getLoginIntent(formData: FormData): LoginIntent | undefined {
