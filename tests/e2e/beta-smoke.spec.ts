@@ -88,7 +88,9 @@ test.describe("beta seeded smoke", () => {
         );
       });
 
-      await page.getByLabel("Question").fill(noJavaScriptQuestionText);
+      await page
+        .getByRole("textbox", { name: "Question", exact: true })
+        .fill(noJavaScriptQuestionText);
       await page.getByRole("button", { name: "Send question" }).click();
       const response = await submitResponse;
       await page.waitForLoadState("domcontentloaded");
@@ -112,6 +114,20 @@ test.describe("beta seeded smoke", () => {
     await expect(
       page.getByText(betaFixture.questions.inbox.text),
     ).toBeVisible();
+    const inboxCard = page
+      .getByRole("article")
+      .filter({ hasText: betaFixture.questions.inbox.text });
+
+    await expect(
+      inboxCard.getByRole("button", { name: "Drop" }),
+    ).not.toBeVisible();
+    await inboxCard.getByRole("button", { name: "Question actions" }).click();
+    await expect(page.getByRole("menuitem", { name: "Drop" })).toBeVisible();
+    await page.getByRole("menuitem", { name: "Drop" }).click();
+    await expect(
+      page.getByRole("alertdialog", { name: "Delete this question?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
 
     await page.goto("/filtered");
     await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
@@ -137,7 +153,7 @@ test.describe("beta seeded smoke", () => {
     await expect(identitySwitch).not.toBeChecked();
 
     await page
-      .getByLabel("Question")
+      .getByRole("textbox", { name: "Question", exact: true })
       .fill("Which self-question should be attributed?");
     await page.waitForTimeout(1_600);
     await page.getByRole("button", { name: "Send question" }).click();
@@ -158,7 +174,7 @@ test.describe("beta seeded smoke", () => {
     await page.getByRole("switch", { name: "Your profile" }).click();
     await expect(page.getByRole("switch", { name: "Anonymous" })).toBeChecked();
     await page
-      .getByLabel("Question")
+      .getByRole("textbox", { name: "Question", exact: true })
       .fill("Which self-question should stay anonymous?");
     await page.waitForTimeout(1_600);
     await page.getByRole("button", { name: "Send question" }).click();
@@ -193,6 +209,11 @@ test.describe("beta seeded smoke", () => {
     await expect(
       dialog.getByRole("button", { name: "Close thread" }),
     ).toBeVisible();
+    await dialog.getByRole("button", { name: "Answer actions" }).click();
+    await expect(
+      page.getByRole("menuitem", { name: "Report answer" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
 
     await dialog
       .getByRole("textbox", { name: "Follow-up" })
@@ -251,6 +272,52 @@ test.describe("beta seeded smoke", () => {
     await expect(
       page.getByRole("button", { name: /Unlike answer/ }).first(),
     ).toBeVisible();
+  });
+
+  test("owner answer actions open above cards and preserve asker identity in drafts", async ({
+    context,
+    page,
+  }) => {
+    await signInAs(context, betaFixture.users.owner);
+    await page.goto(`/${betaFixture.profiles.owner.username}`);
+
+    await page.getByRole("button", { name: "Answer actions" }).click();
+    const actions = page.getByRole("menu", { name: "Answer actions" });
+
+    await expect(actions).toHaveAttribute("data-side", "top");
+    await page.getByRole("menuitem", { name: "Unpublish" }).click();
+    await page.getByRole("button", { name: "Unpublish answer" }).click();
+    await expect(
+      page
+        .getByRole("article")
+        .filter({ hasText: betaFixture.questions.answered.text }),
+    ).not.toBeVisible();
+
+    await page.goto("/drafts");
+    const draft = page
+      .getByRole("article")
+      .filter({ hasText: betaFixture.questions.answered.text });
+
+    await expect(
+      draft.getByRole("link", {
+        name: betaFixture.profiles.viewer.displayName,
+        exact: true,
+      }),
+    ).toHaveAttribute("href", `/${betaFixture.profiles.viewer.username}`);
+    await draft.getByRole("link", { name: "Continue" }).click();
+
+    const editor = page.getByRole("form", { name: "Answer editor" });
+
+    await expect(editor.getByText("Question from")).toBeVisible();
+    await expect(
+      editor.getByRole("link", {
+        name: betaFixture.profiles.viewer.displayName,
+        exact: true,
+      }),
+    ).toHaveAttribute("href", `/${betaFixture.profiles.viewer.username}`);
+    await expect(editor.getByText("Attributed")).toBeVisible();
+    await expect(editor.getByText("Prepare response")).not.toBeVisible();
+    await expect(editor.getByText("Thread context")).not.toBeVisible();
   });
 
   test("owner can mark notifications read with a toast", async ({
@@ -367,6 +434,76 @@ test.describe("beta seeded smoke", () => {
     } else {
       await expect(feedLabel).toBeVisible();
       expect(labelBox?.width).toBeGreaterThan(1);
+    }
+  });
+
+  test("desktop navigation stays wide and animates across profile route boundaries", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "Desktop-only geometry.");
+    await signInAs(context, betaFixture.users.owner);
+    await page.goto("/feed");
+
+    const navigation = page.getByRole("navigation", {
+      name: "Primary app navigation",
+    });
+    const navigationBox = await navigation.boundingBox();
+
+    expect(navigationBox?.width).toBeGreaterThan(700);
+    await navigation.evaluate((element) => {
+      element.dataset.instanceMarker = "persistent-navigation";
+    });
+    await navigation.getByRole("link", { name: "Profile" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/${betaFixture.profiles.owner.username}$`),
+    );
+    await expect(navigation).toHaveAttribute(
+      "data-instance-marker",
+      "persistent-navigation",
+    );
+    await navigation.getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/\/settings\/profile$/);
+    await expect(navigation).toHaveAttribute(
+      "data-instance-marker",
+      "persistent-navigation",
+    );
+    await navigation.getByRole("link", { name: "Profile" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/${betaFixture.profiles.owner.username}$`),
+    );
+    await expect(navigation).toHaveAttribute("data-active-value", "profile");
+  });
+
+  test("desktop ask prompts fill the composer without clipping beside pinned threads", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "Desktop-only geometry.");
+    await signInAs(context, betaFixture.users.owner);
+    await page.goto(`/${betaFixture.profiles.owner.username}`);
+
+    const composer = page.getByRole("region", { name: "Public ask form" });
+    const prompts = composer.getByRole("button", { name: /Use prompt:/ });
+
+    await expect(prompts).toHaveCount(4);
+    const composerBox = await composer.boundingBox();
+
+    if (composerBox === null) {
+      throw new Error("expected the ask composer to have visible geometry");
+    }
+
+    for (let index = 0; index < 4; index += 1) {
+      const promptBox = await prompts.nth(index).boundingBox();
+
+      if (promptBox === null) {
+        throw new Error(`expected prompt ${String(index + 1)} to be visible`);
+      }
+
+      expect(promptBox.x).toBeGreaterThanOrEqual(composerBox.x);
+      expect(promptBox.x + promptBox.width).toBeLessThanOrEqual(
+        composerBox.x + composerBox.width,
+      );
     }
   });
 
