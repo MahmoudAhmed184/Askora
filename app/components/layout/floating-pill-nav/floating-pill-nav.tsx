@@ -33,11 +33,12 @@ export function FloatingPillNav({
   const navRef = React.useRef<HTMLElement | null>(null);
   const itemRefs = React.useRef(new Map<string, HTMLAnchorElement>());
   const [capsuleStyle, setCapsuleStyle] = React.useState<React.CSSProperties>();
+  const capsuleValue = pendingValue ?? activeValue;
 
   useIsomorphicLayoutEffect(() => {
     function repositionCapsule() {
       const nav = navRef.current;
-      const activeItem = itemRefs.current.get(activeValue);
+      const activeItem = itemRefs.current.get(capsuleValue);
 
       if (!nav || !activeItem) {
         return;
@@ -60,7 +61,7 @@ export function FloatingPillNav({
     return () => {
       window.removeEventListener("resize", repositionCapsule);
     };
-  }, [activeValue, items]);
+  }, [capsuleValue, items]);
 
   return (
     <nav
@@ -85,6 +86,7 @@ export function FloatingPillNav({
 
       {items.map((item) => {
         const isActive = item.value === activeValue;
+        const isCapsuleTarget = item.value === capsuleValue;
         const isPending = item.value === pendingValue;
         const Icon = item.icon;
 
@@ -94,10 +96,10 @@ export function FloatingPillNav({
             aria-label={item.label}
             className={cn(
               "relative z-10 inline-flex h-11 min-w-11 flex-1 items-center justify-center gap-2 rounded-full px-1 text-xs font-bold leading-none text-muted-foreground outline-none transition-[background-color,color,transform] duration-200 ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/35 active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0 sm:h-10 sm:px-3 sm:text-[0.84rem]",
-              isActive &&
+              isCapsuleTarget &&
                 "text-primary-foreground hover:text-primary-foreground",
-              isActive && capsuleStyle === undefined && "bg-primary",
-              isPending && !isActive && "text-foreground",
+              isCapsuleTarget && capsuleStyle === undefined && "bg-primary",
+              isPending && !isCapsuleTarget && "text-foreground",
             )}
             data-active={isActive ? "" : undefined}
             data-pending={isPending ? "" : undefined}
@@ -116,7 +118,7 @@ export function FloatingPillNav({
             {isPending && !isActive ? (
               <span
                 aria-hidden="true"
-                className="absolute bottom-1.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary"
+                className="absolute bottom-1.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary-foreground"
               />
             ) : null}
             {item.hasIndicator ? (
@@ -129,7 +131,7 @@ export function FloatingPillNav({
               aria-hidden="true"
               className="size-5 shrink-0"
               data-slot="floating-pill-nav-icon"
-              strokeWidth={isActive ? 2.4 : 2}
+              strokeWidth={isCapsuleTarget ? 2.4 : 2}
             />
             <span
               className="sr-only sm:not-sr-only sm:whitespace-nowrap"

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { Bell, House } from "lucide-react";
-import { createMemoryRouter, RouterProvider } from "react-router";
-import { describe, expect, it } from "vitest";
+import { MemoryRouter } from "react-router";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   FloatingPillNav,
@@ -64,28 +64,74 @@ describe("FloatingPillNav", () => {
     }
   });
 
+  it("moves the capsule to the pending item before the active URL changes", () => {
+    const getBoundingClientRect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function getElementRectangle(this: HTMLElement) {
+        if (this.getAttribute("data-slot") === "floating-pill-nav") {
+          return rectangle({ left: 20, width: 240 });
+        }
+
+        return this.getAttribute("aria-label") === "Notifications"
+          ? rectangle({ left: 140, width: 100 })
+          : rectangle({ left: 30, width: 90 });
+      });
+    const { container, rerender } = renderNav();
+
+    rerender(
+      <MemoryRouter>
+        <FloatingPillNav
+          activeValue="feed"
+          items={items}
+          pendingValue="notifications"
+        />
+      </MemoryRouter>,
+    );
+
+    expect(
+      container.querySelector("[data-slot='floating-pill-nav-capsule']"),
+    ).toHaveStyle({ left: "120px", width: "100px" });
+    expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(
+      screen.getByRole("link", { name: "Notifications" }),
+    ).not.toHaveAttribute("aria-current");
+
+    getBoundingClientRect.mockRestore();
+  });
 });
 
-function renderNav() {
-  const items: FloatingPillNavItem[] = [
-    { value: "feed", to: "/feed", label: "Feed", icon: House },
-    {
-      value: "notifications",
-      to: "/notifications",
-      label: "Notifications",
-      icon: Bell,
-      hasIndicator: true,
-    },
-  ];
-  const router = createMemoryRouter(
-    [
-      {
-        path: "/",
-        element: <FloatingPillNav activeValue="feed" items={items} />,
-      },
-    ],
-    { initialEntries: ["/"] },
-  );
+const items: FloatingPillNavItem[] = [
+  { value: "feed", to: "/feed", label: "Feed", icon: House },
+  {
+    value: "notifications",
+    to: "/notifications",
+    label: "Notifications",
+    icon: Bell,
+    hasIndicator: true,
+  },
+];
 
-  return render(<RouterProvider router={router} />);
+function renderNav() {
+  return render(
+    <MemoryRouter>
+      <FloatingPillNav activeValue="feed" items={items} />
+    </MemoryRouter>,
+  );
+}
+
+function rectangle({ left, width }: { left: number; width: number }): DOMRect {
+  return {
+    bottom: 40,
+    height: 40,
+    left,
+    right: left + width,
+    top: 0,
+    width,
+    x: left,
+    y: 0,
+    toJSON: () => ({}),
+  };
 }
