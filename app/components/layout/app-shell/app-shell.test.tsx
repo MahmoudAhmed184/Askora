@@ -5,9 +5,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppShellData } from "~/types/app-shell-data";
 
 const routerState = vi.hoisted(() => ({
+  fetcherData: undefined as
+    | { profileHref: string; unreadNotificationCount: number }
+    | undefined,
+  fetcherLoad: vi.fn(),
+  fetcherState: "idle",
   locationPathname: "/feed",
   navigationPathname: undefined as string | undefined,
-  revalidate: vi.fn(),
 }));
 
 vi.mock("react-router", async () => {
@@ -35,9 +39,10 @@ vi.mock("react-router", async () => {
       state:
         routerState.navigationPathname === undefined ? "idle" : "loading",
     }),
-    useRevalidator: () => ({
-      revalidate: routerState.revalidate,
-      state: "idle",
+    useFetcher: () => ({
+      data: routerState.fetcherData,
+      load: routerState.fetcherLoad,
+      state: routerState.fetcherState,
     }),
   };
 });
@@ -45,12 +50,17 @@ vi.mock("react-router", async () => {
 import {
   AppNavigation,
   AppShell,
+  AppShellDataProvider,
 } from "~/components/layout/app-shell/app-shell";
 
 describe("AppShell navigation", () => {
   afterEach(() => {
     vi.useRealTimers();
-    routerState.revalidate.mockClear();
+    routerState.fetcherData = undefined;
+    routerState.fetcherLoad.mockClear();
+    routerState.fetcherState = "idle";
+    routerState.locationPathname = "/feed";
+    routerState.navigationPathname = undefined;
   });
 
   it("keeps the rendered page active while marking the pending destination", () => {
@@ -58,12 +68,12 @@ describe("AppShell navigation", () => {
     routerState.navigationPathname = "/notifications";
 
     render(
-      <>
+      <AppShellDataProvider shell={shellData}>
         <AppShell>
           <div>Page</div>
         </AppShell>
-        <AppNavigation shell={shellData} />
-      </>,
+        <AppNavigation />
+      </AppShellDataProvider>,
     );
 
     expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
@@ -81,7 +91,11 @@ describe("AppShell navigation", () => {
     routerState.locationPathname = "/feed";
     routerState.navigationPathname = undefined;
 
-    render(<AppNavigation shell={shellData} />);
+    render(
+      <AppShellDataProvider shell={shellData}>
+        <AppNavigation />
+      </AppShellDataProvider>,
+    );
 
     for (const name of [
       "Feed",
@@ -97,20 +111,42 @@ describe("AppShell navigation", () => {
     }
   });
 
-  it("refreshes shell data while the document remains visible", () => {
+  it("refreshes only the unread notification count while visible", () => {
     vi.useFakeTimers();
     routerState.locationPathname = "/feed";
     routerState.navigationPathname = undefined;
 
     render(
-      <AppShell>
-        <div>Page</div>
-      </AppShell>,
+      <AppShellDataProvider shell={shellData}>
+        <AppNavigation />
+      </AppShellDataProvider>,
     );
 
     vi.advanceTimersByTime(60_000);
 
-    expect(routerState.revalidate).toHaveBeenCalledOnce();
+    expect(routerState.fetcherLoad).toHaveBeenCalledOnce();
+    expect(routerState.fetcherLoad).toHaveBeenCalledWith(
+      "/api/notifications/unread-count",
+    );
+  });
+
+  it("uses the fetched unread count for the notification indicator", () => {
+    routerState.fetcherData = {
+      profileHref: shellData.profileHref,
+      unreadNotificationCount: 0,
+    };
+
+    render(
+      <AppShellDataProvider shell={shellData}>
+        <AppNavigation />
+      </AppShellDataProvider>,
+    );
+
+    expect(
+      screen
+        .getByRole("link", { name: "Notifications" })
+        .querySelector("[aria-hidden='true'].bg-accent"),
+    ).not.toBeInTheDocument();
   });
 });
 

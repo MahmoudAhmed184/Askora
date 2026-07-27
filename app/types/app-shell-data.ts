@@ -8,3 +8,8 @@ export interface AppShellData {
   profileHref: string;
   unreadNotificationCount: number;
 }
+
+export interface UnreadNotificationCountData {
+  profileHref: string;
+  unreadNotificationCount: number;
+}

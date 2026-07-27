@@ -16,7 +16,10 @@ import type { Route } from "./+types/root";
 import "./app.css";
 
 import { BrandLogo } from "~/components/shared/brand-logo/brand-logo";
-import { AppNavigation } from "~/components/layout/app-shell/app-shell";
+import {
+  AppNavigation,
+  AppShellDataProvider,
+} from "~/components/layout/app-shell/app-shell";
 import { ThemeWatcher } from "~/components/shared/theme-watcher/theme-watcher";
 import { Toaster } from "~/components/ui/sonner/sonner";
 import { usesAppShell } from "~/features/app-shell/app-shell-route";
@@ -103,8 +106,16 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 export function shouldRevalidate({
   currentUrl,
   defaultShouldRevalidate,
+  formMethod,
   nextUrl,
 }: ShouldRevalidateFunctionArgs) {
+  if (
+    isMutation(formMethod) ||
+    hasAuthenticationBoundaryChange(currentUrl, nextUrl)
+  ) {
+    return true;
+  }
+
   if (
     hasThreadModalSearchParamChange(currentUrl, nextUrl) ||
     hasAnswerModalSearchParamChange(currentUrl, nextUrl)
@@ -112,7 +123,32 @@ export function shouldRevalidate({
     return true;
   }
 
+  if (currentUrl.pathname !== nextUrl.pathname) {
+    return false;
+  }
+
   return defaultShouldRevalidate;
+}
+
+function isMutation(formMethod: string | undefined) {
+  return formMethod !== undefined && formMethod.toUpperCase() !== "GET";
+}
+
+function hasAuthenticationBoundaryChange(currentUrl: URL, nextUrl: URL) {
+  return (
+    currentUrl.pathname !== nextUrl.pathname &&
+    (isAuthenticationPath(currentUrl.pathname) ||
+      isAuthenticationPath(nextUrl.pathname))
+  );
+}
+
+function isAuthenticationPath(pathname: string) {
+  return (
+    pathname === "/login" ||
+    pathname === "/setup" ||
+    pathname === "/api/auth" ||
+    pathname.startsWith("/api/auth/")
+  );
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
@@ -175,14 +211,14 @@ export default function App({ loaderData }: Route.ComponentProps) {
     : undefined;
 
   return (
-    <>
+    <AppShellDataProvider shell={shell}>
       <Outlet />
-      <AppNavigation shell={shell} />
+      <AppNavigation />
       <ThreadModalHost modal={loaderData.threadModal} />
       <AnswerEditorModalHost modal={loaderData.answerModal} />
       <ThemeWatcher />
       <Toaster />
-    </>
+    </AppShellDataProvider>
   );
 }
 

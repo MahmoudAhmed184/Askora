@@ -3,17 +3,15 @@ import {
   Link,
   Outlet,
   type ShouldRevalidateFunctionArgs,
-  useRouteLoaderData,
 } from "react-router";
 
+import { useAppShellData } from "~/components/layout/app-shell/app-shell-data-context";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import {
   requireCompletedProfileSessionAllowingInactiveFromContext,
   requireCompletedProfileSessionFromContext,
 } from "~/features/auth/services/auth.service.server";
 import { appShellRouteHandle } from "~/features/app-shell/app-shell-route";
-import type { loader as rootLoader } from "~/root";
-
 import type { Route } from "./+types/app-layout.route";
 
 export function loader({ context, request }: Route.LoaderArgs) {
@@ -41,7 +39,7 @@ export function shouldRevalidate({
 }
 
 export default function AppLayoutRoute() {
-  const shell = useRootShell();
+  const shell = useRequiredAppShellData();
 
   return (
     <AppShell>
@@ -51,7 +49,7 @@ export default function AppLayoutRoute() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const rootData = useRouteLoaderData<typeof rootLoader>("root");
+  const shell = useAppShellData();
   const title = isRouteErrorResponse(error)
     ? `${String(error.status)} ${error.statusText}`
     : "Something went wrong";
@@ -80,7 +78,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     </section>
   );
 
-  return rootData?.shell === undefined ? (
+  return shell === undefined ? (
     <main className="mx-auto flex min-h-screen w-full items-center px-5 py-12">
       {content}
     </main>
@@ -89,12 +87,12 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   );
 }
 
-function useRootShell() {
-  const rootData = useRouteLoaderData<typeof rootLoader>("root");
+function useRequiredAppShellData() {
+  const shell = useAppShellData();
 
-  if (rootData?.shell === undefined) {
+  if (shell === undefined) {
     throw new Error("Authenticated app routes require app shell data.");
   }
 
-  return rootData.shell;
+  return shell;
 }

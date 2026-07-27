@@ -48,6 +48,10 @@ export default [
   route("terms", "features/legal/routes/terms.route.tsx"),
   route("privacy", "features/legal/routes/privacy.route.tsx"),
   route("api/avatar", "features/profiles/routes/avatar.route.ts"),
+  route(
+    "api/notifications/unread-count",
+    "features/notifications/routes/unread-count.route.ts",
+  ),
   route("api/auth/*", "features/auth/routes/auth.$.route.ts"),
   route(
     ":username/a/:threadPublicId/follow-ups",
