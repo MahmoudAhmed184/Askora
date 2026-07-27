@@ -69,22 +69,32 @@ describe("AppShell navigation", () => {
     expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
       "data-active",
     );
-    expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
-      "data-prefetch",
-      "viewport",
-    );
     expect(
       screen.getByRole("link", { name: "Notifications" }),
     ).not.toHaveAttribute("data-active");
     expect(
       screen.getByRole("link", { name: "Notifications" }),
     ).toHaveAttribute("data-pending");
-    expect(
-      screen.getByRole("link", { name: "Notifications" }),
-    ).toHaveAttribute(
-      "data-prefetch",
-      "viewport",
-    );
+  });
+
+  it("prefetches navbar destinations only after user intent", () => {
+    routerState.locationPathname = "/feed";
+    routerState.navigationPathname = undefined;
+
+    render(<AppNavigation shell={shellData} />);
+
+    for (const name of [
+      "Feed",
+      "Inbox",
+      "Notifications",
+      "Profile",
+      "Settings",
+    ]) {
+      expect(screen.getByRole("link", { name })).toHaveAttribute(
+        "data-prefetch",
+        "intent",
+      );
+    }
   });
 
   it("refreshes shell data while the document remains visible", () => {

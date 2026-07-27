@@ -103,7 +103,7 @@ export function FloatingPillNav({
             data-pending={isPending ? "" : undefined}
             data-slot="floating-pill-nav-link"
             key={item.value}
-            prefetch="viewport"
+            prefetch="intent"
             ref={(node) => {
               if (node) {
                 itemRefs.current.set(item.value, node);
