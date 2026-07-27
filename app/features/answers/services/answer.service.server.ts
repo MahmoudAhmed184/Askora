@@ -33,11 +33,6 @@ import {
   type LikeControlState,
 } from "~/features/social/social-controls";
 import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
-import {
-  createCompactThreadContextPreview,
-  type CompactThreadContextPreview,
-} from "~/features/threads/services/follow-up.service.server";
-import type { PublicThreadItemRow } from "~/features/threads/queries/public-thread.queries.server";
 import { MAX_PUBLISHED_THREAD_ITEMS } from "~/features/threads/services/thread-permissions.service.server";
 import { createDatabaseId, createPublicId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
@@ -62,6 +57,9 @@ export interface AnswerWorkflowQuestion {
   recipientUserId: string;
   askerUserId: string | null;
   askerProfileId: string | null;
+  askerDisplayName: string | null;
+  askerUsername: string | null;
+  askerAvatarUrl: string | null;
   identityMode: AnswerQuestionIdentity;
   status: AnswerQuestionStatus;
   originalText: string;
@@ -93,6 +91,10 @@ export interface StoredDraftAnswerQuestion {
   answerText: string;
   itemUpdatedAt: Date;
   questionCreatedAt: Date;
+  identityMode: AnswerQuestionIdentity;
+  askerDisplayName: string | null;
+  askerUsername: string | null;
+  askerAvatarUrl: string | null;
   deletedAt: Date | null;
   status: AnswerQuestionStatus;
 }
@@ -130,7 +132,6 @@ export interface AnswerStore {
     profileId: string;
     userId: string;
   }): Promise<StoredDraftAnswerQuestion[]>;
-  findThreadContextRows(threadId: string): Promise<PublicThreadItemRow[]>;
   saveDraftAnswer(params: AnswerMutationParams): Promise<void>;
   publishAnswer(
     params: AnswerMutationParams,
@@ -145,12 +146,17 @@ export interface AnswerEditorViewData {
   question: {
     publicId: string;
     text: string;
-    identity: "anonymous" | "attributed";
     createdAt: string;
+    sender:
+      | {
+          displayName: string;
+          username: string;
+          avatarUrl: string | null;
+        }
+      | undefined;
   };
   values: AnswerFormValues;
   followUpPermissionDefault: FollowUpPermission;
-  threadContext: CompactThreadContextPreview | undefined;
 }
 
 export interface DraftAnswerView {
@@ -159,6 +165,13 @@ export interface DraftAnswerView {
   answerPreview: string;
   updatedAt: string;
   questionCreatedAt: string;
+  sender:
+    | {
+        displayName: string;
+        username: string;
+        avatarUrl: string | null;
+      }
+    | undefined;
 }
 
 export interface DraftAnswersViewData {
@@ -258,13 +271,7 @@ export async function loadAnswerEditor({
     return { status: "not_found" };
   }
 
-  const [draft, threadContext] = await Promise.all([
-    store.findDraftItemByQuestionId(question.question.id),
-    loadAnswerThreadContext({
-      question: question.question,
-      store,
-    }),
-  ]);
+  const draft = await store.findDraftItemByQuestionId(question.question.id);
 
   return {
     status: "found",
@@ -276,15 +283,11 @@ export async function loadAnswerEditor({
       question: {
         publicId: question.question.publicId,
         text: question.question.originalText,
-        identity:
-          question.question.identityMode === "account_attributed"
-            ? "attributed"
-            : "anonymous",
         createdAt: question.question.createdAt.toISOString(),
+        sender: getAnswerQuestionSender(question.question),
       },
       values: toAnswerFormValues(draft, question.question),
       followUpPermissionDefault: question.question.followUpPermissionDefault,
-      threadContext,
     },
   };
 }
@@ -319,6 +322,7 @@ export async function loadDraftAnswers({
       answerPreview: createAnswerPreview(draft.answerText),
       updatedAt: draft.itemUpdatedAt.toISOString(),
       questionCreatedAt: draft.questionCreatedAt.toISOString(),
+      sender: getAnswerQuestionSender(draft),
     }));
 
   return {
@@ -429,6 +433,7 @@ export function createDrizzleAnswerStore(
   return {
     async findQuestionForAnswer(publicId) {
       const questionThreads = alias(threads, "answer_question_threads");
+      const askerProfiles = alias(profiles, "answer_question_asker_profiles");
       const [question] = await database
         .select({
           id: questions.id,
@@ -437,6 +442,9 @@ export function createDrizzleAnswerStore(
           recipientUserId: questions.recipientUserId,
           askerUserId: questions.askerUserId,
           askerProfileId: questions.askerProfileId,
+          askerDisplayName: askerProfiles.displayName,
+          askerUsername: askerProfiles.username,
+          askerAvatarUrl: askerProfiles.avatarUrl,
           identityMode: questions.identityMode,
           status: questions.status,
           originalText: questions.originalText,
@@ -452,6 +460,13 @@ export function createDrizzleAnswerStore(
         })
         .from(questions)
         .innerJoin(profiles, eq(profiles.id, questions.recipientProfileId))
+        .leftJoin(
+          askerProfiles,
+          and(
+            eq(questions.identityMode, "account_attributed"),
+            eq(askerProfiles.id, questions.askerProfileId),
+          ),
+        )
         .leftJoin(questionThreads, eq(questionThreads.id, questions.threadId))
         .where(eq(questions.publicId, publicId))
         .limit(1);
@@ -482,6 +497,7 @@ export function createDrizzleAnswerStore(
       return draft;
     },
     async findDraftAnswerQuestionsForOwner({ profileId, userId }) {
+      const askerProfiles = alias(profiles, "draft_answer_asker_profiles");
       const rows = await database
         .select({
           questionId: questions.id,
@@ -492,11 +508,22 @@ export function createDrizzleAnswerStore(
           answerText: threadItems.answerText,
           itemUpdatedAt: threadItems.updatedAt,
           questionCreatedAt: questions.createdAt,
+          identityMode: questions.identityMode,
+          askerDisplayName: askerProfiles.displayName,
+          askerUsername: askerProfiles.username,
+          askerAvatarUrl: askerProfiles.avatarUrl,
           deletedAt: questions.deletedAt,
           status: questions.status,
         })
         .from(questions)
         .innerJoin(threadItems, eq(threadItems.questionId, questions.id))
+        .leftJoin(
+          askerProfiles,
+          and(
+            eq(questions.identityMode, "account_attributed"),
+            eq(askerProfiles.id, questions.askerProfileId),
+          ),
+        )
         .where(
           and(
             eq(questions.recipientProfileId, profileId),
@@ -510,42 +537,6 @@ export function createDrizzleAnswerStore(
         .orderBy(desc(threadItems.updatedAt));
 
       return rows;
-    },
-    async findThreadContextRows(threadId) {
-      const askerProfiles = alias(profiles, "answer_context_asker_profiles");
-
-      return database
-        .select({
-          publicId: threadItems.publicId,
-          questionId: threadItems.questionId,
-          answerText: threadItems.answerText,
-          itemStatus: threadItems.status,
-          itemDeletedAt: threadItems.deletedAt,
-          publishedAt: threadItems.publishedAt,
-          createdAt: threadItems.createdAt,
-          position: threadItems.position,
-          pinPosition: pinnedAnswers.position,
-          questionStatus: questions.status,
-          questionDeletedAt: questions.deletedAt,
-          questionTextMode: threadItems.questionTextMode,
-          displayQuestionText: threadItems.displayQuestionText,
-          identityMode: questions.identityMode,
-          askerDisplayName: askerProfiles.displayName,
-          askerUsername: askerProfiles.username,
-        })
-        .from(threadItems)
-        .innerJoin(threads, eq(threads.id, threadItems.threadId))
-        .innerJoin(questions, eq(questions.id, threadItems.questionId))
-        .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
-        .leftJoin(
-          pinnedAnswers,
-          and(
-            eq(pinnedAnswers.profileId, threads.ownerProfileId),
-            eq(pinnedAnswers.threadItemId, threadItems.id),
-          ),
-        )
-        .where(eq(threadItems.threadId, threadId))
-        .orderBy(asc(threadItems.position), asc(threadItems.createdAt));
     },
     async saveDraftAnswer(params) {
       await database.transaction(async (transaction) => {
@@ -1088,27 +1079,6 @@ function getNextThreadStatus({
   return published ? "published" : "draft";
 }
 
-async function loadAnswerThreadContext({
-  question,
-  store,
-}: {
-  question: AnswerWorkflowQuestion;
-  store: AnswerStore;
-}) {
-  if (
-    !isFollowUpQuestion(question) ||
-    question.threadId === null ||
-    question.threadInitialQuestionId === null
-  ) {
-    return undefined;
-  }
-
-  return createCompactThreadContextPreview({
-    initialQuestionId: question.threadInitialQuestionId,
-    rows: await store.findThreadContextRows(question.threadId),
-  });
-}
-
 function toAnswerFormValues(
   draft: StoredAnswerDraftItem | undefined,
   question: AnswerWorkflowQuestion,
@@ -1124,6 +1094,27 @@ function toAnswerFormValues(
     followUpPermissionOverride:
       draft?.followUpPermissionOverride ??
       getInitialFollowUpPermissionOverride(question),
+  };
+}
+
+function getAnswerQuestionSender(question: {
+  identityMode: AnswerQuestionIdentity;
+  askerDisplayName: string | null;
+  askerUsername: string | null;
+  askerAvatarUrl: string | null;
+}) {
+  if (
+    question.identityMode !== "account_attributed" ||
+    question.askerDisplayName === null ||
+    question.askerUsername === null
+  ) {
+    return undefined;
+  }
+
+  return {
+    displayName: question.askerDisplayName,
+    username: question.askerUsername,
+    avatarUrl: question.askerAvatarUrl,
   };
 }
 

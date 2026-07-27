@@ -14,16 +14,11 @@ import {
   type AnswerWorkflowQuestion,
   type PublicPublishedAnswerRow,
   type StoredAnswerDraftItem,
-  type StoredDraftAnswerQuestion
-} from "~/features/answers/services/answer.service.server";;
+  type StoredDraftAnswerQuestion,
+} from "~/features/answers/services/answer.service.server";
 import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
-import type {
-  CompletedProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
-import type {
-  PublicThreadItemRow
-} from "~/features/threads/queries/public-thread.queries.server";;
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -292,7 +287,7 @@ describe("answer workflows", () => {
     expect(answers.notifications).toEqual([]);
   });
 
-  it("loads follow-up thread context and preserves the current follow-up override", async () => {
+  it("loads a follow-up without expanding its published thread history", async () => {
     const answers = createAnswerStore({
       items: [createThreadItem()],
       question: createFollowUpQuestion(),
@@ -311,8 +306,36 @@ describe("answer workflows", () => {
         values: {
           followUpPermissionOverride: "logged_in",
         },
-        threadContext: {
-          totalVisibleItems: 1,
+      },
+    });
+  });
+
+  it("loads the attributed asker identity for new and saved draft answers", async () => {
+    const answers = createAnswerStore({
+      question: createQuestion({
+        askerAvatarUrl: "/avatars/asker.png",
+        askerDisplayName: "Known Asker",
+        askerProfileId: "profile_asker",
+        askerUsername: "known_asker",
+        identityMode: "account_attributed",
+      }),
+    });
+
+    await expect(
+      loadAnswerEditor({
+        questionPublicId: "qst_1",
+        session: completedSession,
+        store: answers.store,
+      }),
+    ).resolves.toMatchObject({
+      status: "found",
+      editor: {
+        question: {
+          sender: {
+            avatarUrl: "/avatars/asker.png",
+            displayName: "Known Asker",
+            username: "known_asker",
+          },
         },
       },
     });
@@ -602,6 +625,7 @@ describe("loadDraftAnswers", () => {
             "Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer D...",
           updatedAt: "2026-05-31T12:00:00.000Z",
           questionCreatedAt: "2026-05-31T12:00:00.000Z",
+          sender: undefined,
         },
       ],
     });
@@ -954,17 +978,14 @@ function createAnswerStore({
           answerText: item.answerText,
           itemUpdatedAt: item.updatedAt,
           questionCreatedAt: question.createdAt,
+          identityMode: question.identityMode,
+          askerDisplayName: question.askerDisplayName,
+          askerUsername: question.askerUsername,
+          askerAvatarUrl: question.askerAvatarUrl,
           deletedAt: question.deletedAt,
           status: question.status,
         } satisfies StoredDraftAnswerQuestion,
       ]);
-    },
-    findThreadContextRows(threadId) {
-      return Promise.resolve(
-        items
-          .filter((item) => item.threadId === threadId)
-          .map((item) => createContextRow(item)),
-      );
     },
     saveDraftAnswer(params) {
       const draft = upsertAnswerState({
@@ -1201,27 +1222,6 @@ function countVisiblePublishedItems(
   ).length;
 }
 
-function createContextRow(item: TestThreadItem): PublicThreadItemRow {
-  return {
-    publicId: item.publicId,
-    questionId: item.questionId,
-    answerText: item.answerText,
-    itemStatus: item.status,
-    itemDeletedAt: null,
-    publishedAt: item.publishedAt,
-    createdAt: item.createdAt,
-    position: item.position,
-    pinPosition: null,
-    questionStatus: "answered",
-    questionDeletedAt: null,
-    questionTextMode: item.questionTextMode,
-    displayQuestionText: item.displayQuestionText,
-    identityMode: "guest_anonymous",
-    askerDisplayName: null,
-    askerUsername: null,
-  };
-}
-
 function getParticipantNotificationRecipients({
   actorUserId,
   currentAskerUserId,
@@ -1296,6 +1296,9 @@ function createQuestion(
     recipientUserId: "user_1",
     askerUserId: null,
     askerProfileId: null,
+    askerDisplayName: null,
+    askerUsername: null,
+    askerAvatarUrl: null,
     identityMode: "guest_anonymous",
     status: "inbox",
     originalText: "What should I read next?",

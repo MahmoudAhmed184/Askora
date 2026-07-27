@@ -64,8 +64,8 @@ function createEditor(): AnswerEditorViewData {
     question: {
       publicId: "qst_1",
       text: "What should I read next?",
-      identity: "anonymous",
       createdAt: "2026-05-31T12:00:00.000Z",
+      sender: undefined,
     },
     values: {
       intent: "unknown",
@@ -75,6 +75,5 @@ function createEditor(): AnswerEditorViewData {
       followUpPermissionOverride: null,
     },
     followUpPermissionDefault: "anyone",
-    threadContext: undefined,
   };
 }

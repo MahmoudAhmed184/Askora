@@ -19,6 +19,11 @@ describe("DraftsList", () => {
                   answerPreview: "A private draft",
                   updatedAt: "2026-05-31T12:00:00.000Z",
                   questionCreatedAt: "2026-05-30T12:00:00.000Z",
+                  sender: {
+                    username: "asker",
+                    displayName: "Known Asker",
+                    avatarUrl: null,
+                  },
                 },
               ]}
             />
@@ -39,5 +44,9 @@ describe("DraftsList", () => {
       intent: "delete",
       questionPublicId: "qst_1",
     });
+    expect(screen.getByRole("link", { name: "Known Asker" })).toHaveAttribute(
+      "href",
+      "/asker",
+    );
   });
 });

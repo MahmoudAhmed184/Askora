@@ -4,6 +4,10 @@ import { Form, useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
+import {
+  AnonymousAvatar,
+  ProfileIdentityLink,
+} from "~/components/shared/profile-identity/profile-identity";
 
 import {
   Field,
@@ -20,10 +24,8 @@ import type {
   AnswerFieldErrors,
   AnswerFormValues,
 } from "~/features/answers/types/answers.types";
-import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
 import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
 import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
-import { ThreadContextPreview } from "~/features/threads/components/thread-context-preview";
 import { formatMediumDateTime } from "~/lib/date-format";
 import { cn } from "~/lib/utils";
 
@@ -120,7 +122,7 @@ export function AnswerEditor({
   return (
     <section
       aria-labelledby="answer-editor-title"
-      className="flex max-h-full w-full max-w-[53rem] flex-col overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]"
+      className="flex max-h-full w-full max-w-[44rem] flex-col overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]"
     >
       <ActionToast
         message={getAnswerActionToastMessage(effectiveActionResult, formError)}
@@ -129,28 +131,9 @@ export function AnswerEditor({
         }
         trigger={effectiveActionResult}
       />
-      <header className="border-b border-border/60 bg-secondary p-6 pr-16 sm:p-8 sm:pr-16">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <span className="mb-3 inline-flex rounded-full border bg-card px-2.5 py-1 font-mono text-[0.625rem] font-bold text-primary">
-              Answer editor
-            </span>
-            <h1
-              className="font-serif text-2xl font-bold tracking-tight text-foreground"
-              id="answer-editor-title"
-            >
-              Prepare response
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Edit the visible question text, set follow-up behavior, then save
-              or publish.
-            </p>
-          </div>
-          <div className="flex items-start gap-3 sm:min-w-80 sm:justify-end">
-            <QuestionSender question={editor.question} />
-          </div>
-        </div>
-      </header>
+      <h1 className="sr-only" id="answer-editor-title">
+        Answer question
+      </h1>
       <FormComponent
         {...(action === undefined ? {} : { action })}
         aria-label="Answer editor"
@@ -158,19 +141,20 @@ export function AnswerEditor({
         id={formId}
         method="post"
       >
-        <FieldGroup className="gap-5 p-6 sm:p-8">
+        <FieldGroup className="gap-5 p-5 sm:p-6">
           <fieldset className="contents" disabled={disabled}>
-            {editor.threadContext === undefined ? null : (
-              <ThreadContextPreview context={editor.threadContext} />
-            )}
+            <QuestionContext question={editor.question} />
 
             <Field
               data-invalid={
                 fieldErrors.questionTextMode !== undefined ? true : undefined
               }
             >
+              <FieldLabel id="public-question-wording-label">
+                Public question wording
+              </FieldLabel>
               <div
-                aria-label="Public question text"
+                aria-labelledby="public-question-wording-label"
                 className="flex flex-wrap gap-2"
                 role="radiogroup"
               >
@@ -212,24 +196,6 @@ export function AnswerEditor({
                   )?.description
                 }
               </p>
-              <div className="rounded-xl border bg-secondary p-4">
-                <p
-                  className={cn(
-                    "whitespace-pre-wrap break-words font-serif text-lg font-bold italic leading-7",
-                    values.questionTextMode === "hidden"
-                      ? "text-muted-foreground"
-                      : "text-foreground",
-                  )}
-                >
-                  "
-                  {getQuestionPreviewText({
-                    editedQuestionText: values.editedQuestionText,
-                    mode: normalizeQuestionTextMode(values.questionTextMode),
-                    questionText: editor.question.text,
-                  })}
-                  "
-                </p>
-              </div>
               <FieldError
                 id="questionTextMode-message"
                 message={fieldErrors.questionTextMode}
@@ -382,7 +348,7 @@ export function AnswerEditor({
           </fieldset>
         </FieldGroup>
       </FormComponent>
-      <footer className="shrink-0 border-t border-border/60 bg-secondary p-6 sm:p-8">
+      <footer className="shrink-0 border-t border-border/60 bg-secondary p-4 sm:p-5">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex flex-wrap gap-2">
             <QuestionModerationControls
@@ -460,21 +426,56 @@ function getAnswerActionToastMessage(
   return formError;
 }
 
-function QuestionSender({
+function QuestionContext({
   question,
 }: {
   question: AnswerEditorViewData["question"];
 }) {
-  return (
-    <div className="flex items-center justify-end gap-2 whitespace-nowrap font-mono text-[0.68rem] text-muted-foreground">
-      <span className="rounded-full border bg-card px-3 py-1 font-bold text-foreground">
-        {question.identity === "attributed" ? "Attributed" : "Anonymous"}
-      </span>
+  const timestamp = (
+    <>
       <span aria-hidden="true">·</span>
-      <time dateTime={question.createdAt}>
-        {formatDate(question.createdAt)}
-      </time>
+      <time dateTime={question.createdAt}>{formatDate(question.createdAt)}</time>
+    </>
+  );
+
+  return (
+    <div className="rounded-2xl border bg-secondary/70 p-4">
+      <p className="mb-3 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-primary">
+        Question from
+      </p>
+      {question.sender === undefined ? (
+        <div className="flex min-w-0 items-center gap-3">
+          <AnonymousAvatar />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="font-semibold leading-tight text-foreground">
+              Anonymous
+            </span>
+            <div className="flex flex-wrap items-center gap-x-2 font-mono text-xs text-muted-foreground">
+              <span>Sender hidden</span>
+              {timestamp}
+            </div>
+          </div>
+          <IdentityBadge label="Anonymous" />
+        </div>
+      ) : (
+        <ProfileIdentityLink
+          meta={timestamp}
+          profile={question.sender}
+          trailing={<IdentityBadge label="Attributed" />}
+        />
+      )}
+      <p className="mt-4 whitespace-pre-wrap break-words border-t border-dashed pt-4 font-serif text-lg font-bold italic leading-7 text-foreground">
+        {question.text}
+      </p>
     </div>
+  );
+}
+
+function IdentityBadge({ label }: { label: "Anonymous" | "Attributed" }) {
+  return (
+    <span className="shrink-0 rounded-full border bg-card px-2.5 py-1 font-mono text-[0.65rem] font-bold text-muted-foreground">
+      {label}
+    </span>
   );
 }
 
@@ -492,39 +493,10 @@ function getFormError(result: AnswerActionResult | undefined) {
   return undefined;
 }
 
-function normalizeQuestionTextMode(
-  value: AnswerFormValues["questionTextMode"],
-): QuestionTextMode {
-  if (value === "edited" || value === "hidden") {
-    return value;
-  }
-
-  return "original";
-}
-
 function normalizeFollowUpPermissionOverride(
   value: AnswerFormValues["followUpPermissionOverride"],
 ) {
   return value === "unknown" || value === null ? "" : value;
-}
-
-function getQuestionPreviewText({
-  editedQuestionText,
-  mode,
-  questionText,
-}: {
-  editedQuestionText: string;
-  mode: QuestionTextMode;
-  questionText: string;
-}) {
-  switch (mode) {
-    case "edited":
-      return editedQuestionText.trim() || questionText;
-    case "hidden":
-      return "Question hidden from published answer.";
-    case "original":
-      return questionText;
-  }
 }
 
 function getFollowUpPermissionShortLabel(value: FollowUpPermission) {

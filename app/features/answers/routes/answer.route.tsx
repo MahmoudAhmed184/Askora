@@ -127,7 +127,7 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
   }
 
   const editor = (
-    <div className="flex min-h-0 w-full max-w-[53rem]">
+    <div className="flex min-h-0 w-full max-w-[44rem]">
       <AnswerEditor
         actionResult={actionData?.answer}
         disabled={isSuspended}
@@ -215,7 +215,7 @@ function AnswerRouteDialog({
   return (
     <dialog
       aria-labelledby="answer-editor-title"
-      className="fixed inset-0 z-10 m-auto max-h-[calc(100svh_-_9rem_-_env(safe-area-inset-bottom))] w-full max-w-[53rem] overflow-hidden border-0 bg-transparent p-0 backdrop:bg-background/88 open:flex sm:max-h-[calc(100svh_-_9rem)]"
+      className="fixed inset-0 z-10 m-auto max-h-[calc(100svh_-_9rem_-_env(safe-area-inset-bottom))] w-full max-w-[44rem] overflow-hidden border-0 bg-transparent p-0 backdrop:bg-background/88 open:flex sm:max-h-[calc(100svh_-_9rem)]"
       onCancel={(event) => {
         event.preventDefault();
         onRequestClose();

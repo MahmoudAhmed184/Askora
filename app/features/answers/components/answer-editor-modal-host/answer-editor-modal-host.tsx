@@ -76,7 +76,7 @@ export function AnswerEditorModalHost({ modal }: AnswerEditorModalHostProps) {
     >
       {modal === undefined ? null : (
         <DialogContent
-          className="max-h-[calc(100svh-2rem)] w-[calc(100%-1rem)] max-w-[53rem] overflow-hidden border-0 bg-transparent p-0 shadow-none sm:w-[calc(100%-3rem)]"
+          className="max-h-[calc(100svh-2rem)] w-[calc(100%-1rem)] max-w-[44rem] overflow-hidden border-0 bg-transparent p-0 shadow-none sm:w-[calc(100%-3rem)]"
           key={modal.questionPublicId}
           overlayClassName="bg-background/20 backdrop-blur-[2px]"
         >

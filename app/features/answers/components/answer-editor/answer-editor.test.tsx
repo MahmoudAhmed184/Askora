@@ -6,6 +6,29 @@ import { AnswerEditor } from "~/features/answers/components/answer-editor/answer
 import type { AnswerEditorViewData } from "~/features/answers/types/answers.types";
 
 describe("AnswerEditor", () => {
+  it("identifies the current asker without the oversized workflow header or thread context", () => {
+    renderAnswerEditor({
+      question: {
+        publicId: "qst_1",
+        text: "What should I read next?",
+        createdAt: "2026-05-31T12:00:00.000Z",
+        sender: {
+          username: "asker",
+          displayName: "Known Asker",
+          avatarUrl: null,
+        },
+      },
+    });
+
+    expect(
+      screen.getByRole("link", { name: "Known Asker" }),
+    ).toHaveAttribute("href", "/asker");
+    expect(screen.getByText("@asker")).toBeInTheDocument();
+    expect(screen.getByText("Attributed")).toBeInTheDocument();
+    expect(screen.queryByText("Prepare response")).not.toBeInTheDocument();
+    expect(screen.queryByText("Thread context")).not.toBeInTheDocument();
+  });
+
   it("hides the edited question field unless Edited mode is selected", () => {
     renderAnswerEditor();
 
@@ -54,7 +77,7 @@ describe("AnswerEditor", () => {
   });
 });
 
-function renderAnswerEditor() {
+function renderAnswerEditor(overrides: Partial<AnswerEditorViewData> = {}) {
   const router = createMemoryRouter(
     [
       {
@@ -63,7 +86,7 @@ function renderAnswerEditor() {
           <AnswerEditor
             actionResult={undefined}
             disabled={false}
-            editor={createEditor()}
+            editor={{ ...createEditor(), ...overrides }}
           />
         ),
       },
@@ -83,8 +106,8 @@ function createEditor(): AnswerEditorViewData {
     question: {
       publicId: "qst_1",
       text: "What should I read next?",
-      identity: "anonymous",
       createdAt: "2026-05-31T12:00:00.000Z",
+      sender: undefined,
     },
     values: {
       intent: "unknown",
@@ -94,6 +117,5 @@ function createEditor(): AnswerEditorViewData {
       followUpPermissionOverride: null,
     },
     followUpPermissionDefault: "anyone",
-    threadContext: undefined,
   };
 }
