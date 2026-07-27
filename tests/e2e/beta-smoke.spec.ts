@@ -287,6 +287,7 @@ test.describe("beta seeded smoke", () => {
     await expect(actions).toHaveAttribute("data-side", "bottom");
     await page.getByRole("menuitem", { name: "Unpublish" }).click();
     await page.getByRole("button", { name: "Unpublish answer" }).click();
+    await expectToast(page, "Answer unpublished.");
     await expect(
       page
         .getByRole("article")
