@@ -80,6 +80,15 @@ export type PublicSessionSummary =
       };
     };
 
+export interface GetCurrentSessionSummaryOptions {
+  disableCookieCache?: boolean;
+}
+
+export interface CurrentSessionSummaryWithHeaders {
+  headers: Headers;
+  session: CurrentSessionSummary;
+}
+
 const authProviderStatus = getAuthProviderStatus();
 const googleProvider = getGoogleProvider();
 
@@ -89,6 +98,10 @@ export const auth = betterAuth({
   secret: getServerAuthSecret(),
   trustedOrigins: serverEnv.TRUSTED_ORIGINS,
   session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 60,
+    },
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
   },
@@ -145,26 +158,88 @@ export const auth = betterAuth({
 
 export async function getCurrentSessionSummary(
   request: Request,
+  options: GetCurrentSessionSummaryOptions = {},
 ): Promise<CurrentSessionSummary> {
+  return (await getCurrentSessionSummaryWithHeaders(request, options)).session;
+}
+
+export async function getCurrentSessionSummaryWithHeaders(
+  request: Request,
+  options: GetCurrentSessionSummaryOptions = {},
+): Promise<CurrentSessionSummaryWithHeaders> {
   if (!authProviderStatus.databaseConfigured) {
-    return { status: "anonymous" };
+    return {
+      headers: new Headers(),
+      session: { status: "anonymous" },
+    };
   }
 
-  const session = await auth.api.getSession({
-    headers: request.headers,
-  });
+  const result = await getBetterAuthSessionWithHeaders(request, options);
 
-  if (session === null) {
-    return { status: "anonymous" };
+  if (result.response === null) {
+    return {
+      headers: result.headers,
+      session: { status: "anonymous" },
+    };
   }
 
-  const sessionUser = await getSessionUserSummary(session.user.id);
+  const sessionUser = await getSessionUserSummary(result.response.user.id);
 
   if (sessionUser === undefined) {
-    return { status: "anonymous" };
+    return {
+      headers: result.headers,
+      session: { status: "anonymous" },
+    };
   }
 
-  return sessionUser;
+  return {
+    headers: result.headers,
+    session: sessionUser,
+  };
+}
+
+export function getBetterAuthSessionWithHeaders(
+  request: Request,
+  options: GetCurrentSessionSummaryOptions = {},
+) {
+  return auth.api.getSession({
+    headers: request.headers,
+    ...(options.disableCookieCache === true
+      ? { query: { disableCookieCache: true } }
+      : {}),
+    returnHeaders: true,
+  });
+}
+
+export function shouldBypassSessionCookieCache(pathname: string) {
+  return (
+    pathname === "/settings/account" ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/")
+  );
+}
+
+export function withSessionCookieHeaders(
+  response: Response,
+  sessionHeaders: Headers,
+) {
+  const setCookieHeaders = sessionHeaders.getSetCookie();
+
+  if (setCookieHeaders.length === 0) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+
+  for (const setCookieHeader of setCookieHeaders) {
+    headers.append("Set-Cookie", setCookieHeader);
+  }
+
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
 }
 
 export async function getPublicSessionSummary(request: Request) {

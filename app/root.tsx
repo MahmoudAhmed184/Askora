@@ -32,10 +32,12 @@ import {
 } from "~/features/answers/answer-modal";
 import { currentSessionContext } from "~/features/auth/auth.context";
 import {
-  getCurrentSessionSummary,
+  getCurrentSessionSummaryWithHeaders,
   getCurrentSessionSummaryFromContext,
+  shouldBypassSessionCookieCache,
   toPublicSessionSummary,
   type PublicSessionSummary,
+  withSessionCookieHeaders,
 } from "~/features/auth/services/auth.service.server";
 import { ThreadModalHost } from "~/features/threads/components/thread-modal-host";
 import { loadThreadModalData } from "~/features/threads/services/thread-modal.service.server";
@@ -62,11 +64,16 @@ export interface RootLoaderData {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const middleware: Route.MiddlewareFunction[] = [
-  async ({ context, request }) => {
-    context.set(
-      currentSessionContext,
-      await getCurrentSessionSummary(request),
-    );
+  async ({ context, request }, next) => {
+    const sessionResult = await getCurrentSessionSummaryWithHeaders(request, {
+      disableCookieCache: shouldBypassSessionCookieCache(
+        new URL(request.url).pathname,
+      ),
+    });
+
+    context.set(currentSessionContext, sessionResult.session);
+
+    return withSessionCookieHeaders(await next(), sessionResult.headers);
   },
 ];
 

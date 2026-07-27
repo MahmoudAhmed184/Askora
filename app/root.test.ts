@@ -1,6 +1,43 @@
 import { describe, expect, it } from "vitest";
 
 import { shouldRevalidate } from "~/root";
+import {
+  shouldBypassSessionCookieCache,
+  withSessionCookieHeaders,
+} from "~/features/auth/services/auth.service.server";
+
+describe("root session middleware", () => {
+  it.each([
+    "/admin",
+    "/admin/reports/report_1",
+    "/settings/account",
+  ])("forces an authoritative session read for %s", (pathname) => {
+    expect(shouldBypassSessionCookieCache(pathname)).toBe(true);
+  });
+
+  it.each(["/feed", "/inbox", "/settings/profile", "/administrator"])(
+    "allows the short cookie cache for %s",
+    (pathname) => {
+      expect(shouldBypassSessionCookieCache(pathname)).toBe(false);
+    },
+  );
+
+  it("forwards Better Auth's cache cookie without replacing route headers", () => {
+    const response = withSessionCookieHeaders(
+      new Response("ok", {
+        headers: { "X-Route": "preserved" },
+      }),
+      new Headers({
+        "Set-Cookie": "better-auth.session_data=signed-cache; Path=/; HttpOnly",
+      }),
+    );
+
+    expect(response.headers.get("X-Route")).toBe("preserved");
+    expect(response.headers.get("Set-Cookie")).toContain(
+      "better-auth.session_data=signed-cache",
+    );
+  });
+});
 
 describe("root revalidation", () => {
   it("skips the root loader for ordinary pathname navigation", () => {
