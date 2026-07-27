@@ -10,8 +10,8 @@ Required runtime values on Vercel:
 - `APP_NAME`
 - `APP_URL`
 - `PUBLIC_BETA_NOINDEX=true`
-- `DATABASE_URL` for pooled Neon runtime access
-- `DIRECT_DATABASE_URL` for migrations and admin scripts
+- `DATABASE_URL` using the Supabase transaction pooler on port `6543`
+- `DIRECT_DATABASE_URL` using the Supabase session pooler on port `5432`
 - `CRON_SECRET` (at least 32 random characters) for the scheduled retention job
 - `BETTER_AUTH_URL`
 - `BETTER_AUTH_SECRET`
@@ -22,15 +22,18 @@ Required runtime values on Vercel:
 - `GOOGLE_CLIENT_SECRET`
 - `RESEND_API_KEY`
 - `AUTH_EMAIL_FROM`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
 `PUBLIC_BETA_NOINDEX=true` keeps beta pages out of search results through
 headers and meta tags. Do not add a sitemap route during beta.
 
 ## Migrations
 
-Vercel runs migrations against the direct Neon connection before each build
-through `npm run deploy:build`. A failed migration stops the deployment. To run
-the same step manually:
+Vercel runs migrations through the IPv4-compatible Supabase session pooler
+before each build via `npm run deploy:build`. Runtime traffic uses the
+transaction pooler, which is intended for autoscaling and serverless workloads.
+A failed migration stops the deployment. To run the same step manually:
 
 ```bash
 DIRECT_DATABASE_URL="postgres://..." npm run db:migrate
@@ -38,8 +41,8 @@ DIRECT_DATABASE_URL="postgres://..." npm run db:migrate
 
 The GitHub Actions workflow validates typechecking, lint, unit/component tests,
 and the production build on pull requests and pushes to `main`. Configure a
-separate Neon branch for preview deployments so preview migrations cannot alter
-the production database.
+separate Supabase branch for preview deployments so preview migrations cannot
+alter the production database.
 
 Migration 0016 retires the standalone starter-prompt source. It removes any
 obsolete starter-prompt questions and narrows `question_source` to
@@ -94,7 +97,7 @@ External smoke still needs real service credentials:
 - Google OAuth sign-in
 - Resend magic-link delivery
 - Vercel preview and production routing
-- Neon branch migration on the target deployment
+- Supabase branch migration on the target deployment
 
 ## Visual QA
 

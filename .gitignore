@@ -8,6 +8,7 @@ playwright-report
 test-results
 .env
 .env.local
+.env.production
 .env.*.local
 
 # Local agent artifacts
@@ -16,4 +17,7 @@ docs/agent-skills.md
 skills-lock.json
 .agents/
 .codex/
+.claude/
+.mcp.json
 screenshots/
+.vercel
