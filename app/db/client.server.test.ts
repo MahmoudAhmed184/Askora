@@ -1,4 +1,3 @@
-import { Pool as NeonPool } from "@neondatabase/serverless";
 import { Pool as NodePostgresPool } from "pg";
 import { describe, expect, it } from "vitest";
 
@@ -6,32 +5,20 @@ import {
   createRuntimeDatabase,
   getMigrationDatabaseUrl,
   getRuntimeDatabaseUrl,
-  isNeonDatabaseUrl,
 } from "~/db/client.server";
 
-const pooledUrl =
-  "postgres://user:password@ep-example-pooler.region.aws.neon.tech/neondb?sslmode=require";
-const directUrl =
-  "postgres://user:password@ep-example.region.aws.neon.tech/neondb?sslmode=require";
+const runtimeUrl =
+  "postgresql://app_role.project_ref:password@aws-0-region.pooler.supabase.com:6543/postgres?sslmode=require";
+const migrationUrl =
+  "postgresql://app_role.project_ref:password@aws-0-region.pooler.supabase.com:5432/postgres?sslmode=require";
 
 describe("database URL selection", () => {
   it("uses the pooled URL for runtime workloads", () => {
-    expect(getRuntimeDatabaseUrl({ DATABASE_URL: pooledUrl })).toBe(pooledUrl);
+    expect(getRuntimeDatabaseUrl({ DATABASE_URL: runtimeUrl })).toBe(runtimeUrl);
   });
 
-  it("creates a transaction-capable Neon WebSocket database for runtime workloads", async () => {
-    const database = createRuntimeDatabase(pooledUrl);
-
-    expect(database.$client).toBeInstanceOf(NeonPool);
-    expect(typeof database.transaction).toBe("function");
-
-    await database.$client.end();
-  });
-
-  it("creates a standard Postgres database for local workloads", async () => {
-    const database = createRuntimeDatabase(
-      "postgres://askora:askora_local@localhost:5432/askora?sslmode=disable",
-    );
+  it("creates a transaction-capable Postgres database for runtime workloads", async () => {
+    const database = createRuntimeDatabase(runtimeUrl);
 
     expect(database.$client).toBeInstanceOf(NodePostgresPool);
     expect(typeof database.transaction).toBe("function");
@@ -39,29 +26,20 @@ describe("database URL selection", () => {
     await database.$client.end();
   });
 
-  it("detects Neon URLs by hostname", () => {
-    expect(isNeonDatabaseUrl(pooledUrl)).toBe(true);
-    expect(
-      isNeonDatabaseUrl(
-        "postgres://askora:askora_local@localhost:5432/askora?sslmode=disable",
-      ),
-    ).toBe(false);
-  });
-
   it("uses the direct URL for migrations when present", () => {
     expect(
       getMigrationDatabaseUrl({
-        DATABASE_URL: pooledUrl,
-        DIRECT_DATABASE_URL: directUrl,
+        DATABASE_URL: runtimeUrl,
+        DIRECT_DATABASE_URL: migrationUrl,
       }),
-    ).toBe(directUrl);
+    ).toBe(migrationUrl);
   });
 
   it("falls back to the pooled URL for migrations in local setups", () => {
     expect(
       getMigrationDatabaseUrl({
-        DATABASE_URL: pooledUrl,
+        DATABASE_URL: runtimeUrl,
       }),
-    ).toBe(pooledUrl);
+    ).toBe(runtimeUrl);
   });
 });

@@ -187,7 +187,7 @@ Chosen stack:
 - Validation: Zod or Valibot.
 - Email: Resend, only for auth magic links in MVP.
 - Hosting for beta: Vercel Hobby.
-- Database hosting for beta: Neon Free Postgres.
+- Database hosting for beta: Supabase Postgres.
 - Rate limiting: Postgres-backed counters first.
 - Redis/rate limiting later if needed: Upstash Free.
 
