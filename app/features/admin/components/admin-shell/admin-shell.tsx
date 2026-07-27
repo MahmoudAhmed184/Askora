@@ -1,3 +1,11 @@
+import {
+  Bell,
+  House,
+  Inbox,
+  Settings,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigation } from "react-router";
 
@@ -50,18 +58,23 @@ function getAdminNavigation({
   profileHref: string;
 }): readonly FloatingPillNavItem[] {
   return [
-    { value: "feed", to: "/feed", label: "Feed" },
-    { value: "inbox", to: "/inbox", label: "Inbox" },
+    { value: "feed", to: "/feed", label: "Feed", icon: House },
+    { value: "inbox", to: "/inbox", label: "Inbox", icon: Inbox },
     {
       value: "notifications",
       to: "/notifications",
       label: "Notifications",
-      mobileLabel: "Notifications",
+      icon: Bell,
       hasIndicator: hasUnreadNotifications,
     },
-    { value: "profile", to: profileHref, label: "Profile" },
-    { value: "settings", to: "/settings/profile", label: "Settings" },
-    { value: "admin", to: "/admin", label: "Admin" },
+    { value: "profile", to: profileHref, label: "Profile", icon: UserRound },
+    {
+      value: "settings",
+      to: "/settings/profile",
+      label: "Settings",
+      icon: Settings,
+    },
+    { value: "admin", to: "/admin", label: "Admin", icon: ShieldCheck },
   ] as const;
 }
 

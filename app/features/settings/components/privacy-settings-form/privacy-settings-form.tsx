@@ -4,6 +4,7 @@ import { Form } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
+import { SettingsSwitchField } from "~/features/settings/components/settings-switch-field";
 import {
   Field,
   FieldDescription,
@@ -65,7 +66,10 @@ export function PrivacySettingsForm({
         {disabled ? <LockedNotice /> : undefined}
 
         <fieldset className="contents" disabled={disabled}>
-          <section aria-labelledby="questions-heading" className="flex flex-col gap-4">
+          <section
+            aria-labelledby="questions-heading"
+            className="flex flex-col gap-4"
+          >
             <div className="flex items-start gap-3">
               <MessageCircle
                 aria-hidden="true"
@@ -76,13 +80,15 @@ export function PrivacySettingsForm({
                   Question intake
                 </h2>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  Control who can start questions and how follow-up threads open.
+                  Control who can start questions and how follow-up threads
+                  open.
                 </p>
               </div>
             </div>
 
             <ToggleField
               checked={values.anonymousQuestionsEnabled}
+              disabled={disabled}
               description="Allow visitors to ask without showing a public identity."
               label="Anonymous questions"
               name="anonymousQuestionsEnabled"
@@ -127,7 +133,10 @@ export function PrivacySettingsForm({
             />
           </section>
 
-          <section aria-labelledby="visibility-heading" className="flex flex-col gap-4">
+          <section
+            aria-labelledby="visibility-heading"
+            className="flex flex-col gap-4"
+          >
             <div className="flex items-start gap-3 border-t pt-5">
               <Eye
                 aria-hidden="true"
@@ -145,6 +154,7 @@ export function PrivacySettingsForm({
 
             <ToggleField
               checked={values.showFollowerCounts}
+              disabled={disabled}
               description="Show follower and following totals publicly."
               label="Follower and following counts"
               name="showFollowerCounts"
@@ -158,6 +168,7 @@ export function PrivacySettingsForm({
 
             <ToggleField
               checked={values.showLikeCounts}
+              disabled={disabled}
               description="Show public reaction totals on profiles and threads."
               label="Reaction counts"
               name="showLikeCounts"
@@ -198,12 +209,14 @@ function getPrivacySettingsToastMessage(
 function ToggleField({
   checked,
   description,
+  disabled,
   label,
   name,
   onChange,
 }: {
   checked: boolean;
   description: string;
+  disabled: boolean;
   label: string;
   name: keyof Pick<
     PrivacySettingsFormValues,
@@ -212,23 +225,14 @@ function ToggleField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex items-start gap-3 rounded-xl border bg-secondary p-3">
-      <input
-        checked={checked}
-        className="mt-1 size-4 accent-primary"
-        name={name}
-        onChange={(event) => {
-          onChange(event.currentTarget.checked);
-        }}
-        type="checkbox"
-      />
-      <span>
-        <span className="block text-sm font-medium">{label}</span>
-        <span className="mt-1 block text-sm leading-6 text-muted-foreground">
-          {description}
-        </span>
-      </span>
-    </label>
+    <SettingsSwitchField
+      checked={checked}
+      description={description}
+      disabled={disabled}
+      label={label}
+      name={name}
+      onChange={onChange}
+    />
   );
 }
 
@@ -272,11 +276,17 @@ function SelectField({
           </option>
         ))}
       </Select>
-      <FieldDescription id={`${id}-description`}>{description}</FieldDescription>
+      <FieldDescription id={`${id}-description`}>
+        {description}
+      </FieldDescription>
       {error === undefined ? (
         <span id={messageId} />
       ) : (
-        <p className="text-sm leading-6 text-destructive" id={messageId} role="alert">
+        <p
+          className="text-sm leading-6 text-destructive"
+          id={messageId}
+          role="alert"
+        >
           {error}
         </p>
       )}

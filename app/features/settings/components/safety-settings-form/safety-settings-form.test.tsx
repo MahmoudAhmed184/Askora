@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
@@ -38,19 +38,39 @@ describe("SafetySettingsForm", () => {
       formError: "You can mute up to 50 phrases.",
     });
 
-    expect(screen.getAllByText("You can mute up to 50 phrases.")).not.toHaveLength(0);
+    expect(
+      screen.getAllByText("You can mute up to 50 phrases."),
+    ).not.toHaveLength(0);
   });
 
   it("shows locked copy and disables safety actions", () => {
     renderSafetySettingsForm(undefined, { disabled: true });
 
     expect(
-      screen.getByText(/safety settings are locked while this account is suspended/i),
+      screen.getByText(
+        /safety settings are locked while this account is suspended/i,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /save safety/i })).toBeDisabled();
     expect(
       screen.getByRole("button", { name: /add muted phrase/i }),
     ).toBeDisabled();
+  });
+
+  it("renders accept new questions as a switch and submits its value", () => {
+    const { container } = renderSafetySettingsForm();
+    const form = getForm(container, 'form[aria-label="Question safety"]');
+    const control = screen.getByRole("switch", {
+      name: "Accept new questions",
+    });
+
+    expect(control).toBeChecked();
+    expect(new FormData(form).get("acceptingQuestions")).toBe("true");
+
+    fireEvent.click(control);
+
+    expect(control).not.toBeChecked();
+    expect(new FormData(form).get("acceptingQuestions")).toBe("false");
   });
 });
 
@@ -117,5 +137,15 @@ function renderSafetySettingsForm(
     },
   );
 
-  render(<RouterProvider router={router} />);
+  return render(<RouterProvider router={router} />);
+}
+
+function getForm(container: HTMLElement, selector = "form") {
+  const form = container.querySelector(selector);
+
+  if (!(form instanceof HTMLFormElement)) {
+    throw new Error(`expected a form matching ${selector}`);
+  }
+
+  return form;
 }

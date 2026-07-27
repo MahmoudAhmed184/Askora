@@ -20,6 +20,7 @@ import {
   FieldLabel,
 } from "~/components/ui/field/field";
 import { Input } from "~/components/ui/input/input";
+import { SettingsSwitchField } from "~/features/settings/components/settings-switch-field";
 import type {
   SafetyBlockView,
   SafetySettingsFieldErrors,
@@ -61,7 +62,9 @@ export function SafetySettingsForm({
     <div className="flex flex-col gap-6 p-5 sm:p-6">
       <ActionToast
         message={getSafetySettingsToastMessage(result)}
-        tone={result !== undefined && isSuccessResult(result) ? "success" : "error"}
+        tone={
+          result !== undefined && isSuccessResult(result) ? "success" : "error"
+        }
         trigger={result}
       />
       {disabled ? <LockedNotice /> : undefined}
@@ -74,7 +77,10 @@ export function SafetySettingsForm({
         <input name="intent" type="hidden" value="update_safety" />
         <FieldGroup className="gap-5">
           <fieldset className="contents" disabled={disabled}>
-            <section aria-labelledby="intake-heading" className="flex flex-col gap-4">
+            <section
+              aria-labelledby="intake-heading"
+              className="flex flex-col gap-4"
+            >
               <div className="flex items-start gap-3">
                 <Shield
                   aria-hidden="true"
@@ -90,25 +96,14 @@ export function SafetySettingsForm({
                 </div>
               </div>
 
-              <label className="flex items-start gap-3 rounded-xl border bg-secondary p-3">
-                <input
-                  checked={acceptingQuestions}
-                  className="mt-1 size-4 accent-primary"
-                  name="acceptingQuestions"
-                  onChange={(event) => {
-                    setAcceptingQuestions(event.currentTarget.checked);
-                  }}
-                  type="checkbox"
-                />
-                <span>
-                  <span className="block text-sm font-medium">
-                    Accept new questions
-                  </span>
-                  <span className="mt-1 block text-sm leading-6 text-muted-foreground">
-                    When off, visitors see the normal unavailable state for asks.
-                  </span>
-                </span>
-              </label>
+              <SettingsSwitchField
+                checked={acceptingQuestions}
+                description="When off, visitors see the normal unavailable state for asks."
+                disabled={disabled}
+                label="Accept new questions"
+                name="acceptingQuestions"
+                onChange={setAcceptingQuestions}
+              />
             </section>
           </fieldset>
 
@@ -126,7 +121,10 @@ export function SafetySettingsForm({
         </FieldGroup>
       </Form>
 
-      <section aria-labelledby="muted-phrases-heading" className="flex flex-col gap-4">
+      <section
+        aria-labelledby="muted-phrases-heading"
+        className="flex flex-col gap-4"
+      >
         <div className="flex items-start gap-3">
           <MessageCircleOff
             aria-hidden="true"
@@ -142,10 +140,16 @@ export function SafetySettingsForm({
           </div>
         </div>
 
-        <Form aria-label="Add muted phrase" className="flex flex-col gap-3" method="post">
+        <Form
+          aria-label="Add muted phrase"
+          className="flex flex-col gap-3"
+          method="post"
+        >
           <input name="intent" type="hidden" value="add_muted_phrase" />
           <fieldset className="contents" disabled={disabled}>
-            <Field data-invalid={fieldErrors.phrase !== undefined ? true : undefined}>
+            <Field
+              data-invalid={fieldErrors.phrase !== undefined ? true : undefined}
+            >
               <FieldLabel htmlFor="mutedPhrase">Phrase</FieldLabel>
               <Input
                 aria-describedby="mutedPhrase-description mutedPhrase-message"
@@ -158,7 +162,10 @@ export function SafetySettingsForm({
               <FieldDescription id="mutedPhrase-description">
                 100 characters max. Unicode variants and spacing are normalized.
               </FieldDescription>
-              <FieldError id="mutedPhrase-message" message={fieldErrors.phrase} />
+              <FieldError
+                id="mutedPhrase-message"
+                message={fieldErrors.phrase}
+              />
             </Field>
           </fieldset>
           <PendingButton
@@ -177,18 +184,25 @@ export function SafetySettingsForm({
         <MutedPhraseList disabled={disabled} settings={settings} />
       </section>
 
-      <section aria-labelledby="blocked-senders-heading" className="flex flex-col gap-4 border-t pt-6">
+      <section
+        aria-labelledby="blocked-senders-heading"
+        className="flex flex-col gap-4 border-t pt-6"
+      >
         <div className="flex items-start gap-3">
           <Ban
             aria-hidden="true"
             className="mt-1 size-4 shrink-0 text-muted-foreground"
           />
           <div>
-            <h2 className="text-base font-semibold" id="blocked-senders-heading">
+            <h2
+              className="text-base font-semibold"
+              id="blocked-senders-heading"
+            >
               Blocked senders
             </h2>
             <p className="text-sm leading-6 text-muted-foreground">
-              Unblock account and anonymous-signal blocks created from private questions.
+              Unblock account and anonymous-signal blocks created from private
+              questions.
             </p>
           </div>
         </div>
@@ -293,7 +307,9 @@ function BlockList({
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
               Blocked{" "}
-              <time dateTime={block.createdAt}>{formatDate(block.createdAt)}</time>
+              <time dateTime={block.createdAt}>
+                {formatDate(block.createdAt)}
+              </time>
             </p>
           </div>
           <Form method="post">

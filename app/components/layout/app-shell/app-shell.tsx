@@ -1,3 +1,4 @@
+import { Bell, House, Inbox, Settings, UserRound } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { useLocation, useNavigation, useRevalidator } from "react-router";
 
@@ -73,10 +74,7 @@ function useRefreshAppShell() {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      if (
-        document.visibilityState === "visible" &&
-        state === "idle"
-      ) {
+      if (document.visibilityState === "visible" && state === "idle") {
         void revalidate();
       }
     }, SHELL_REFRESH_INTERVAL_MILLISECONDS);
@@ -97,17 +95,22 @@ function getAppNavigation({
   profileHref,
 }: AppNavigationInput): readonly FloatingPillNavItem[] {
   return [
-    { value: "feed", to: "/feed", label: "Feed" },
-    { value: "inbox", to: "/inbox", label: "Inbox" },
+    { value: "feed", to: "/feed", label: "Feed", icon: House },
+    { value: "inbox", to: "/inbox", label: "Inbox", icon: Inbox },
     {
       value: "notifications",
       to: "/notifications",
       label: "Notifications",
-      mobileLabel: "Notifications",
+      icon: Bell,
       hasIndicator: hasUnreadNotifications,
     },
-    { value: "profile", to: profileHref, label: "Profile" },
-    { value: "settings", to: "/settings/profile", label: "Settings" },
+    { value: "profile", to: profileHref, label: "Profile", icon: UserRound },
+    {
+      value: "settings",
+      to: "/settings/profile",
+      label: "Settings",
+      icon: Settings,
+    },
   ] as const;
 }
 

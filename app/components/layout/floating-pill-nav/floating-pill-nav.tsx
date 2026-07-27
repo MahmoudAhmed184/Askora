@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router";
 
@@ -6,8 +7,8 @@ import { cn } from "~/lib/utils";
 export interface FloatingPillNavItem {
   value: string;
   label: string;
-  mobileLabel?: string | undefined;
   to: string;
+  icon: LucideIcon;
   hasIndicator?: boolean | undefined;
 }
 
@@ -84,16 +85,14 @@ export function FloatingPillNav({
       {items.map((item) => {
         const isActive = item.value === activeValue;
         const isPending = item.value === pendingValue;
+        const Icon = item.icon;
 
         return (
           <Link
             aria-current={isActive ? "page" : undefined}
             aria-label={item.label}
             className={cn(
-              "relative z-10 inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-full px-1 text-xs font-bold leading-none text-muted-foreground outline-none transition-[background-color,color,transform] duration-200 ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/35 active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0 sm:px-3 sm:text-[0.84rem]",
-              item.mobileLabel !== undefined &&
-                item.mobileLabel.length > 10 &&
-                "flex-[1.55] sm:flex-1",
+              "relative z-10 inline-flex h-11 min-w-11 flex-1 items-center justify-center gap-2 rounded-full px-1 text-xs font-bold leading-none text-muted-foreground outline-none transition-[background-color,color,transform] duration-200 ease-out hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/35 active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0 sm:h-10 sm:px-3 sm:text-[0.84rem]",
               isActive &&
                 "text-primary-foreground hover:text-primary-foreground",
               isActive && capsuleStyle === undefined && "bg-primary",
@@ -125,18 +124,18 @@ export function FloatingPillNav({
                 className="absolute -top-2 left-1/2 size-3 -translate-x-1/2 rounded-full bg-accent shadow-[0_0_0_4px_var(--card)] sm:-top-3"
               />
             ) : null}
-            {item.mobileLabel ? (
-              <>
-                <span className="whitespace-nowrap sm:hidden">
-                  {item.mobileLabel}
-                </span>
-                <span className="hidden whitespace-nowrap sm:inline">
-                  {item.label}
-                </span>
-              </>
-            ) : (
-              <span className="whitespace-nowrap">{item.label}</span>
-            )}
+            <Icon
+              aria-hidden="true"
+              className="size-5 shrink-0"
+              data-slot="floating-pill-nav-icon"
+              strokeWidth={isActive ? 2.4 : 2}
+            />
+            <span
+              className="sr-only sm:not-sr-only sm:whitespace-nowrap"
+              data-slot="floating-pill-nav-label"
+            >
+              {item.label}
+            </span>
           </Link>
         );
       })}

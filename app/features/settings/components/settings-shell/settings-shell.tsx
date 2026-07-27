@@ -53,10 +53,7 @@ const settingsLinks = [
   },
 ] as const;
 
-export function SettingsShell({
-  isSuspended,
-  children,
-}: SettingsShellProps) {
+export function SettingsShell({ isSuspended, children }: SettingsShellProps) {
   const location = useLocation();
   const panel = getPanelMetadata(location.pathname);
 
@@ -96,8 +93,14 @@ export function SettingsShell({
 }
 
 function SettingsNavigation() {
+  // min-w-0 lets this grid item shrink below the pill row's min-content width.
+  // Without it the row of non-shrinking tabs sets the column width and the
+  // whole page scrolls sideways on narrow screens.
   return (
-    <nav aria-label="Settings navigation" className="md:sticky md:top-6">
+    <nav
+      aria-label="Settings navigation"
+      className="min-w-0 md:sticky md:top-6"
+    >
       <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-full border bg-card/92 p-1.5 shadow-[var(--shadow-card)] md:flex-col md:gap-0 md:rounded-[1.25rem] md:p-2">
         <div className="hidden px-3 pb-1.5 pt-2 font-mono text-[0.62rem] font-bold uppercase text-muted-foreground md:block">
           Sections
@@ -128,7 +131,9 @@ function SettingsNavigationLink({
     <NavLink
       className={({ isActive, isPending }) =>
         cn(
-          "inline-flex h-10 min-w-0 shrink-0 flex-1 items-center justify-center gap-2 rounded-full px-3 text-sm font-bold text-muted-foreground transition-colors md:h-auto md:min-h-9 md:w-full md:flex-none md:justify-start md:rounded-xl md:py-2 md:text-[0.84rem]",
+          // Content-sized on mobile so the row scrolls with readable labels
+          // instead of squeezing every tab into an ellipsis.
+          "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full px-4 text-sm font-bold text-muted-foreground transition-colors md:h-auto md:min-h-9 md:w-full md:justify-start md:rounded-xl md:px-3 md:py-2 md:text-[0.84rem]",
           isActive || isPending
             ? "bg-secondary text-primary"
             : "hover:bg-surface hover:text-foreground",
@@ -138,13 +143,11 @@ function SettingsNavigationLink({
       to={to}
     >
       <Icon aria-hidden="true" className="hidden size-4 shrink-0 md:block" />
-      <span className="truncate">{label}</span>
+      <span className="truncate whitespace-nowrap">{label}</span>
     </NavLink>
   );
 }
 
 function getPanelMetadata(pathname: string) {
-  return (
-    settingsLinks.find((link) => pathname === link.to) ?? settingsLinks[0]
-  );
+  return settingsLinks.find((link) => pathname === link.to) ?? settingsLinks[0];
 }
