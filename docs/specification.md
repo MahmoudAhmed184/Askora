@@ -153,7 +153,6 @@ MVP includes:
 - Profile deactivation and account deletion flow.
 - Creator-level moderation controls.
 - Minimal admin moderation console.
-- Static curated starter prompts in the authenticated app.
 - Minimal internal event logging.
 - Noindex beta configuration.
 - Basic Terms and Privacy Policy pages before external beta.
@@ -209,7 +208,7 @@ Design implementation:
   shells, and feature-owned components while preserving route URLs and
   loader/action contracts.
 - The signed-in app uses top-level product URLs: `/feed`, `/inbox`, `/drafts`,
-  `/filtered`, `/prompts`, `/notifications`, `/answer/:questionId`,
+  `/filtered`, `/notifications`, `/answer/:questionId`,
   `/answers/:threadItemPublicId/actions`, and `/settings/*`.
 - Feed, Inbox, Notifications, Profile, and Settings are the primary app areas,
   reached through the floating pill navigation.
@@ -228,8 +227,8 @@ Auth flow:
 2. If profile setup is incomplete, user must complete profile setup before entering the signed-in app.
 3. Required setup fields: username and display name.
 4. Optional setup field: bio.
-5. After setup, user lands on a simple share step with copy/native-share actions.
-6. Later completed-profile sign-ins land on Feed, not setup.
+5. After setup, user lands on Feed.
+6. Later completed-profile sign-ins also land on Feed, not setup.
 
 Incomplete-profile users:
 
@@ -283,7 +282,6 @@ Profile URL:
 Empty profile state:
 
 - Show profile info plus ask box only.
-- Do not show unanswered starter prompts publicly.
 - Show a subtle no-answers state below the ask box if needed.
 
 Public profile answer ordering:
@@ -322,7 +320,6 @@ Question sources:
 - Guest anonymous.
 - Logged-in anonymous.
 - Logged-in attributed.
-- Static starter prompt.
 
 Anonymous asking:
 
@@ -362,6 +359,15 @@ Permission behavior:
 - Logged-in only: attributed or logged-in anonymous, depending on anonymous setting.
 - Followers only: only logged-in followers, attributed or logged-in anonymous depending on anonymous setting.
 - Off: no new questions.
+
+Self-questions:
+
+- A profile owner can ask their own profile a question from their own public profile.
+- Self-questions bypass the owner's own intake gates: accepting questions, ask permission (including Off and Followers-only), and the follower requirement do not apply.
+- Anonymous self-asking still requires the profile to have anonymous questions enabled.
+- Suspension and inactive-profile restrictions still apply to self-questions.
+- Self-questions are processed through the normal inbox, draft, and publish workflow. They are ordinary questions once created.
+- Do not notify the owner about their own answer or their own follow-up. Suppress any notification where the asker and the acting owner are the same account.
 
 Followers-only behavior:
 
@@ -416,6 +422,9 @@ Publishing:
 - The original question text appears publicly by default.
 - The owner can edit or hide the question text before publishing.
 - If the question text is edited, the UI should not imply the modified text is the asker's exact untouched wording.
+- Public surfaces must show a visible "Edited question" badge beside the question text whenever `questionTextMode` is `edited`. This applies to profile answer cards, feed items, and thread entries.
+- The badge discloses modified question wording only. It says nothing about edits to the answer.
+- The edited-question input is only offered while Edited mode is selected, and its draft value is preserved when the owner switches modes within the same editor session.
 - Editing question text should keep an internal copy of the original.
 - Hidden question text remains stored internally while the related thread/item exists for context, reports, and audit, but is not exposed publicly.
 
@@ -538,7 +547,6 @@ Following feed:
 - No algorithmic recommendations.
 - No join events.
 - No "open to questions" events.
-- Static starter prompt answers appear only if published like normal answers.
 - Follow-up answers appear as feed items with context.
 - Use cursor pagination with 20 items per page.
 - Use a simple "load more" interaction in MVP; infinite scroll can come later.
@@ -780,37 +788,12 @@ Deletion effects:
 - Normal anonymous safety metadata retention is 30 days.
 - Report-linked or blocked-abuse metadata retention is 180 days.
 
-## Starter Prompts
-
-AI prompt generation is postponed.
-
-MVP includes static curated starter prompts only:
-
-- Prompts live in the authenticated app, not onboarding.
-- Prompts are optional.
-- Prompts are private until answered.
-- Ship 6 prompt categories: casual, deep, funny, friends, work/school, and random.
-- Each category has 10 prompts.
-- Starter prompt text limit: 180 characters.
-- Starter prompts can be refreshed randomly from the static list.
-- Starter prompts can be edited or hidden before publishing, like normal question text.
-- Answering a starter prompt creates a normal published thread publicly.
-- Internally mark source as `starter_prompt`.
-- Starter prompt answers can receive follow-ups according to the same follow-up settings.
-
 ## Sharing And Open Graph
-
-Post-setup share screen:
-
-- After profile setup, show a simple share screen.
-- Include public profile URL.
-- Include copy button.
-- Include platform share options when available.
-- The owner profile and share step should keep persistent share actions.
 
 Sharing target:
 
 - Share the profile URL.
+- The owner profile keeps persistent copy/native-share actions.
 - The profile URL lands visitors directly in ask mode.
 - Separate answer/thread URLs exist for sharing specific answers.
 
@@ -919,9 +902,9 @@ Questions and answers:
   - `recipientProfileId`
   - `askerUserId` nullable
   - `askerProfileId` nullable
-  - `identityMode`: `guest_anonymous | account_anonymous | attributed | starter_prompt`
-  - `source`: `user_submitted | starter_prompt`
-  - `kind`: `top_level | follow_up | starter_prompt`
+  - `identityMode`: `guest_anonymous | account_anonymous | account_attributed`
+  - `source`: `public_profile`
+  - `kind`: inferred as top-level when `threadId` is null, follow-up otherwise
   - `text`
   - `status`: `inbox | draft | answered | deleted | filtered | reported`
   - `threadId` nullable; set for follow-up questions and for top-level questions once a thread is created
@@ -1103,9 +1086,6 @@ Recommended route map:
 - `GET /setup`
   - Required profile setup after auth.
 
-- `GET /setup/share`
-  - Post-setup share screen.
-
 - `GET /feed`
   - Following feed.
 
@@ -1118,14 +1098,11 @@ Recommended route map:
 - `GET /filtered`
   - Filtered questions.
 
-- `GET /prompts`
-  - Static starter prompt categories.
-
 - `GET /notifications`
   - In-app notifications.
 
 - `GET /answer/:questionId`
-  - Private answer editor for an incoming question or starter prompt.
+  - Private answer editor for an incoming question.
 
 - `POST /answers/:threadItemPublicId/actions`
   - Published answer owner actions such as edit, pin, unpin, unpublish, and delete.
@@ -1247,8 +1224,6 @@ Phase 4: Safety layer
 
 Phase 5: Beta readiness
 
-- Static starter prompts.
-- Share screen.
 - Open Graph metadata.
 - Noindex beta configuration.
 - Deployment.
@@ -1391,7 +1366,6 @@ These are not strategic product decisions anymore, but concrete copy/assets that
 - Homepage copy.
 - Terms of Service.
 - Privacy Policy.
-- Exact starter prompt copy for the 6 categories.
 - Exact content-policy wording shown to users.
 - Admin report-review copy and canned warning text.
 - Static/fallback Open Graph image assets.

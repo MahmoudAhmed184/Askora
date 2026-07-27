@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-27T18:16:56+03:00",
+  "title": "Design System: Askora",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Violet Paper",
+        "canonical": "oklch(0.955 0.018 295)",
+        "tonalRamp": [
+          "oklch(0.15 0.018 295)",
+          "oklch(0.25 0.018 295)",
+          "oklch(0.38 0.018 295)",
+          "oklch(0.52 0.018 295)",
+          "oklch(0.66 0.018 295)",
+          "oklch(0.78 0.018 295)",
+          "oklch(0.88 0.018 295)",
+          "oklch(0.955 0.018 295)"
+        ]
+      },
+      "primary": {
+        "role": "primary",
+        "displayName": "Editorial Purple",
+        "canonical": "oklch(0.36 0.12 296)",
+        "tonalRamp": [
+          "oklch(0.15 0.12 296)",
+          "oklch(0.24 0.12 296)",
+          "oklch(0.36 0.12 296)",
+          "oklch(0.48 0.12 296)",
+          "oklch(0.60 0.12 296)",
+          "oklch(0.72 0.12 296)",
+          "oklch(0.84 0.10 296)",
+          "oklch(0.95 0.05 296)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Editorial Display",
+        "purpose": "Page headings and public questions."
+      },
+      "body": {
+        "displayName": "Readable Body",
+        "purpose": "Answers, controls, and explanations."
+      },
+      "label": {
+        "displayName": "Metadata",
+        "purpose": "Handles, timestamps, and counts."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 8px 30px oklch(0.16 0.035 295 / 0.06)",
+        "purpose": "Ambient separation for content cards."
+      },
+      {
+        "name": "card-hover",
+        "value": "0 12px 34px oklch(0.16 0.035 295 / 0.08)",
+        "purpose": "Floating and interactive card states."
+      },
+      {
+        "name": "navbar",
+        "value": "0 12px 36px oklch(0.16 0.035 295 / 0.10)",
+        "purpose": "Persistent floating navigation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "200ms ease-out",
+        "purpose": "Control and focus state transitions."
+      },
+      {
+        "name": "surface",
+        "value": "300ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Card and capsule movement."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action on a screen or card.",
+      "html": "<button class=\"ds-button-primary\">Send question</button>",
+      "css": ".ds-button-primary { min-height: 40px; border: 1px solid transparent; border-radius: 9999px; padding: 8px 16px; background: var(--primary); color: var(--primary-foreground); font-family: \"Plus Jakarta Sans\", sans-serif; font-size: 14px; font-weight: 700; box-shadow: 0 4px 14px var(--accent-glow); transition: transform 200ms ease-out, box-shadow 200ms ease-out; } .ds-button-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent-glow); } .ds-button-primary:focus-visible { outline: 3px solid color-mix(in oklch, var(--ring) 30%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "description": "Secondary and reversible actions.",
+      "html": "<button class=\"ds-button-outline\">Report</button>",
+      "css": ".ds-button-outline { min-height: 40px; border: 1px solid var(--border); border-radius: 9999px; padding: 8px 16px; background: transparent; color: var(--foreground); font-family: \"Plus Jakarta Sans\", sans-serif; font-size: 14px; font-weight: 700; transition: background 200ms ease-out, border-color 200ms ease-out; } .ds-button-outline:hover { border-color: var(--primary); background: var(--surface); } .ds-button-outline:focus-visible { outline: 3px solid color-mix(in oklch, var(--ring) 30%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Question Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Identity, editorial question, answer, and compact actions.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-card-meta\">MONA · JUL 27</div><h3>What changed your mind?</h3><p>A considered answer with room to breathe.</p></article>",
+      "css": ".ds-card { border: 1px solid var(--border); border-radius: 24px; padding: 24px; background: var(--card); color: var(--foreground); box-shadow: var(--shadow-card); font-family: \"Plus Jakarta Sans\", sans-serif; } .ds-card h3 { margin: 16px 0; color: var(--primary); font-family: \"Playfair Display\", Georgia, serif; font-size: 24px; font-style: italic; line-height: 1.25; } .ds-card p { margin: 0; line-height: 1.75; } .ds-card-meta { color: var(--muted-foreground); font-family: \"JetBrains Mono\", monospace; font-size: 12px; font-weight: 600; } .ds-card:hover { border-color: var(--border-strong); } .ds-card:focus-within { outline: 3px solid color-mix(in oklch, var(--ring) 30%, transparent); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Persistent-label form control.",
+      "html": "<label class=\"ds-field\">Question<textarea>What would you ask?</textarea></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: var(--foreground); font-family: \"Plus Jakarta Sans\", sans-serif; font-size: 14px; font-weight: 700; } .ds-field textarea { min-height: 96px; border: 1px solid var(--input); border-radius: 12px; padding: 12px; background: var(--card); color: var(--foreground); font: inherit; font-weight: 400; line-height: 1.5; } .ds-field textarea:hover { border-color: var(--border-strong); } .ds-field textarea:focus-visible { border-color: var(--ring); outline: 3px solid color-mix(in oklch, var(--ring) 30%, transparent); }"
+    },
+    {
+      "name": "Floating Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Responsive icon-and-label app navigation.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-active\" href=\"#\">Feed</a><a href=\"#\">Inbox</a><a href=\"#\">Profile</a></nav>",
+      "css": ".ds-nav { display: flex; gap: 4px; border: 1px solid color-mix(in oklch, var(--primary) 15%, transparent); border-radius: 9999px; padding: 6px; background: var(--card); box-shadow: var(--shadow-navbar); font-family: \"Plus Jakarta Sans\", sans-serif; } .ds-nav a { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; padding: 0 16px; color: var(--muted-foreground); font-size: 13px; font-weight: 700; text-decoration: none; } .ds-nav a:hover { color: var(--foreground); } .ds-nav a:focus-visible { outline: 3px solid color-mix(in oklch, var(--ring) 35%, transparent); } .ds-nav .ds-nav-active { background: var(--primary); color: var(--primary-foreground); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Private Editorial Desk",
+    "overview": "Askora is a considered publication that happens to be interactive: private-by-default, identity-aware, and unmistakably editorial purple on paper.",
+    "keyCharacteristics": [
+      "Editorial questions and readable answers",
+      "Plain-language privacy and attribution",
+      "Compact familiar hierarchy without borrowed branding",
+      "Accessible responsive controls"
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Editorial Purple is the only everyday accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Question Voice Rule",
+        "body": "Questions use the serif voice; answers use the sans body face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Border-Before-Shadow Rule",
+        "body": "Borders establish surfaces before ambient shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do preserve identity, content, then actions.",
+      "Do keep anonymous sender data absent.",
+      "Do honor reduced motion."
+    ],
+    "donts": [
+      "Don't use childish anonymous-message aesthetics.",
+      "Don't make Askora a direct copy of Facebook.",
+      "Don't introduce generic SaaS chrome or engagement pressure."
+    ]
+  }
+}

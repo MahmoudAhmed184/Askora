@@ -41,8 +41,9 @@ and the production build on pull requests and pushes to `main`. Configure a
 separate Neon branch for preview deployments so preview migrations cannot alter
 the production database.
 
-Slice 16 adds `starter_prompt` to the `question_source` enum. Existing
-`public_profile` questions remain the default.
+Migration 0016 retires the standalone starter-prompt source. It removes any
+obsolete starter-prompt questions and narrows `question_source` to
+`public_profile`.
 
 ## Seed
 
@@ -84,9 +85,9 @@ npm run test:e2e
 ```
 
 When `DATABASE_URL` is available, Playwright runs the DB-backed beta smoke loop:
-setup, no-JavaScript public ask, inbox, starter prompt creation, publish, public
-thread, follow-up, like/follow, report creation, admin action, and mobile profile
-and inbox checks.
+setup, no-JavaScript public ask, inbox, self-asking, publish, public thread,
+inline follow-up, like/follow, report creation, admin action, settings, and
+mobile profile and inbox checks.
 
 External smoke still needs real service credentials:
 
@@ -105,8 +106,8 @@ npm run prototype:dev -- --host 127.0.0.1 --port 5177
 node design/prototype/capture-screenshots.mjs http://127.0.0.1:5177/
 ```
 
-For real routes, seed beta fixtures, start the app, and capture mobile plus
-desktop screenshots:
+For real routes, seed beta fixtures and run the Playwright desktop/mobile
+projects:
 
 ```bash
 BETA_SEED_CONFIRM=reset-beta-fixtures \
@@ -114,22 +115,11 @@ BETA_SEED_SCOPE=preview \
 DIRECT_DATABASE_URL="postgres://..." \
 npm run beta:seed
 
-npm run dev -- --host 127.0.0.1 --port 5173
-SCREENSHOT_DIR=screenshots/redesign-20260601-port \
-node scripts/capture-page-screenshots.mjs --base-url http://127.0.0.1:5173 --viewport=all
+npm run test:e2e
 ```
 
-The real-route capture reports console issues, page errors, 5xx responses,
-final URLs, and horizontal overflow for public, signed-in app, inbox workflow,
-answer editor, settings, profile, thread, follow-up, and admin surfaces.
-
-Current redesign QA evidence:
-
-- Prototype screenshots: `design/prototype/screenshots/`.
-- Real app screenshots: `screenshots/redesign-20260601-port/`.
-- Completed-profile app captures should start from `/feed`.
-- Mobile and desktop captures should report zero horizontal overflow and no
-  console/page/server errors after any dev-server warm-up recapture.
+Completed-profile app checks should start from `/feed`. Desktop and mobile runs
+must report zero horizontal overflow and no console, page, or server errors.
 
 ## Cleanup Notes
 
@@ -156,7 +146,7 @@ Shared production UI now lives in `app/components/layout`,
 `app/components/ui`.
 
 Signed-in app routes are top-level product URLs such as `/feed`, `/inbox`,
-`/prompts`, `/notifications`, and `/settings/profile`.
+`/notifications`, and `/settings/profile`.
 
 `design/prototype` remains the visual source artifact for the redesign. Its
 local prototype components are not production route code.
