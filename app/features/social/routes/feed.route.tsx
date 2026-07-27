@@ -7,6 +7,7 @@ import {
 
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
 import { ProfileIdentityLink } from "~/components/shared/profile-identity/profile-identity";
 import { PageHeader } from "~/components/shared/page-header/page-header";
 import { Badge } from "~/components/ui/badge/badge";
@@ -121,7 +122,9 @@ function FeedItemArticle({
         />
       </header>
 
-      {item.questionText === null ? null : (
+      {item.questionTextMode === "hidden" || item.questionText === null ? (
+        <HiddenQuestionPlaceholder className="border-b border-dashed pb-5" />
+      ) : (
         <div className="flex flex-col gap-2 border-b border-dashed pb-5">
           <div className="flex flex-wrap items-baseline gap-2">
             <p className="min-w-0 flex-1 whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
@@ -153,23 +156,21 @@ function FeedItemArticle({
         {item.answerText}
       </p>
 
-      <footer className="flex flex-col gap-3 border-t border-dashed pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <LikeButton like={item.like} />
-          <Button asChild size="sm" variant="secondary">
-            <Link
-              defaultShouldRevalidate={false}
-              id={threadHref.focusReturnId}
-              mask={threadHref.mask}
-              prefetch="intent"
-              preventScrollReset
-              to={threadHref.to}
-            >
-              <MessageCircle data-icon="inline-start" />
-              Thread
-            </Link>
-          </Button>
-        </div>
+      <footer className="flex flex-wrap items-center gap-3 border-t border-dashed pt-4">
+        <LikeButton like={item.like} />
+        <Button asChild size="sm" variant="secondary">
+          <Link
+            defaultShouldRevalidate={false}
+            id={threadHref.focusReturnId}
+            mask={threadHref.mask}
+            prefetch="intent"
+            preventScrollReset
+            to={threadHref.to}
+          >
+            <MessageCircle data-icon="inline-start" />
+            Thread
+          </Link>
+        </Button>
       </footer>
     </article>
   );

@@ -1,9 +1,27 @@
-import { Ban, Flag, LoaderCircle, MoreHorizontal, Send } from "lucide-react";
+import {
+  Ban,
+  Flag,
+  LoaderCircle,
+  MoreHorizontal,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { useId, useState } from "react";
 import { useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import { Button } from "~/components/ui/button/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog/alert-dialog";
+import { buttonVariants } from "~/components/ui/button/button-variants";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +50,8 @@ interface QuestionModerationControlsProps {
   questionPublicId: string;
   disabled: boolean;
   action?: string | undefined;
+  canDelete?: boolean | undefined;
+  deleteLabel?: "Delete" | "Drop" | undefined;
   variant?: "menu" | "inline";
 }
 
@@ -44,7 +64,7 @@ type InboxActionSuccessStatus = Exclude<
   InboxActionResult["status"],
   "invalid" | "denied"
 >;
-type ActivePanel = "menu" | "report" | "block" | null;
+type ActivePanel = "menu" | "report" | "block" | "delete" | null;
 
 const reportReasonLabels = {
   harassment: "Harassment or bullying",
@@ -60,6 +80,8 @@ const reportReasonLabels = {
 
 export function QuestionModerationControls({
   action,
+  canDelete = false,
+  deleteLabel = "Delete",
   disabled,
   questionPublicId,
   variant = "menu",
@@ -85,6 +107,8 @@ export function QuestionModerationControls({
       ) : (
         <QuestionActionsMenu
           disabled={disabled || isPending}
+          canDelete={canDelete}
+          deleteLabel={deleteLabel}
           open={activePanel === "menu"}
           onBlock={() => {
             setActivePanel("block");
@@ -100,6 +124,9 @@ export function QuestionModerationControls({
           }}
           onReport={() => {
             setActivePanel("report");
+          }}
+          onDelete={() => {
+            setActivePanel("delete");
           }}
         />
       )}
@@ -127,6 +154,21 @@ export function QuestionModerationControls({
         open={activePanel === "block"}
         questionPublicId={questionPublicId}
       />
+
+      {canDelete ? (
+        <DeleteDialog
+          actionProps={actionProps}
+          disabled={disabled}
+          fetcher={fetcher}
+          isPending={isPending}
+          label={deleteLabel}
+          onOpenChange={(open) => {
+            setActivePanel(open ? "delete" : null);
+          }}
+          open={activePanel === "delete"}
+          questionPublicId={questionPublicId}
+        />
+      ) : null}
 
       <QuestionModerationNoScriptFallback
         action={action}
@@ -260,16 +302,22 @@ function InlineActions({
 }
 
 function QuestionActionsMenu({
+  canDelete,
+  deleteLabel,
   disabled,
   onOpenChange,
   open,
   onBlock,
+  onDelete,
   onReport,
 }: {
+  canDelete: boolean;
+  deleteLabel: "Delete" | "Drop";
   disabled: boolean;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   onBlock: () => void;
+  onDelete: () => void;
   onReport: () => void;
 }) {
   return (
@@ -307,9 +355,86 @@ function QuestionActionsMenu({
             <Ban data-icon="inline-start" />
             Block sender
           </DropdownMenuItem>
+          {canDelete ? (
+            <DropdownMenuItem
+              disabled={disabled}
+              onSelect={(event) => {
+                event.preventDefault();
+                onDelete();
+              }}
+              variant="destructive"
+            >
+              <Trash2 data-icon="inline-start" />
+              {deleteLabel}
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function DeleteDialog({
+  actionProps,
+  disabled,
+  fetcher,
+  isPending,
+  label,
+  onOpenChange,
+  open,
+  questionPublicId,
+}: {
+  actionProps: Record<string, string>;
+  disabled: boolean;
+  fetcher: InboxFetcher;
+  isPending: boolean;
+  label: "Delete" | "Drop";
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  questionPublicId: string;
+}) {
+  return (
+    <AlertDialog onOpenChange={onOpenChange} open={open}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this question?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This permanently removes the question. It cannot be answered or
+            restored afterwards.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <fetcher.Form
+            method="post"
+            onSubmit={() => {
+              onOpenChange(false);
+            }}
+            {...actionProps}
+          >
+            <input name="intent" type="hidden" value="delete" />
+            <input
+              name="questionPublicId"
+              type="hidden"
+              value={questionPublicId}
+            />
+            <AlertDialogAction
+              asChild
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              <Button
+                disabled={disabled || isPending}
+                type="submit"
+                variant="destructive"
+              >
+                <Trash2 data-icon="inline-start" />
+                {label}
+              </Button>
+            </AlertDialogAction>
+          </fetcher.Form>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

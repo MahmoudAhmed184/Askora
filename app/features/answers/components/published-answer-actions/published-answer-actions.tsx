@@ -1,5 +1,6 @@
 import {
   EyeOff,
+  Flag,
   MoreHorizontal,
   Pin,
   PinOff,
@@ -7,7 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
@@ -45,15 +46,17 @@ import { Textarea } from "~/components/ui/textarea/textarea";
 import type { PublishedAnswerActionIntent } from "~/features/answers/validations/answer.validations";
 import type { PublishedAnswerActionResult } from "~/features/answers/types/answers.types";
 import type { PublishedAnswerControlState } from "~/features/answers/types/answers.types";
+import { PublicReportDialog } from "~/features/moderation/components/public-report-dialog";
 
-export interface PublishedAnswerOwnerControlAnswer {
+export interface PublishedAnswerActionAnswer {
   publicId: string;
   answerText: string;
   pinPosition: number | null;
 }
 
-interface PublishedAnswerOwnerControlsProps {
-  answer: PublishedAnswerOwnerControlAnswer;
+interface PublishedAnswerActionsProps {
+  answer: PublishedAnswerActionAnswer;
+  canReport: boolean;
   controls: PublishedAnswerControlState;
 }
 
@@ -73,17 +76,23 @@ type MenuFormIntent = Exclude<
   "edit" | ConfirmIntent
 >;
 
-export function PublishedAnswerOwnerControls({
+export function PublishedAnswerActions({
   answer,
+  canReport,
   controls,
-}: PublishedAnswerOwnerControlsProps) {
+}: PublishedAnswerActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [confirmIntent, setConfirmIntent] = useState<ConfirmIntent | null>(null);
   const fetcher = useFetcher<PublishedAnswerActionFetcherData>();
   const disabled = controls.disabled || fetcher.state !== "idle";
   const action = `/answers/${answer.publicId}/actions`;
   const result = fetcher.data?.publishedAnswer;
+
+  if (!canReport && !controls.canManage) {
+    return null;
+  }
 
   return (
     <div className="relative self-start">
@@ -91,7 +100,7 @@ export function PublishedAnswerOwnerControls({
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
-            aria-label="Manage published answer"
+            aria-label="Answer actions"
             disabled={disabled}
             size="icon"
             type="button"
@@ -100,65 +109,99 @@ export function PublishedAnswerOwnerControls({
             <MoreHorizontal data-icon="inline-start" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56" side="top">
-          <DropdownMenuLabel>Answer controls</DropdownMenuLabel>
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              disabled={disabled}
-              onSelect={() => {
-                setMenuOpen(false);
-                setEditOpen(true);
-              }}
-            >
-              <Save data-icon="inline-start" />
-              Edit silently
-            </DropdownMenuItem>
-            {answer.pinPosition === null ? (
-              <InlinePublishedAnswerActionForm
-                action={action}
-                disabled={disabled}
-                fetcher={fetcher}
-                icon={<Pin data-icon="inline-start" />}
-                intent="pin"
-                label="Pin"
-              />
-            ) : (
-              <InlinePublishedAnswerActionForm
-                action={action}
-                disabled={disabled}
-                fetcher={fetcher}
-                icon={<PinOff data-icon="inline-start" />}
-                intent="unpin"
-                label="Unpin"
-              />
-            )}
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              disabled={disabled}
-              onSelect={() => {
-                setMenuOpen(false);
-                setConfirmIntent("unpublish");
-              }}
-            >
-              <EyeOff data-icon="inline-start" />
-              Unpublish
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={disabled}
-              onSelect={() => {
-                setMenuOpen(false);
-                setConfirmIntent("delete");
-              }}
-              variant="destructive"
-            >
-              <Trash2 data-icon="inline-start" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
+        <DropdownMenuContent
+          align="end"
+          aria-label="Answer actions"
+          avoidCollisions={false}
+          className="w-56"
+          side="top"
+        >
+          <DropdownMenuLabel>Answer actions</DropdownMenuLabel>
+          {canReport ? (
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setMenuOpen(false);
+                  setReportOpen(true);
+                }}
+              >
+                <Flag data-icon="inline-start" />
+                Report answer
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          ) : null}
+          {canReport && controls.canManage ? <DropdownMenuSeparator /> : null}
+          {controls.canManage ? (
+            <>
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  disabled={disabled}
+                  onSelect={() => {
+                    setMenuOpen(false);
+                    setEditOpen(true);
+                  }}
+                >
+                  <Save data-icon="inline-start" />
+                  Edit silently
+                </DropdownMenuItem>
+                {answer.pinPosition === null ? (
+                  <InlinePublishedAnswerActionForm
+                    action={action}
+                    disabled={disabled}
+                    fetcher={fetcher}
+                    icon={<Pin data-icon="inline-start" />}
+                    intent="pin"
+                    label="Pin"
+                  />
+                ) : (
+                  <InlinePublishedAnswerActionForm
+                    action={action}
+                    disabled={disabled}
+                    fetcher={fetcher}
+                    icon={<PinOff data-icon="inline-start" />}
+                    intent="unpin"
+                    label="Unpin"
+                  />
+                )}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  disabled={disabled}
+                  onSelect={() => {
+                    setMenuOpen(false);
+                    setConfirmIntent("unpublish");
+                  }}
+                >
+                  <EyeOff data-icon="inline-start" />
+                  Unpublish
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={disabled}
+                  onSelect={() => {
+                    setMenuOpen(false);
+                    setConfirmIntent("delete");
+                  }}
+                  variant="destructive"
+                >
+                  <Trash2 data-icon="inline-start" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <PublicReportDialog
+        canReport={canReport}
+        onOpenChange={setReportOpen}
+        open={reportOpen}
+        targetId={answer.publicId}
+        targetLabel="answer"
+        targetType="thread_item"
+        trigger="none"
+      />
 
       <EditPublishedAnswerDialog
         action={action}
@@ -193,7 +236,7 @@ function EditPublishedAnswerDialog({
   open,
 }: {
   action: string;
-  answer: PublishedAnswerOwnerControlAnswer;
+  answer: PublishedAnswerActionAnswer;
   disabled: boolean;
   fetcher: PublishedAnswerActionFetcher;
   onOpenChange: (open: boolean) => void;
@@ -270,8 +313,15 @@ function ConfirmPublishedAnswerActionDialog({
   intent: ConfirmIntent | null;
   onOpenChange: (open: boolean) => void;
 }) {
+  const lastIntentRef = useRef<ConfirmIntent>("unpublish");
+
+  if (intent !== null) {
+    lastIntentRef.current = intent;
+  }
+
+  const activeIntent = intent ?? lastIntentRef.current;
   const copy =
-    intent === "delete"
+    activeIntent === "delete"
       ? {
           description:
             "This removes the public answer and leaves a compact removed state where the thread order needs to be preserved.",
@@ -302,19 +352,22 @@ function ConfirmPublishedAnswerActionDialog({
             }}
           >
             <ToastResultInput />
-            <input name="intent" type="hidden" value={intent ?? "delete"} />
+            <input name="intent" type="hidden" value={activeIntent} />
             <AlertDialogAction
               asChild
               className={buttonVariants({
-                variant: intent === "delete" ? "destructive" : "default",
+                variant:
+                  activeIntent === "delete" ? "destructive" : "default",
               })}
             >
               <Button
                 disabled={disabled}
                 type="submit"
-                variant={intent === "delete" ? "destructive" : "default"}
+                variant={
+                  activeIntent === "delete" ? "destructive" : "default"
+                }
               >
-                {intent === "delete" ? (
+                {activeIntent === "delete" ? (
                   <Trash2 data-icon="inline-start" />
                 ) : (
                   <EyeOff data-icon="inline-start" />

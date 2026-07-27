@@ -40,7 +40,9 @@ describe("InboxList", () => {
   it("shows inbox actions without restore", async () => {
     renderInboxList();
 
-    expect(screen.getByRole("button", { name: /drop/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /drop/i }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /question actions/i }),
     ).toBeInTheDocument();
@@ -59,8 +61,14 @@ describe("InboxList", () => {
       screen.getByRole("menuitem", { name: /block sender/i }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("menuitem", { name: /drop/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("menuitem", { name: /drop/i }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: /drop/i }));
+
+    expect(
+      screen.getByRole("alertdialog", { name: /delete this question/i }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /restore/i }),
     ).not.toBeInTheDocument();

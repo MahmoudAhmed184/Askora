@@ -109,8 +109,8 @@ describe("PublicThread", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("does not render hidden question text", () => {
-    renderPublicThread(
+  it("renders a non-sensitive placeholder for hidden question text", () => {
+    const { container } = renderPublicThread(
       createAvailablePage({
         items: [
           {
@@ -119,6 +119,7 @@ describe("PublicThread", () => {
             answerText: "Answer without the private prompt",
             publishedAt: "2026-05-31T12:00:00.000Z",
             pinPosition: null,
+            questionTextMode: "hidden",
             like: createLikeState("titem_hidden"),
           },
         ],
@@ -131,6 +132,10 @@ describe("PublicThread", () => {
     expect(
       screen.queryByText("Secret hidden question"),
     ).not.toBeInTheDocument();
+    expect(screen.getByText("Hidden question")).toBeInTheDocument();
+    expect(
+      container.querySelector("[data-slot='hidden-question-placeholder']"),
+    ).toBeInTheDocument();
   });
 
   it("renders owner controls only when management is allowed", () => {
@@ -158,7 +163,7 @@ describe("PublicThread", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: /manage published answer/i }),
+      screen.queryByRole("button", { name: /answer actions/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -309,7 +314,7 @@ function renderPublicThread(
 
 function openPublishedAnswerMenu() {
   fireEvent.pointerDown(
-    screen.getByRole("button", { name: /manage published answer/i }),
+    screen.getByRole("button", { name: /answer actions/i }),
   );
 }
 
@@ -373,6 +378,7 @@ function createAnswerItem(
     pinPosition: null,
     like: createLikeState(overrides.publicId ?? "titem_1"),
     questionText: "What should I read next?",
+    questionTextMode: "original",
     ...overrides,
   };
 }

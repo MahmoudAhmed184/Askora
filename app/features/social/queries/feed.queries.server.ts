@@ -74,8 +74,8 @@ export interface SocialFeedItem {
   answerText: string;
   publishedAt: string;
   questionText: string | null;
-  /** Disclosure mode for the public question text, when text is shown. */
-  questionTextMode: QuestionTextMode | undefined;
+  /** Disclosure mode; hidden mode never includes the private question text. */
+  questionTextMode: QuestionTextMode;
   asker:
     | {
         displayName: string;
@@ -258,7 +258,7 @@ function toSocialFeedItem(
     answerText: row.answerText,
     publishedAt: getFeedSortDate(row).toISOString(),
     questionText,
-    questionTextMode: questionText === null ? undefined : row.questionTextMode,
+    questionTextMode: row.questionTextMode,
     asker: getPublicAsker(row, questionText),
     like: getLikeControlState({
       count: row.ownerShowLikeCounts ? row.likeCount : undefined,

@@ -41,7 +41,7 @@ function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         align={align}
         className={cn(
-          "z-50 min-w-40 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-xl border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card-hover)] data-[side=bottom]:animate-in data-[side=bottom]:slide-in-from-top-1 data-[side=left]:animate-in data-[side=left]:slide-in-from-right-1 data-[side=right]:animate-in data-[side=right]:slide-in-from-left-1 data-[side=top]:animate-in data-[side=top]:slide-in-from-bottom-1 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+          "z-[80] min-w-40 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-xl border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card-hover)] data-[side=bottom]:animate-in data-[side=bottom]:slide-in-from-top-1 data-[side=left]:animate-in data-[side=left]:slide-in-from-right-1 data-[side=right]:animate-in data-[side=right]:slide-in-from-left-1 data-[side=top]:animate-in data-[side=top]:slide-in-from-bottom-1 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           className,
         )}
         data-slot="dropdown-menu-content"
@@ -228,7 +228,7 @@ function DropdownMenuSubContent({
   return (
     <DropdownMenuPrimitive.SubContent
       className={cn(
-        "z-50 min-w-40 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-xl border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card-hover)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+        "z-[80] min-w-40 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-xl border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card-hover)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
         className,
       )}
       data-slot="dropdown-menu-sub-content"

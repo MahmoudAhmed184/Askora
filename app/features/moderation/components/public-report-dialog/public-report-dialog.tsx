@@ -1,5 +1,5 @@
 import { Flag, LoaderCircle, Send } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
@@ -32,9 +32,12 @@ const reportReasonLabels = {
 
 interface PublicReportDialogProps {
   canReport: boolean;
+  onOpenChange?: ((open: boolean) => void) | undefined;
+  open?: boolean | undefined;
   targetId: string;
   targetType: "thread_item" | "profile";
   targetLabel: "answer" | "profile";
+  trigger?: "button" | "none";
 }
 
 interface ReportFetcherData {
@@ -43,22 +46,38 @@ interface ReportFetcherData {
 
 export function PublicReportDialog({
   canReport,
+  onOpenChange,
+  open,
   targetId,
   targetLabel,
   targetType,
+  trigger = "button",
 }: PublicReportDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const fetcher = useFetcher<ReportFetcherData>();
   const result = fetcher.data?.report;
   const reasonId = useId();
   const detailsId = useId();
   const isPending = fetcher.state !== "idle";
   const targetName = targetLabel === "answer" ? "answer" : "profile";
+  const isControlled = open !== undefined;
+  const dialogOpen = isControlled ? open : internalOpen;
+
+  const setDialogOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (!isControlled) {
+        setInternalOpen(nextOpen);
+      }
+
+      onOpenChange?.(nextOpen);
+    },
+    [isControlled, onOpenChange],
+  );
 
   useEffect(() => {
     if (result?.status === "created") {
       const timeoutId = window.setTimeout(() => {
-        setOpen(false);
+        setDialogOpen(false);
       }, 0);
       return () => {
         window.clearTimeout(timeoutId);
@@ -66,7 +85,7 @@ export function PublicReportDialog({
     }
 
     return undefined;
-  }, [result]);
+  }, [result, setDialogOpen]);
 
   if (!canReport) {
     return null;
@@ -74,20 +93,22 @@ export function PublicReportDialog({
 
   return (
     <>
-      <Button
-        aria-label={`Report ${targetName}`}
-        onClick={() => {
-          setOpen(true);
-        }}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        <Flag data-icon="inline-start" />
-        Report
-      </Button>
+      {trigger === "button" ? (
+        <Button
+          aria-label={`Report ${targetName}`}
+          onClick={() => {
+            setDialogOpen(true);
+          }}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <Flag data-icon="inline-start" />
+          Report
+        </Button>
+      ) : null}
 
-      <Dialog onOpenChange={setOpen} open={open}>
+      <Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Report {targetName}</DialogTitle>
@@ -138,7 +159,7 @@ export function PublicReportDialog({
               <Button
                 disabled={isPending}
                 onClick={() => {
-                  setOpen(false);
+                  setDialogOpen(false);
                 }}
                 type="button"
                 variant="outline"

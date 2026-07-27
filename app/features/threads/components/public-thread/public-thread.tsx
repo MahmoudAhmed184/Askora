@@ -5,6 +5,7 @@ import type { AppShellData } from "~/types/app-shell-data";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
+import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
 import {
   AnonymousAvatar,
   ProfileAvatar,
@@ -12,7 +13,7 @@ import {
 } from "~/components/shared/profile-identity/profile-identity";
 import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
 import { Button } from "~/components/ui/button/button";
-import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
+import { PublishedAnswerActions } from "~/features/answers/components/published-answer-actions";
 import { BetaNoindexBadge } from "~/features/profiles/components/profile-header";
 import { FollowButton } from "~/features/social/components/follow-button";
 import { LikeButton } from "~/features/social/components/like-button";
@@ -344,7 +345,9 @@ function AnswerThreadItem({
   return (
     <article className="scroll-mt-24" id={`item-${item.publicId}`}>
       <div className="flex flex-col gap-5">
-        {item.questionText === undefined ? undefined : (
+        {item.questionTextMode === "hidden" ? (
+          <HiddenQuestionPlaceholder />
+        ) : item.questionText === undefined ? undefined : (
           <ThreadQuestionEntry
             index={index}
             item={item}
@@ -362,12 +365,6 @@ function AnswerThreadItem({
       <footer className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <LikeButton like={item.like} />
-          <PublicReportDialog
-            canReport={canReport}
-            targetId={item.publicId}
-            targetLabel="answer"
-            targetType="thread_item"
-          />
           {item.pinPosition === null ? undefined : (
             <span className="inline-flex h-9 items-center gap-2 rounded-full border bg-background px-3.5 text-sm font-semibold text-foreground">
               <Pin data-icon="inline-start" />
@@ -376,9 +373,11 @@ function AnswerThreadItem({
           )}
         </div>
 
-        {controls.canManage ? (
-          <PublishedAnswerOwnerControls answer={item} controls={controls} />
-        ) : undefined}
+        <PublishedAnswerActions
+          answer={item}
+          canReport={canReport}
+          controls={controls}
+        />
       </footer>
     </article>
   );

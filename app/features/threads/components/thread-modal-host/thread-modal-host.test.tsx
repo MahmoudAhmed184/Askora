@@ -94,6 +94,7 @@ function createAvailablePage(): Extract<
         publishedAt: "2026-05-31T12:00:00.000Z",
         pinPosition: null,
         questionText: "What should I read next?",
+        questionTextMode: "original",
         like: {
           threadItemPublicId: "titem_1",
           isLiked: false,

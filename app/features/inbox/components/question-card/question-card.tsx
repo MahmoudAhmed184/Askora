@@ -83,6 +83,8 @@ function QuestionCardFrame({
       <header className="flex items-start justify-between gap-3">
         <QuestionSenderIdentity question={question} />
         <QuestionModerationControls
+          canDelete={!restoreAction}
+          deleteLabel="Drop"
           disabled={disabled || isPending}
           questionPublicId={question.publicId}
         />
@@ -94,7 +96,13 @@ function QuestionCardFrame({
 
       <ActionResultToast result={result} />
 
-      <div className="grid gap-3 border-t border-dashed pt-5 sm:grid-cols-2">
+      <div
+        className={
+          restoreAction
+            ? "grid gap-3 border-t border-dashed pt-5 sm:grid-cols-2"
+            : "border-t border-dashed pt-5"
+        }
+      >
         {!restoreAction && !disabled && !isPending ? (
           <Button asChild className="w-full" size="lg">
             <Link
@@ -126,12 +134,14 @@ function QuestionCardFrame({
           />
         ) : undefined}
 
-        <DeleteQuestionAction
-          disabled={disabled || isPending}
-          fetcher={fetcher}
-          label={restoreAction ? "Delete" : "Drop"}
-          questionPublicId={question.publicId}
-        />
+        {restoreAction ? (
+          <DeleteQuestionAction
+            disabled={disabled || isPending}
+            fetcher={fetcher}
+            label="Delete"
+            questionPublicId={question.publicId}
+          />
+        ) : undefined}
       </div>
     </article>
   );

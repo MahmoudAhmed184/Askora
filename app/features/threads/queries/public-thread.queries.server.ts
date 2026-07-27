@@ -154,10 +154,10 @@ export interface PublicThreadAnswerItem {
   like: LikeControlState;
   questionText?: string;
   /**
-   * Disclosure mode for the public question text. Only present when public
-   * question text is shown; the original private wording is never exposed.
+   * Disclosure mode for the public question text. Hidden mode is serialized
+   * without any question wording so clients can render a safe placeholder.
    */
-  questionTextMode?: QuestionTextMode;
+  questionTextMode: QuestionTextMode;
   asker?: {
     displayName: string;
     username: string;
@@ -496,6 +496,7 @@ function toPublicThreadAnswerItem({
     answerText: row.answerText,
     publishedAt: (row.publishedAt ?? new Date(0)).toISOString(),
     pinPosition: row.pinPosition,
+    questionTextMode: row.questionTextMode,
     like: getLikeControlState({
       count: owner.showLikeCounts ? (row.likeCount ?? 0) : undefined,
       isLiked: row.viewerLiked ?? false,
@@ -506,9 +507,7 @@ function toPublicThreadAnswerItem({
         threadItemPublicId: row.publicId,
       },
     }),
-    ...(questionText === undefined
-      ? {}
-      : { questionText, questionTextMode: row.questionTextMode }),
+    ...(questionText === undefined ? {} : { questionText }),
     ...getPublicAsker(row, questionText),
   };
 }

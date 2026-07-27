@@ -187,8 +187,8 @@ describe("public profile components", () => {
     );
   });
 
-  it("omits question text entirely for hidden public answers", () => {
-    renderWithRouter(
+  it("replaces hidden question text with a non-sensitive blurred placeholder", () => {
+    const { container } = renderWithRouter(
       <PublicAnswerList
         answers={[
           createPublishedAnswer({
@@ -207,6 +207,10 @@ describe("public profile components", () => {
     expect(
       screen.queryByText("What should I read next?"),
     ).not.toBeInTheDocument();
+    expect(screen.getByText("Hidden question")).toBeInTheDocument();
+    expect(
+      container.querySelector("[data-slot='hidden-question-placeholder']"),
+    ).toBeInTheDocument();
   });
 
   it("renders owner controls only when management is allowed", () => {
@@ -256,7 +260,7 @@ describe("public profile components", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: /manage published answer/i }),
+      screen.queryByRole("button", { name: /answer actions/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -270,9 +274,51 @@ describe("public profile components", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /manage published answer/i }),
+      screen.getByRole("button", { name: /answer actions/i }),
     ).toBeDisabled();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("submits unpublish without changing the intent when the dialog closes", async () => {
+    let submittedIntent: FormDataEntryValue | null = null;
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/",
+          element: (
+            <PublicAnswerList
+              answers={[createPublishedAnswer()]}
+              controls={{ canManage: true, disabled: false }}
+              profile={answerListProfile}
+            />
+          ),
+        },
+        {
+          path: "/answers/:threadItemPublicId/actions",
+          action: async ({ request }) => {
+            submittedIntent = (await request.formData()).get("intent");
+
+            return {
+              publishedAnswer: {
+                status: "unpublished",
+                threadItemPublicId: "titem_1",
+                redirectTo: "/person#published-answers",
+              },
+            };
+          },
+        },
+      ],
+      { initialEntries: ["/"] },
+    );
+
+    render(<RouterProvider router={router} />);
+    openPublishedAnswerMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unpublish" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unpublish answer" }));
+
+    await waitFor(() => {
+      expect(submittedIntent).toBe("unpublish");
+    });
   });
 
   it("renders profile side rail pinned threads without ask state", () => {
@@ -374,6 +420,30 @@ describe("public profile components", () => {
       "/person",
     );
   });
+
+  it("moves reporting into the answer actions menu", async () => {
+    renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer()]}
+        canReport
+        profile={answerListProfile}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Report answer" }),
+    ).not.toBeInTheDocument();
+
+    openPublishedAnswerMenu();
+
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Report answer" }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Report answer" }),
+    ).toBeInTheDocument();
+  });
 });
 
 function renderWithRouter(element: React.ReactNode) {
@@ -397,7 +467,7 @@ function renderWithRouter(element: React.ReactNode) {
 
 function openPublishedAnswerMenu() {
   fireEvent.pointerDown(
-    screen.getByRole("button", { name: /manage published answer/i }),
+    screen.getByRole("button", { name: /answer actions/i }),
   );
 }
 

@@ -3,12 +3,13 @@ import { Link, useLocation } from "react-router";
 
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
 import {
   ProfileIdentityLink,
   type ProfileIdentitySummary,
 } from "~/components/shared/profile-identity/profile-identity";
 import type { PublicPublishedAnswer } from "~/features/answers/types/answers.types";
-import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
+import { PublishedAnswerActions } from "~/features/answers/components/published-answer-actions";
 import {
   hiddenPublishedAnswerControls,
   type PublishedAnswerControlState,
@@ -16,7 +17,6 @@ import {
 import { LikeButton } from "~/features/social/components/like-button";
 import { createThreadModalLink } from "~/features/threads/thread-modal";
 import { formatMediumDateTime } from "~/lib/date-format";
-import { PublicReportDialog } from "~/features/moderation/components/public-report-dialog";
 
 interface PublicAnswerListProps {
   answers: PublicPublishedAnswer[];
@@ -133,13 +133,16 @@ function PublicAnswerArticle({
           profile={profile}
         />
 
-        {controls.canManage ? (
-          <PublishedAnswerOwnerControls answer={answer} controls={controls} />
-        ) : undefined}
+        <PublishedAnswerActions
+          answer={answer}
+          canReport={canReport}
+          controls={controls}
+        />
       </header>
 
-      {answer.questionTextMode === "hidden" ||
-      answer.questionText === null ? undefined : (
+      {answer.questionTextMode === "hidden" || answer.questionText === null ? (
+        <HiddenQuestionPlaceholder className="border-b border-dashed pb-5" />
+      ) : (
         <div className="flex flex-col gap-2 border-b border-dashed pb-5">
           <div className="flex flex-wrap items-baseline gap-2">
             <p className="min-w-0 flex-1 whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
@@ -171,28 +174,20 @@ function PublicAnswerArticle({
         {answer.answerText}
       </p>
 
-      <footer className="flex flex-col gap-3 border-t border-dashed pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <LikeButton like={answer.like} />
-          <PublicReportDialog
-            canReport={canReport}
-            targetId={answer.publicId}
-            targetLabel="answer"
-            targetType="thread_item"
-          />
-          <Link
-            className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_4px_14px_var(--accent-glow)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
-            defaultShouldRevalidate={false}
-            id={threadHref.focusReturnId}
-            mask={threadHref.mask}
-            prefetch="intent"
-            preventScrollReset
-            to={threadHref.to}
-          >
-            <MessageCircle data-icon="inline-start" />
-            Thread
-          </Link>
-        </div>
+      <footer className="flex flex-wrap items-center gap-3 border-t border-dashed pt-4">
+        <LikeButton like={answer.like} />
+        <Link
+          className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground transition-[border-color,background-color,box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-px hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_4px_14px_var(--accent-glow)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+          defaultShouldRevalidate={false}
+          id={threadHref.focusReturnId}
+          mask={threadHref.mask}
+          prefetch="intent"
+          preventScrollReset
+          to={threadHref.to}
+        >
+          <MessageCircle data-icon="inline-start" />
+          Thread
+        </Link>
       </footer>
     </article>
   );

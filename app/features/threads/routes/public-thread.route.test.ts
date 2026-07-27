@@ -110,6 +110,7 @@ function createAvailablePage(): PublicThreadPageData {
         answerText: "Public answer for the thread.",
         publishedAt: "2026-05-31T12:00:00.000Z",
         pinPosition: null,
+        questionTextMode: "hidden",
         like: {
           threadItemPublicId: "titem_1",
           isLiked: false,
