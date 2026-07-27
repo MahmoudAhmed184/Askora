@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  CurrentSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CurrentSessionSummary } from "~/features/auth/services/auth.service.server";
 import { ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS } from "~/features/profiles/services/ask-friction.service.server";
 import {
   createFollowUpTimingToken,
@@ -12,11 +10,9 @@ import {
   type FollowUpStore,
   type FollowUpThreadRecord,
   type NewFollowUpNotification,
-  type NewFollowUpQuestion
-} from "~/features/threads/services/follow-up.service.server";;
-import type {
-  PublicThreadItemRow
-} from "~/features/threads/queries/public-thread.queries.server";;
+  type NewFollowUpQuestion,
+} from "~/features/threads/services/follow-up.service.server";
+import type { PublicThreadItemRow } from "~/features/threads/queries/public-thread.queries.server";
 import type {
   RateLimitDecision,
   RateLimitOptions,
@@ -124,7 +120,9 @@ describe("submitThreadFollowUp", () => {
           profileId: "profile_1",
           threadPublicId: "thr_1",
           username: "person",
-          now: new Date(now.getTime() - ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS - 1),
+          now: new Date(
+            now.getTime() - ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS - 1,
+          ),
         }),
       }),
     });
@@ -134,7 +132,12 @@ describe("submitThreadFollowUp", () => {
       values: { question: "Please keep this follow-up" },
       formError: "Your follow-up was not sent. Please try again.",
     });
-    expect(getFollowUpFlashForResult({ result, session: anonymousSession })).toMatchObject({
+    expect(
+      result.status === "invalid" ? result.retryTimingToken : undefined,
+    ).toEqual(expect.any(String));
+    expect(
+      getFollowUpFlashForResult({ result, session: anonymousSession }),
+    ).toMatchObject({
       status: "error",
       values: { question: "Please keep this follow-up" },
     });

@@ -1,9 +1,15 @@
-import { LockKeyhole, MessageCircle, Pin, Send } from "lucide-react";
+import { LockKeyhole, Pin, Send } from "lucide-react";
 import { Link } from "react-router";
 
 import type { AppShellData } from "~/types/app-shell-data";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
+import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
+import {
+  AnonymousAvatar,
+  ProfileAvatar,
+  ProfileIdentityLink,
+} from "~/components/shared/profile-identity/profile-identity";
 import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
 import { Button } from "~/components/ui/button/button";
 import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
@@ -11,6 +17,8 @@ import { BetaNoindexBadge } from "~/features/profiles/components/profile-header"
 import { FollowButton } from "~/features/social/components/follow-button";
 import { LikeButton } from "~/features/social/components/like-button";
 import { PublicReportDialog } from "~/features/moderation/components/public-report-dialog";
+import { ThreadFollowUpComposer } from "~/features/threads/components/thread-follow-up-composer";
+import type { ThreadModalData } from "~/features/threads/thread-modal";
 import type {
   PublicThreadAnswerItem,
   PublicThreadItem,
@@ -19,6 +27,7 @@ import type {
   PublicThreadRemovedItem,
 } from "~/features/threads/types/threads.types";
 import { formatMediumDateTime } from "~/lib/date-format";
+import { cn } from "~/lib/utils";
 
 interface PublicThreadProps {
   betaNoindex: boolean;
@@ -26,11 +35,7 @@ interface PublicThreadProps {
   shell?: AppShellData | undefined;
 }
 
-export function PublicThread({
-  betaNoindex,
-  page,
-  shell,
-}: PublicThreadProps) {
+export function PublicThread({ betaNoindex, page, shell }: PublicThreadProps) {
   const content = (
     <PublicThreadPageContent betaNoindex={betaNoindex} page={page} />
   );
@@ -43,15 +48,27 @@ export function PublicThread({
 }
 
 export function PublicThreadModalContent({
-  page,
+  modal,
 }: {
-  page: PublicThreadPageData;
+  modal: ThreadModalData;
 }) {
+  const { page } = modal;
+
   if (page.status === "unavailable") {
     return <UnavailablePublicThread page={page} />;
   }
 
-  return <PublicThreadCard page={page} />;
+  return (
+    <PublicThreadCard
+      followUpTimingToken={
+        modal.followUpComposer.status === "available"
+          ? modal.followUpComposer.timingToken
+          : undefined
+      }
+      inlineFollowUp
+      page={page}
+    />
+  );
 }
 
 function PublicThreadPageContent({
@@ -77,17 +94,11 @@ function PublicThreadPage({
 }) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="font-serif text-xl font-bold text-foreground">
-            Public Thread
-          </h1>
-          {betaNoindex ? <BetaNoindexBadge /> : null}
+      {betaNoindex ? (
+        <div className="flex justify-end">
+          <BetaNoindexBadge />
         </div>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Published answers and follow-up state from @{page.profile.username}.
-        </p>
-      </header>
+      ) : null}
 
       <PublicThreadCard page={page} />
     </div>
@@ -95,43 +106,51 @@ function PublicThreadPage({
 }
 
 function PublicThreadCard({
+  followUpTimingToken,
+  inlineFollowUp = false,
   page,
 }: {
   page: Extract<PublicThreadPageData, { status: "available" }>;
+  inlineFollowUp?: boolean | undefined;
+  followUpTimingToken?: string | undefined;
 }) {
+  const answerCount = page.items.filter(isAnswerItem).length;
+
   return (
     <section className="overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
       <PublicThreadHeader
+        answerCount={answerCount}
         canReport={page.canReport}
         follow={page.follow}
-        itemCount={page.items.length}
         profile={page.profile}
         publishedAt={page.thread.publishedAt}
-        threadPublicId={page.thread.publicId}
-        title={getThreadTitle(page.items)}
+        reserveCloseSpace={inlineFollowUp}
       />
-      <section
-        aria-labelledby="thread-answers-title"
-        className="flex flex-col gap-6 border-t border-dashed px-6 py-6 sm:px-7"
+      <ol
+        aria-label={getAnswerCountLabel(answerCount)}
+        className="flex list-none flex-col border-t border-dashed px-6 sm:px-7"
       >
-        <h2 className="sr-only" id="thread-answers-title">
-          Thread answers
-        </h2>
         {page.items.map((item, index) => (
-          <PublicThreadItemCard
-            canReport={page.canReport}
-            controls={page.publishedAnswerControls}
-            index={index}
-            item={item}
+          <li
+            className="border-b border-dashed py-6 last:border-b-0"
             key={getThreadItemKey(item, index)}
-            profileDisplayName={page.profile.displayName}
-          />
+          >
+            <PublicThreadItemCard
+              canReport={page.canReport}
+              controls={page.publishedAnswerControls}
+              index={index}
+              item={item}
+              profile={page.profile}
+            />
+          </li>
         ))}
-      </section>
+      </ol>
       <PublicThreadFollowUpPanel
         followUp={page.followUp}
-        profileUsername={page.profile.username}
+        inline={inlineFollowUp}
+        profile={page.profile}
         threadPublicId={page.thread.publicId}
+        timingToken={followUpTimingToken}
       />
     </section>
   );
@@ -139,30 +158,48 @@ function PublicThreadCard({
 
 function PublicThreadFollowUpPanel({
   followUp,
-  profileUsername,
+  inline,
+  profile,
   threadPublicId,
+  timingToken,
 }: {
   followUp: Extract<PublicThreadPageData, { status: "available" }>["followUp"];
-  profileUsername: string;
+  inline: boolean;
+  profile: PublicThreadProfileView;
   threadPublicId: string;
+  timingToken: string | undefined;
 }) {
   if (followUp.status === "allowed") {
+    if (inline) {
+      if (timingToken === undefined) {
+        throw new Error("Inline follow-up composer requires a timing token.");
+      }
+
+      return (
+        <footer className="border-t border-dashed px-6 py-6 sm:px-7">
+          <ThreadFollowUpComposer
+            followUp={followUp}
+            profile={profile}
+            threadPublicId={threadPublicId}
+            timingToken={timingToken}
+          />
+        </footer>
+      );
+    }
+
     return (
       <footer className="border-t border-dashed px-6 py-6 sm:px-7">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-foreground">
-            Follow-up question
-          </h2>
-          <span className="font-mono text-[0.68rem] text-muted-foreground">
-            Available
-          </span>
-        </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm leading-6 text-muted-foreground">
-            Follow-ups go to @{profileUsername}'s private inbox.
-          </p>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-bold text-foreground">
+              Follow-up question
+            </h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Follow-ups go to @{profile.username}'s private inbox.
+            </p>
+          </div>
           <Button asChild className="justify-center px-6">
-            <Link to={`/${profileUsername}/a/${threadPublicId}/follow-ups`}>
+            <Link to={`/${profile.username}/a/${threadPublicId}/follow-ups`}>
               <Send data-icon="inline-start" />
               Ask a follow-up
             </Link>
@@ -178,7 +215,7 @@ function PublicThreadFollowUpPanel({
   return (
     <footer className="flex flex-col items-start gap-3 border-t border-dashed px-6 py-6 sm:px-7">
       <div className="flex flex-col gap-1">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <LockKeyhole data-icon="inline-start" />
           Follow-ups unavailable
         </h2>
@@ -210,56 +247,42 @@ function UnavailablePublicThread({
 }
 
 function PublicThreadHeader({
+  answerCount,
   canReport,
   follow,
-  itemCount,
   profile,
   publishedAt,
-  threadPublicId,
-  title,
+  reserveCloseSpace,
 }: {
+  answerCount: number;
   canReport: boolean;
   follow: Extract<PublicThreadPageData, { status: "available" }>["follow"];
-  itemCount: number;
   profile: PublicThreadProfileView;
   publishedAt: string;
-  threadPublicId: string;
-  title: string | undefined;
+  reserveCloseSpace: boolean;
 }) {
   return (
-    <header className="flex flex-col gap-5 px-6 py-6 sm:px-7">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="break-all font-mono text-[0.72rem] text-muted-foreground">
-            /{profile.username}/a/{threadPublicId}
-          </p>
-          {title === undefined ? null : (
-            <h2 className="mt-3 max-w-3xl break-words font-serif text-2xl font-extrabold italic leading-tight text-primary">
-              "{title}"
+    <header
+      className={cn(
+        "flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-6",
+        reserveCloseSpace && "pr-20 sm:pr-20",
+      )}
+    >
+      <ProfileIdentityLink
+        meta={
+          <>
+            <span aria-hidden="true">·</span>
+            <time dateTime={publishedAt}>{formatDate(publishedAt)}</time>
+            <span aria-hidden="true">·</span>
+            <h2 className="font-mono text-xs font-semibold text-primary">
+              {getAnswerCountLabel(answerCount)}
             </h2>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:max-w-56 sm:justify-end">
-          <time
-            className="font-mono text-[0.72rem] text-muted-foreground sm:text-right"
-            dateTime={publishedAt}
-          >
-            {formatDate(publishedAt)}
-          </time>
-          <FollowButton follow={follow} />
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Link
-          className="rounded-full border bg-secondary px-3 py-1 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          to={`/${profile.username}`}
-        >
-          {profile.displayName} @{profile.username}
-        </Link>
-        <span className="rounded-full border bg-secondary px-3 py-1 text-sm font-medium text-muted-foreground">
-          {itemCount} {itemCount === 1 ? "item" : "items"}
-        </span>
+          </>
+        }
+        profile={profile}
+      />
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <FollowButton follow={follow} />
         <PublicReportDialog
           canReport={canReport}
           targetId={profile.username}
@@ -276,13 +299,16 @@ function PublicThreadItemCard({
   controls,
   index,
   item,
-  profileDisplayName,
+  profile,
 }: {
   canReport: boolean;
-  controls: Extract<PublicThreadPageData, { status: "available" }>["publishedAnswerControls"];
+  controls: Extract<
+    PublicThreadPageData,
+    { status: "available" }
+  >["publishedAnswerControls"];
   index: number;
   item: PublicThreadItem;
-  profileDisplayName: string;
+  profile: PublicThreadProfileView;
 }) {
   if (item.type === "removed") {
     return <RemovedThreadItem item={item} />;
@@ -294,7 +320,7 @@ function PublicThreadItemCard({
       controls={controls}
       index={index}
       item={item}
-      profileDisplayName={profileDisplayName}
+      profile={profile}
     />
   );
 }
@@ -304,38 +330,37 @@ function AnswerThreadItem({
   controls,
   index,
   item,
-  profileDisplayName,
+  profile,
 }: {
   canReport: boolean;
-  controls: Extract<PublicThreadPageData, { status: "available" }>["publishedAnswerControls"];
+  controls: Extract<
+    PublicThreadPageData,
+    { status: "available" }
+  >["publishedAnswerControls"];
   index: number;
   item: PublicThreadAnswerItem;
-  profileDisplayName: string;
+  profile: PublicThreadProfileView;
 }) {
   return (
-    <article
-      className="scroll-mt-24"
-      id={`item-${item.publicId}`}
-    >
-      <div className="border-y border-dashed py-4">
+    <article className="scroll-mt-24" id={`item-${item.publicId}`}>
+      <div className="flex flex-col gap-5">
         {item.questionText === undefined ? undefined : (
-          <ThreadEvent
-            actor={getQuestionActor(item)}
-            body={item.questionText}
-            kind={index === 0 ? "Question" : "Follow-up"}
+          <ThreadQuestionEntry
+            index={index}
+            item={item}
             time={formatDate(item.publishedAt)}
           />
         )}
-        <ThreadEvent
-          actor={profileDisplayName}
+        <ThreadAnswerEntry
           body={item.answerText}
-          kind="Answer"
+          index={index}
+          profile={profile}
           time={formatDate(item.publishedAt)}
         />
       </div>
 
-      <footer className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+      <footer className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <LikeButton like={item.like} />
           <PublicReportDialog
             canReport={canReport}
@@ -343,10 +368,6 @@ function AnswerThreadItem({
             targetLabel="answer"
             targetType="thread_item"
           />
-          <span className="inline-flex h-9 items-center gap-2 rounded-full border bg-secondary px-3.5 text-sm font-semibold text-secondary-foreground">
-            <MessageCircle data-icon="inline-start" />
-            {index === 0 ? "Original answer" : "Follow-up answer"}
-          </span>
           {item.pinPosition === null ? undefined : (
             <span className="inline-flex h-9 items-center gap-2 rounded-full border bg-background px-3.5 text-sm font-semibold text-foreground">
               <Pin data-icon="inline-start" />
@@ -363,47 +384,164 @@ function AnswerThreadItem({
   );
 }
 
-function ThreadEvent({
-  actor,
-  body,
-  kind,
+function ThreadQuestionEntry({
+  index,
+  item,
   time,
 }: {
-  actor: string;
-  body: string;
-  kind: string;
+  index: number;
+  item: PublicThreadAnswerItem;
   time: string;
 }) {
   return (
-    <div className="mb-4 last:mb-0">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[0.68rem] font-bold text-primary">
-          {kind}
-        </span>
-        <span className="font-mono text-[0.72rem] text-muted-foreground">
-          {actor} · {time}
-        </span>
+    <div className="flex gap-3">
+      <ThreadAskerAvatar asker={item.asker} />
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <ThreadEntryBadge
+            label={index === 0 ? "Question" : "Follow-up"}
+            tone="question"
+          />
+          <ThreadAskerAttribution asker={item.asker} />
+          <span className="whitespace-nowrap font-mono text-[0.72rem] text-muted-foreground">
+            <span aria-hidden="true">· </span>
+            {time}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <p
+            className={cn(
+              "min-w-0 flex-1 whitespace-pre-wrap break-words font-serif font-bold italic",
+              index === 0
+                ? "text-2xl leading-tight text-primary"
+                : "text-lg leading-7 text-foreground",
+            )}
+          >
+            {item.questionText}
+          </p>
+          {item.questionTextMode === "edited" ? (
+            <EditedQuestionBadge />
+          ) : undefined}
+        </div>
       </div>
-      <p className="whitespace-pre-wrap break-words text-sm leading-7 text-foreground/90">
-        {body}
-      </p>
     </div>
   );
 }
 
-function getQuestionActor(item: PublicThreadAnswerItem) {
-  if (item.asker === undefined) {
-    return "Anonymous";
+function ThreadAnswerEntry({
+  body,
+  index,
+  profile,
+  time,
+}: {
+  body: string;
+  index: number;
+  profile: PublicThreadProfileView;
+  time: string;
+}) {
+  return (
+    <div className="flex gap-3">
+      <Link
+        aria-label={`View ${profile.displayName}'s profile`}
+        className="shrink-0 rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35"
+        to={`/${profile.username}`}
+      >
+        <ProfileAvatar profile={profile} size="sm" />
+      </Link>
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <ThreadEntryBadge
+            label={index === 0 ? "Answer" : "Follow-up answer"}
+            tone="answer"
+          />
+          <Link
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+            to={`/${profile.username}`}
+          >
+            {profile.displayName}
+          </Link>
+          <span className="whitespace-nowrap font-mono text-[0.72rem] text-muted-foreground">
+            <span aria-hidden="true">· </span>
+            {time}
+          </span>
+        </div>
+        <p className="whitespace-pre-wrap break-words text-[0.96rem] leading-8 text-foreground/90 sm:text-base">
+          {body}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ThreadAskerAttribution({
+  asker,
+}: {
+  asker: PublicThreadAnswerItem["asker"];
+}) {
+  if (asker === undefined) {
+    return <span className="font-medium text-muted-foreground">Anonymous</span>;
   }
 
-  return `${item.asker.displayName} @${item.asker.username}`;
+  return (
+    <Link
+      className="font-medium text-foreground underline-offset-4 hover:underline"
+      to={`/${asker.username}`}
+    >
+      {asker.displayName}{" "}
+      <span className="font-mono text-xs text-muted-foreground">
+        @{asker.username}
+      </span>
+    </Link>
+  );
+}
+
+function ThreadEntryBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "question" | "answer";
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-[0.06em]",
+        tone === "question"
+          ? "border-primary/30 bg-primary/10 text-primary"
+          : "border-border bg-secondary text-secondary-foreground",
+      )}
+      data-slot="thread-entry-badge"
+    >
+      {label}
+    </span>
+  );
+}
+
+function ThreadAskerAvatar({
+  asker,
+}: {
+  asker: PublicThreadAnswerItem["asker"];
+}) {
+  if (asker === undefined) {
+    return <AnonymousAvatar size="sm" />;
+  }
+
+  return (
+    <Link
+      aria-label={`View ${asker.displayName}'s profile`}
+      className="shrink-0 rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35"
+      to={`/${asker.username}`}
+    >
+      <ProfileAvatar profile={asker} size="sm" />
+    </Link>
+  );
 }
 
 function RemovedThreadItem({ item }: { item: PublicThreadRemovedItem }) {
   return (
     <div
       aria-label="Answer removed"
-      className="flex flex-wrap items-center gap-3 bg-destructive/5 px-5 py-4 text-sm text-muted-foreground sm:px-7"
+      className="flex flex-wrap items-center gap-3 rounded-2xl bg-destructive/5 px-4 py-3 text-sm text-muted-foreground"
       data-position={item.position}
     >
       <span className="rounded-full border border-destructive/35 bg-background px-3 py-1 font-medium text-destructive">
@@ -414,11 +552,12 @@ function RemovedThreadItem({ item }: { item: PublicThreadRemovedItem }) {
   );
 }
 
-function getThreadTitle(items: readonly PublicThreadItem[]) {
-  return items.find(
-    (item): item is PublicThreadAnswerItem =>
-      item.type === "answer" && item.questionText !== undefined,
-  )?.questionText;
+function getAnswerCountLabel(answerCount: number) {
+  return `${String(answerCount)} ${answerCount === 1 ? "answer" : "answers"}`;
+}
+
+function isAnswerItem(item: PublicThreadItem): item is PublicThreadAnswerItem {
+  return item.type === "answer";
 }
 
 function getThreadItemKey(item: PublicThreadItem, index: number) {

@@ -11,17 +11,13 @@ import {
   threadItems,
   threads,
 } from "~/db/schema";
-import type {
-  AnswerQuestionIdentity
-} from "~/features/answers/services/answer.service.server";;
+import type { AnswerQuestionIdentity } from "~/features/answers/services/answer.service.server";
 import {
   getPublishedAnswerControlState,
   type PublishedAnswerControlState,
 } from "~/features/answers/services/published-answer-controls.service.server";
 import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
-import type {
-  CurrentSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CurrentSessionSummary } from "~/features/auth/services/auth.service.server";
 import { findThreadItemLikeSummaries } from "~/features/social/services/social-data.service.server";
 import {
   getFollowControlState,
@@ -79,6 +75,7 @@ export interface PublicThreadItemRow {
   identityMode: AnswerQuestionIdentity;
   askerDisplayName: string | null;
   askerUsername: string | null;
+  askerAvatarUrl?: string | null;
   likeCount?: number | undefined;
   viewerLiked?: boolean | undefined;
 }
@@ -106,7 +103,17 @@ export type PublicThreadLoadResult =
       status: "page";
       page: PublicThreadPageData;
       responseStatus: 200 | 404;
+      /**
+       * Server-only owner identifiers, kept out of `page` so nothing internal
+       * reaches public payloads. Present only for available threads.
+       */
+      owner?: PublicThreadOwnerIdentifiers;
     };
+
+export interface PublicThreadOwnerIdentifiers {
+  profileId: string;
+  username: string;
+}
 
 export type PublicThreadPageData =
   | {
@@ -146,9 +153,15 @@ export interface PublicThreadAnswerItem {
   pinPosition: number | null;
   like: LikeControlState;
   questionText?: string;
+  /**
+   * Disclosure mode for the public question text. Only present when public
+   * question text is shown; the original private wording is never exposed.
+   */
+  questionTextMode?: QuestionTextMode;
   asker?: {
     displayName: string;
     username: string;
+    avatarUrl: string | null;
   };
 }
 
@@ -215,6 +228,10 @@ export async function loadPublicThreadPage({
 
   return {
     status: "page",
+    owner: {
+      profileId: thread.ownerProfileId,
+      username: thread.ownerUsername,
+    },
     page: {
       status: "available",
       profile: {
@@ -224,7 +241,11 @@ export async function loadPublicThreadPage({
       },
       thread: {
         publicId: thread.publicId,
-        publishedAt: (thread.publishedAt ?? initialItem.publishedAt ?? new Date(0)).toISOString(),
+        publishedAt: (
+          thread.publishedAt ??
+          initialItem.publishedAt ??
+          new Date(0)
+        ).toISOString(),
       },
       items: createPublicThreadItems({
         initialQuestionId: thread.initialQuestionId,
@@ -286,7 +307,10 @@ export function createDrizzlePublicThreadStore(
 ): PublicThreadStore {
   return {
     async findThreadByPublicId(threadPublicId) {
-      const initialQuestions = alias(questions, "public_thread_initial_questions");
+      const initialQuestions = alias(
+        questions,
+        "public_thread_initial_questions",
+      );
       const [thread] = await database
         .select({
           id: threads.id,
@@ -342,6 +366,7 @@ export function createDrizzlePublicThreadStore(
           identityMode: questions.identityMode,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
+          askerAvatarUrl: askerProfiles.avatarUrl,
         })
         .from(threadItems)
         .innerJoin(threads, eq(threads.id, threadItems.threadId))
@@ -407,7 +432,9 @@ export function createPublicThreadItems({
       return [toPublicThreadAnswerItem({ owner, row, session })];
     }
 
-    if (shouldShowRemovedMarker({ index, initialQuestionId, rows: sortedRows })) {
+    if (
+      shouldShowRemovedMarker({ index, initialQuestionId, rows: sortedRows })
+    ) {
       return [
         {
           type: "removed" as const,
@@ -479,7 +506,9 @@ function toPublicThreadAnswerItem({
         threadItemPublicId: row.publicId,
       },
     }),
-    ...(questionText === undefined ? {} : { questionText }),
+    ...(questionText === undefined
+      ? {}
+      : { questionText, questionTextMode: row.questionTextMode }),
     ...getPublicAsker(row, questionText),
   };
 }
@@ -501,6 +530,7 @@ function getPublicAsker(
     asker: {
       displayName: row.askerDisplayName,
       username: row.askerUsername,
+      avatarUrl: row.askerAvatarUrl ?? null,
     },
   };
 }
@@ -527,7 +557,8 @@ async function findViewerFollowState({
 }
 
 function getViewerProfileId(session: CurrentSessionSummary) {
-  return session.status === "authenticated" && session.profileStatus === "complete"
+  return session.status === "authenticated" &&
+    session.profileStatus === "complete"
     ? session.profile.id
     : undefined;
 }
@@ -564,10 +595,7 @@ function shouldShowRemovedMarker({
 }
 
 function isVisiblePublishedThreadItem(row: PublicThreadItemRow) {
-  return (
-    row.itemStatus === "published" &&
-    row.itemDeletedAt === null
-  );
+  return row.itemStatus === "published" && row.itemDeletedAt === null;
 }
 
 function isRemovedPublishedThreadItem(row: PublicThreadItemRow) {

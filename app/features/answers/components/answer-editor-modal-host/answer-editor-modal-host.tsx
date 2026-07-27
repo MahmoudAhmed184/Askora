@@ -76,19 +76,12 @@ export function AnswerEditorModalHost({ modal }: AnswerEditorModalHostProps) {
     >
       {modal === undefined ? null : (
         <DialogContent
-          aria-describedby="answer-editor-modal-description"
-          aria-labelledby="answer-editor-modal-title"
           className="max-h-[calc(100svh-2rem)] w-[calc(100%-1rem)] max-w-[53rem] overflow-hidden border-0 bg-transparent p-0 shadow-none sm:w-[calc(100%-3rem)]"
           key={modal.questionPublicId}
           overlayClassName="bg-background/20 backdrop-blur-[2px]"
         >
-          <DialogTitle className="sr-only" id="answer-editor-modal-title">
-            Answer editor
-          </DialogTitle>
-          <DialogDescription
-            className="sr-only"
-            id="answer-editor-modal-description"
-          >
+          <DialogTitle className="sr-only">Answer editor</DialogTitle>
+          <DialogDescription className="sr-only">
             Edit and publish an answer without leaving the current page.
           </DialogDescription>
           {modal.status === "not_found" ? (

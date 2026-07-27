@@ -2,6 +2,7 @@ import { Send } from "lucide-react";
 import { Form } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { IdentitySwitch } from "~/components/shared/identity-switch/identity-switch";
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   Field,
@@ -89,7 +90,7 @@ export function FollowUpComposer({
             />
           </Field>
 
-          <IdentityControls error={error} followUp={followUp} />
+          <FollowUpIdentityControls error={error} followUp={followUp} />
 
           <PendingButton className="w-full sm:w-fit" pendingText="Sending">
             <Send data-icon="inline-start" />
@@ -109,12 +110,14 @@ function getFollowUpToastMessage(flash: FollowUpFlash | undefined) {
   return flash?.formError;
 }
 
-function IdentityControls({
+export function FollowUpIdentityControls({
   error,
   followUp,
+  variant,
 }: {
   error: Extract<FollowUpFlash, { status: "error" }> | undefined;
   followUp: Extract<PublicThreadFollowUpState, { status: "allowed" }>;
+  variant?: "card" | "inline" | undefined;
 }) {
   if (!followUp.anonymousAllowed || !followUp.attributedAllowed) {
     return (
@@ -127,61 +130,10 @@ function IdentityControls({
   }
 
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-medium">Send as</legend>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <IdentityOption
-          defaultChecked={
-            (error?.values.identityMode ?? followUp.defaultIdentity) ===
-            "anonymous"
-          }
-          description="Anonymous to the recipient and public viewers."
-          label="Anonymous"
-          value="anonymous"
-        />
-        <IdentityOption
-          defaultChecked={
-            (error?.values.identityMode ?? followUp.defaultIdentity) ===
-            "attributed"
-          }
-          description="Your profile is attached if the follow-up is answered."
-          label="Your profile"
-          value="attributed"
-        />
-      </div>
-      {error?.fieldErrors?.identityMode === undefined ? null : (
-        <p className="text-sm leading-6 text-destructive">
-          {error.fieldErrors.identityMode}
-        </p>
-      )}
-    </fieldset>
-  );
-}
-
-function IdentityOption({
-  defaultChecked,
-  description,
-  label,
-  value,
-}: {
-  defaultChecked: boolean;
-  description: string;
-  label: string;
-  value: "anonymous" | "attributed";
-}) {
-  return (
-    <label className="flex gap-3 rounded-xl border bg-secondary p-3 text-sm">
-      <input
-        className="mt-1 size-4 accent-primary"
-        defaultChecked={defaultChecked}
-        name="identityMode"
-        type="radio"
-        value={value}
-      />
-      <span className="flex flex-col gap-1">
-        <span className="font-medium">{label}</span>
-        <span className="leading-5 text-muted-foreground">{description}</span>
-      </span>
-    </label>
+    <IdentitySwitch
+      defaultIdentity={error?.values.identityMode ?? followUp.defaultIdentity}
+      error={error?.fieldErrors?.identityMode}
+      variant={variant}
+    />
   );
 }

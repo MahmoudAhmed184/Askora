@@ -13,6 +13,10 @@ import { getAvatarImageSource } from "~/features/profiles/avatar-url";
 import { FollowUpComposer } from "~/features/threads/components/follow-up-composer";
 import { ThreadContextPreview } from "~/features/threads/components/thread-context-preview";
 import {
+  isInlineFollowUpSubmission,
+  type InlineFollowUpActionData,
+} from "~/features/threads/inline-follow-up";
+import {
   clearFollowUpFlashCookieHeader,
   createFollowUpFlashCookieHeader,
   getFollowUpFlashForResult,
@@ -22,9 +26,7 @@ import {
   submitThreadFollowUp,
   type FollowUpPageData,
 } from "~/features/threads/services/follow-up.service.server";
-import type {
-  PublicThreadFollowUpState
-} from "~/features/threads/services/thread-permissions.service.server";;
+import type { PublicThreadFollowUpState } from "~/features/threads/services/thread-permissions.service.server";
 import { getPublicAppConfig } from "~/lib/config.server";
 import { noindexHeaders } from "~/lib/response.server";
 
@@ -78,8 +80,10 @@ export async function action({ context, params, request }: Route.ActionArgs) {
   const username = params.username;
   const threadPublicId = params.threadPublicId;
   const session = getCurrentSessionSummaryFromContext(context);
+  const formData = await request.formData();
+  const isInline = isInlineFollowUpSubmission(formData);
   const result = await submitThreadFollowUp({
-    formData: await request.formData(),
+    formData,
     request,
     session,
     threadPublicId,
@@ -87,7 +91,34 @@ export async function action({ context, params, request }: Route.ActionArgs) {
   });
 
   if (result.status === "redirect") {
+    if (isInline) {
+      return data<InlineFollowUpActionData>(
+        {
+          followUp: {
+            status: "error",
+            values: { question: "", identityMode: "anonymous" },
+            formError: "This thread moved. Reload the page and try again.",
+          },
+        },
+        { status: 409 },
+      );
+    }
+
     return redirect(`/${result.username}/a/${threadPublicId}/follow-ups`);
+  }
+
+  const flash = getFollowUpFlashForResult({ result, session });
+
+  if (isInline) {
+    return data<InlineFollowUpActionData>(
+      {
+        followUp: flash,
+        ...(result.status === "invalid" && result.retryTimingToken !== undefined
+          ? { timingToken: result.retryTimingToken }
+          : {}),
+      },
+      { status: flash.status === "success" ? 200 : 400 },
+    );
   }
 
   const headers = new Headers();
@@ -95,7 +126,7 @@ export async function action({ context, params, request }: Route.ActionArgs) {
   headers.append(
     "Set-Cookie",
     createFollowUpFlashCookieHeader({
-      result: getFollowUpFlashForResult({ result, session }),
+      result: flash,
       threadPublicId,
       username,
     }),

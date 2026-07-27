@@ -21,6 +21,14 @@ export interface ThreadModalParams {
 export interface ThreadModalData {
   canonicalPath: string;
   page: PublicThreadPageData;
+  followUpComposer:
+    | {
+        status: "available";
+        timingToken: string;
+      }
+    | {
+        status: "unavailable";
+      };
 }
 
 export interface ThreadModalLocation {
@@ -113,10 +121,7 @@ export function getThreadModalParams(
   return { username, threadPublicId };
 }
 
-export function hasThreadModalSearchParamChange(
-  currentUrl: URL,
-  nextUrl: URL,
-) {
+export function hasThreadModalSearchParamChange(currentUrl: URL, nextUrl: URL) {
   return threadModalSearchParams.some(
     (param) =>
       currentUrl.searchParams.get(param) !== nextUrl.searchParams.get(param),

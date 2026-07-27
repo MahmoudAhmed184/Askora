@@ -3,24 +3,44 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { ThreadModalHost } from "~/features/threads/components/thread-modal-host";
-import type {
-  PublicThreadPageData
-} from "~/features/threads/queries/public-thread.queries.server";;
+import type { PublicThreadPageData } from "~/features/threads/queries/public-thread.queries.server";
 
 describe("ThreadModalHost", () => {
-  it("renders a viewport-inset scrollable modal without a visible close button", () => {
+  it("renders a centered card that scrolls internally", () => {
+    renderThreadModalHost();
+
+    const dialog = screen.getByRole("dialog", { name: "Public thread" });
+
+    expect(dialog).toHaveClass(
+      "max-h-[calc(100svh-2rem)]",
+      "max-w-2xl",
+      "w-[calc(100vw-1.5rem)]",
+    );
+    expect(
+      dialog.querySelector(".overflow-y-auto.overscroll-contain"),
+    ).toBeInTheDocument();
+  });
+
+  it("provides an explicit close button", () => {
     renderThreadModalHost();
 
     expect(
-      screen.queryByRole("button", { name: "Close thread" }),
+      screen.getByRole("button", { name: "Close thread" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the inline follow-up composer instead of navigating away", () => {
+    renderThreadModalHost();
+
+    expect(
+      screen.getByRole("textbox", { name: /follow-up/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /send follow-up/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /ask a follow-up/i }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Public thread" })).toHaveClass(
-      "block",
-      "h-svh",
-      "overflow-y-scroll",
-      "pb-[calc(6rem+env(safe-area-inset-bottom))]",
-      "top-0",
-    );
   });
 });
 
@@ -33,6 +53,10 @@ function renderThreadModalHost() {
           <ThreadModalHost
             modal={{
               canonicalPath: "/person/a/thr_1",
+              followUpComposer: {
+                status: "available",
+                timingToken: "token",
+              },
               page: createAvailablePage(),
             }}
           />
@@ -83,7 +107,8 @@ function createAvailablePage(): Extract<
       defaultIdentity: "anonymous",
       anonymousAllowed: true,
       attributedAllowed: false,
-      description: "Your follow-up is anonymous to the recipient and public viewers.",
+      description:
+        "Your follow-up is anonymous to the recipient and public viewers.",
       effectivePermission: "anyone",
     },
     publishedAnswerControls: {

@@ -3,9 +3,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { PublicThread } from "~/features/threads/components/public-thread";
-import type {
-  PublicThreadPageData
-} from "~/features/threads/queries/public-thread.queries.server";;
+import type { PublicThreadPageData } from "~/features/threads/queries/public-thread.queries.server";
 
 describe("PublicThread", () => {
   beforeAll(() => {
@@ -47,7 +45,9 @@ describe("PublicThread", () => {
     expect(
       screen.getByRole("button", { name: /like answer \(0\)/i }),
     ).toBeDisabled();
-    expect(screen.getByText(/^Person ·/)).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: "Person" }).length,
+    ).toBeGreaterThan(0);
     expect(container.querySelector("script")).toBeNull();
   });
 
@@ -75,7 +75,8 @@ describe("PublicThread", () => {
         followUp: {
           status: "denied",
           reason: "thread_full",
-          message: "This thread already has the maximum number of published answers.",
+          message:
+            "This thread already has the maximum number of published answers.",
         },
       }),
     );
@@ -103,7 +104,9 @@ describe("PublicThread", () => {
     );
 
     expect(screen.getByText("Answer removed")).toBeInTheDocument();
-    expect(screen.queryByText("Removed private answer")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Removed private answer"),
+    ).not.toBeInTheDocument();
   });
 
   it("does not render hidden question text", () => {
@@ -122,8 +125,12 @@ describe("PublicThread", () => {
       }),
     );
 
-    expect(screen.getByText("Answer without the private prompt")).toBeInTheDocument();
-    expect(screen.queryByText("Secret hidden question")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Answer without the private prompt"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Secret hidden question"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders owner controls only when management is allowed", () => {
@@ -135,7 +142,9 @@ describe("PublicThread", () => {
 
     openPublishedAnswerMenu();
 
-    expect(screen.getByRole("menuitem", { name: "Edit silently" })).toBeEnabled();
+    expect(
+      screen.getByRole("menuitem", { name: "Edit silently" }),
+    ).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: "Pin" })).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: "Unpublish" })).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
@@ -177,12 +186,96 @@ describe("PublicThread", () => {
     });
 
     expect(
-      screen.getByRole("heading", { name: /public thread/i }),
+      screen.getByRole("heading", { name: "1 answer" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /ask a follow-up/i }),
+    ).toHaveAttribute("href", "/person/a/thr_1/follow-ups");
     expect(
       screen.queryByRole("link", { name: "Dismiss thread" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("labels each timeline entry and attributes the asker", () => {
+    renderPublicThread(
+      createAvailablePage({
+        items: [
+          createAnswerItem({
+            asker: {
+              displayName: "Asker",
+              username: "asker",
+              avatarUrl: null,
+            },
+          }),
+        ],
+      }),
+    );
+
+    expect(screen.getByText("Question")).toBeInTheDocument();
+    expect(screen.getByText("Answer")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Asker @asker" })).toHaveAttribute(
+      "href",
+      "/asker",
+    );
+  });
+
+  it("attributes anonymous askers without exposing an account", () => {
+    renderPublicThread(createAvailablePage());
+
+    expect(screen.getByText("Anonymous")).toBeInTheDocument();
+  });
+
+  it("discloses edited question wording", () => {
+    const edited = renderPublicThread(
+      createAvailablePage({
+        items: [createAnswerItem({ questionTextMode: "edited" })],
+      }),
+    );
+
+    expect(screen.getByText("Edited question")).toBeInTheDocument();
+
+    edited.unmount();
+
+    renderPublicThread(
+      createAvailablePage({
+        items: [createAnswerItem({ questionTextMode: "original" })],
+      }),
+    );
+
+    expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
+  });
+
+  it("counts answers semantically", () => {
+    const single = renderPublicThread(createAvailablePage());
+
+    expect(
+      screen.getByRole("heading", { name: "1 answer" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 item")).not.toBeInTheDocument();
+
+    single.unmount();
+
+    renderPublicThread(
+      createAvailablePage({
+        items: [
+          createAnswerItem({ publicId: "titem_1" }),
+          createAnswerItem({ publicId: "titem_2" }),
+        ],
+      }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "2 answers" }),
+    ).toBeInTheDocument();
+  });
+
+  it("links the thread owner identity to their profile", () => {
+    renderPublicThread(createAvailablePage());
+
+    for (const link of screen.getAllByRole("link", { name: "Person" })) {
+      expect(link).toHaveAttribute("href", "/person");
+    }
   });
 });
 
@@ -203,13 +296,7 @@ function renderPublicThread(
     [
       {
         path: "/",
-        element: (
-          <PublicThread
-            betaNoindex={false}
-            page={page}
-            shell={shell}
-          />
-        ),
+        element: <PublicThread betaNoindex={false} page={page} shell={shell} />,
       },
     ],
     {
@@ -227,7 +314,9 @@ function openPublishedAnswerMenu() {
 }
 
 function createAvailablePage(
-  overrides: Partial<Extract<PublicThreadPageData, { status: "available" }>> = {},
+  overrides: Partial<
+    Extract<PublicThreadPageData, { status: "available" }>
+  > = {},
 ): Extract<PublicThreadPageData, { status: "available" }> {
   return {
     status: "available",
@@ -246,7 +335,8 @@ function createAvailablePage(
       defaultIdentity: "anonymous",
       anonymousAllowed: true,
       attributedAllowed: false,
-      description: "Your follow-up is anonymous to the recipient and public viewers.",
+      description:
+        "Your follow-up is anonymous to the recipient and public viewers.",
       effectivePermission: "anyone",
     },
     publishedAnswerControls: {

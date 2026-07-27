@@ -74,7 +74,8 @@ export function AnswerEditor({
 }: AnswerEditorProps) {
   const formId = useId();
   const fetcher = useFetcher<{ answer: AnswerActionResult }>();
-  const contextualActionResult = action === undefined ? undefined : fetcher.data?.answer;
+  const contextualActionResult =
+    action === undefined ? undefined : fetcher.data?.answer;
   const effectiveActionResult = contextualActionResult ?? actionResult;
   const initialValues = getInitialValues(actionResult, editor.values);
   const [values, setValues] = useState(initialValues);
@@ -111,7 +112,8 @@ export function AnswerEditor({
 
   const fieldErrors = getFieldErrors(effectiveActionResult);
   const formError = getFormError(effectiveActionResult);
-  const answerCharactersRemaining = answerCharacterLimit - values.answerText.length;
+  const answerCharactersRemaining =
+    answerCharacterLimit - values.answerText.length;
   const isSubmitting = action !== undefined && fetcher.state !== "idle";
   const FormComponent = action === undefined ? Form : fetcher.Form;
 
@@ -122,7 +124,9 @@ export function AnswerEditor({
     >
       <ActionToast
         message={getAnswerActionToastMessage(effectiveActionResult, formError)}
-        tone={effectiveActionResult?.status === "draft_saved" ? "success" : "error"}
+        tone={
+          effectiveActionResult?.status === "draft_saved" ? "success" : "error"
+        }
         trigger={effectiveActionResult}
       />
       <header className="border-b border-border/60 bg-secondary p-6 pr-16 sm:p-8 sm:pr-16">
@@ -138,8 +142,8 @@ export function AnswerEditor({
               Prepare response
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Edit the visible question text, set follow-up behavior, then save or
-              publish.
+              Edit the visible question text, set follow-up behavior, then save
+              or publish.
             </p>
           </div>
           <div className="flex items-start gap-3 sm:min-w-80 sm:justify-end">
@@ -217,11 +221,13 @@ export function AnswerEditor({
                       : "text-foreground",
                   )}
                 >
-                  "{getQuestionPreviewText({
+                  "
+                  {getQuestionPreviewText({
                     editedQuestionText: values.editedQuestionText,
                     mode: normalizeQuestionTextMode(values.questionTextMode),
                     questionText: editor.question.text,
-                  })}"
+                  })}
+                  "
                 </p>
               </div>
               <FieldError
@@ -230,40 +236,56 @@ export function AnswerEditor({
               />
             </Field>
 
-            <Field
-              data-invalid={
-                fieldErrors.editedQuestionText !== undefined ? true : undefined
-              }
-            >
-              <FieldLabel htmlFor="editedQuestionText">
-                Edited question
-              </FieldLabel>
-              <Textarea
-                aria-describedby="editedQuestionText-description editedQuestionText-message"
-                aria-invalid={fieldErrors.editedQuestionText !== undefined}
-                id="editedQuestionText"
-                maxLength={500}
+            {values.questionTextMode === "edited" ? (
+              <Field
+                data-invalid={
+                  fieldErrors.editedQuestionText !== undefined
+                    ? true
+                    : undefined
+                }
+              >
+                <FieldLabel htmlFor="editedQuestionText">
+                  Edited question
+                </FieldLabel>
+                <Textarea
+                  aria-describedby="editedQuestionText-description editedQuestionText-message"
+                  aria-invalid={fieldErrors.editedQuestionText !== undefined}
+                  id="editedQuestionText"
+                  maxLength={500}
+                  name="editedQuestionText"
+                  onChange={(event) => {
+                    setValues((current) => ({
+                      ...current,
+                      editedQuestionText: event.target.value,
+                    }));
+                  }}
+                  rows={4}
+                  value={values.editedQuestionText}
+                />
+                <FieldDescription id="editedQuestionText-description">
+                  Published in place of the original wording. 500 characters
+                  max; the original remains private for context.
+                </FieldDescription>
+                <FieldError
+                  id="editedQuestionText-message"
+                  message={fieldErrors.editedQuestionText}
+                />
+              </Field>
+            ) : (
+              // Keeps the typed draft in the submission while the field is
+              // hidden, so switching modes back restores the same text.
+              <input
                 name="editedQuestionText"
-                onChange={(event) => {
-                  setValues((current) => ({
-                    ...current,
-                    editedQuestionText: event.target.value,
-                  }));
-                }}
-                rows={4}
+                type="hidden"
                 value={values.editedQuestionText}
               />
-              <FieldDescription id="editedQuestionText-description">
-                Used only when Edited is selected. 500 characters max; the
-                original remains private for context.
-              </FieldDescription>
-              <FieldError
-                id="editedQuestionText-message"
-                message={fieldErrors.editedQuestionText}
-              />
-            </Field>
+            )}
 
-            <Field data-invalid={fieldErrors.answerText !== undefined ? true : undefined}>
+            <Field
+              data-invalid={
+                fieldErrors.answerText !== undefined ? true : undefined
+              }
+            >
               <div className="flex items-center justify-between gap-4">
                 <FieldLabel htmlFor="answerText">Answer</FieldLabel>
                 <span
@@ -276,7 +298,8 @@ export function AnswerEditor({
                   )}
                   id="answerText-counter"
                 >
-                  {formatCharacterCount(Math.max(answerCharactersRemaining, 0))} left
+                  {formatCharacterCount(Math.max(answerCharactersRemaining, 0))}{" "}
+                  left
                 </span>
               </div>
               <Textarea
@@ -299,7 +322,10 @@ export function AnswerEditor({
               <FieldDescription id="answerText-description">
                 3,000 characters max. Line breaks are preserved when published.
               </FieldDescription>
-              <FieldError id="answerText-message" message={fieldErrors.answerText} />
+              <FieldError
+                id="answerText-message"
+                message={fieldErrors.answerText}
+              />
             </Field>
 
             <Field
@@ -325,7 +351,8 @@ export function AnswerEditor({
                     followUpPermissionOverride:
                       event.target.value === ""
                         ? null
-                        : (event.target.value as AnswerFormValues["followUpPermissionOverride"]),
+                        : (event.target
+                            .value as AnswerFormValues["followUpPermissionOverride"]),
                   }));
                 }}
                 value={normalizeFollowUpPermissionOverride(
@@ -333,7 +360,10 @@ export function AnswerEditor({
                 )}
               >
                 <option value="">
-                  Profile default: {getFollowUpPermissionShortLabel(editor.followUpPermissionDefault)}
+                  Profile default:{" "}
+                  {getFollowUpPermissionShortLabel(
+                    editor.followUpPermissionDefault,
+                  )}
                 </option>
                 {followUpPermissionOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -383,7 +413,9 @@ export function AnswerEditor({
               disabled={disabled || isSubmitting}
               form={formId}
               name="intent"
-              pending={isSubmitting && fetcher.formData?.get("intent") === "publish"}
+              pending={
+                isSubmitting && fetcher.formData?.get("intent") === "publish"
+              }
               pendingText="Publishing"
               size="sm"
               type="submit"
@@ -408,10 +440,7 @@ function getInitialValues(
     : editorValues;
 }
 
-function areAnswerValuesEqual(
-  left: AnswerFormValues,
-  right: AnswerFormValues,
-) {
+function areAnswerValuesEqual(left: AnswerFormValues, right: AnswerFormValues) {
   return (
     left.answerText === right.answerText &&
     left.questionTextMode === right.questionTextMode &&
@@ -442,7 +471,9 @@ function QuestionSender({
         {question.identity === "attributed" ? "Attributed" : "Anonymous"}
       </span>
       <span aria-hidden="true">·</span>
-      <time dateTime={question.createdAt}>{formatDate(question.createdAt)}</time>
+      <time dateTime={question.createdAt}>
+        {formatDate(question.createdAt)}
+      </time>
     </div>
   );
 }

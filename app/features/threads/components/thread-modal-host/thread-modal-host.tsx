@@ -1,12 +1,15 @@
+import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "~/components/ui/dialog/dialog";
+import { Button } from "~/components/ui/button/button";
 import { PublicThreadModalContent } from "~/features/threads/components/public-thread";
 import {
   getThreadModalFocusReturnId,
@@ -64,19 +67,28 @@ export function ThreadModalHost({ modal }: ThreadModalHostProps) {
     >
       {modal === undefined ? null : (
         <DialogContent
-          aria-describedby="thread-modal-description"
-          aria-labelledby="thread-modal-title"
-          className="top-0 block h-svh max-h-none w-[calc(100%-1rem)] max-w-3xl translate-y-0 overflow-y-scroll overscroll-contain border-0 bg-transparent p-2 pb-[calc(6rem+env(safe-area-inset-bottom))] shadow-none sm:w-[calc(100%-3rem)] sm:p-6 sm:pb-16"
+          className="max-h-[calc(100svh-2rem)] w-[calc(100vw-1.5rem)] max-w-2xl gap-0 overflow-visible border-0 bg-transparent p-0 shadow-none sm:w-[calc(100vw-4rem)]"
           key={modal.canonicalPath}
-          overlayClassName="bg-background/20 backdrop-blur-[2px]"
+          overlayClassName="bg-background/70 backdrop-blur-[2px]"
         >
-          <DialogTitle className="sr-only" id="thread-modal-title">
-            Public thread
-          </DialogTitle>
-          <DialogDescription className="sr-only" id="thread-modal-description">
+          <DialogTitle className="sr-only">Public thread</DialogTitle>
+          <DialogDescription className="sr-only">
             Published answers and follow-up state for this public thread.
           </DialogDescription>
-          <PublicThreadModalContent page={modal.page} />
+          <DialogClose asChild>
+            <Button
+              aria-label="Close thread"
+              className="absolute right-3 top-3 z-10 size-11 rounded-full bg-card/95 shadow-sm backdrop-blur-sm sm:right-4 sm:top-4"
+              size="icon"
+              type="button"
+              variant="outline"
+            >
+              <X aria-hidden="true" />
+            </Button>
+          </DialogClose>
+          <div className="max-h-[calc(100svh-2rem)] overflow-y-auto overscroll-contain rounded-3xl">
+            <PublicThreadModalContent modal={modal} />
+          </div>
         </DialogContent>
       )}
     </Dialog>

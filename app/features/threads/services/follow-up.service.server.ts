@@ -12,16 +12,12 @@ import {
   threadItems,
   threads,
 } from "~/db/schema";
-import type {
-  CurrentSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CurrentSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   createFollowUpAskedNotification,
   type FollowUpAskedNotification,
 } from "~/features/notifications/services/notification.service.server";
-import type {
-  QuestionIdentityMode
-} from "~/features/profiles/services/ask-permissions.service.server";;
+import type { QuestionIdentityMode } from "~/features/profiles/services/ask-permissions.service.server";
 import {
   ASK_MINIMUM_SUBMIT_MILLISECONDS,
   ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS,
@@ -153,6 +149,7 @@ export type FollowUpSubmissionResult =
       values: FollowUpFormValues;
       fieldErrors: FollowUpFieldErrors;
       formError?: string;
+      retryTimingToken?: string;
     }
   | {
       status: "denied";
@@ -314,9 +311,11 @@ export async function submitThreadFollowUp({
   threadPublicId: string;
   store?: FollowUpStore | undefined;
   rateLimiter?: RateLimitCheck | undefined;
-  safetyDecider?: ((
-    input: PublicQuestionSafetyInput,
-  ) => Promise<QuestionSafetyDecision> | QuestionSafetyDecision) | undefined;
+  safetyDecider?:
+    | ((
+        input: PublicQuestionSafetyInput,
+      ) => Promise<QuestionSafetyDecision> | QuestionSafetyDecision)
+    | undefined;
   createId?: (() => string) | undefined;
   createQuestionPublicId?: (() => string) | undefined;
   createNotificationId?: (() => string) | undefined;
@@ -365,6 +364,12 @@ export async function submitThreadFollowUp({
           timingToken: "This follow-up form expired. Try submitting it again.",
         },
         formError: "Your follow-up was not sent. Please try again.",
+        retryTimingToken: createFollowUpTimingToken({
+          now,
+          profileId: thread.ownerProfileId,
+          threadPublicId: thread.publicId,
+          username: thread.ownerUsername,
+        }),
       };
     }
 
@@ -451,8 +456,7 @@ export async function submitThreadFollowUp({
     notification: createFollowUpAskedNotification({
       id: createNotificationId(),
       recipientUserId: thread.ownerUserId,
-      actorUserId:
-        session.status === "authenticated" ? session.user.id : null,
+      actorUserId: session.status === "authenticated" ? session.user.id : null,
       threadId: thread.id,
       questionId: question.id,
       now,
@@ -620,7 +624,8 @@ export function getFollowUpFlashForResult({
     if (session.status === "anonymous") {
       return {
         ...flash,
-        prompt: "Create an account to get notified if this follow-up is answered.",
+        prompt:
+          "Create an account to get notified if this follow-up is answered.",
       };
     }
 
@@ -767,13 +772,19 @@ export function readFollowUpFlashFromRequest({
     return undefined;
   }
 
-  const unsealed = unsealJsonFromCookie(cookieValue, FOLLOW_UP_FLASH_COOKIE_PURPOSE);
+  const unsealed = unsealJsonFromCookie(
+    cookieValue,
+    FOLLOW_UP_FLASH_COOKIE_PURPOSE,
+  );
 
   if (!isFollowUpFlashCookieValue(unsealed)) {
     return undefined;
   }
 
-  if (unsealed.username !== username || unsealed.threadPublicId !== threadPublicId) {
+  if (
+    unsealed.username !== username ||
+    unsealed.threadPublicId !== threadPublicId
+  ) {
     return undefined;
   }
 
@@ -913,7 +924,10 @@ function getAskerIdentityFields({
     };
   }
 
-  if (identityMode === "account_anonymous" || session.profileStatus === "incomplete") {
+  if (
+    identityMode === "account_anonymous" ||
+    session.profileStatus === "incomplete"
+  ) {
     return {
       askerUserId: session.user.id,
       askerProfileId: null,

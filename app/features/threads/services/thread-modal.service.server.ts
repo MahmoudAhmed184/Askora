@@ -1,10 +1,10 @@
-import type {
-  CurrentSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CurrentSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   loadPublicThreadPage,
-  type PublicThreadPageData
-} from "~/features/threads/queries/public-thread.queries.server";;
+  type PublicThreadLoadResult,
+  type PublicThreadPageData,
+} from "~/features/threads/queries/public-thread.queries.server";
+import { createFollowUpTimingToken } from "~/features/threads/services/follow-up.service.server";
 import {
   createCanonicalThreadPath,
   getThreadModalParams,
@@ -12,11 +12,13 @@ import {
 } from "~/features/threads/thread-modal";
 
 export async function loadThreadModalData({
+  now = new Date(),
   request,
   session,
 }: {
   request: Request;
   session: CurrentSessionSummary;
+  now?: Date | undefined;
 }): Promise<ThreadModalData | undefined> {
   const params = getThreadModalParams(new URL(request.url).searchParams);
 
@@ -24,15 +26,42 @@ export async function loadThreadModalData({
     return undefined;
   }
 
-  const page = await loadModalThreadPage({ params, session });
+  const result = await loadModalThreadResult({ params, session });
+  const canonicalPath = createCanonicalThreadPath(
+    getThreadCanonicalParams(result.page),
+  );
+
+  if (
+    result.page.status === "available" &&
+    result.page.followUp.status === "allowed"
+  ) {
+    if (result.owner === undefined) {
+      throw new Error("Available thread modal is missing its owner.");
+    }
+
+    return {
+      canonicalPath,
+      page: result.page,
+      followUpComposer: {
+        status: "available",
+        timingToken: createFollowUpTimingToken({
+          now,
+          profileId: result.owner.profileId,
+          threadPublicId: result.page.thread.publicId,
+          username: result.owner.username,
+        }),
+      },
+    };
+  }
 
   return {
-    canonicalPath: createCanonicalThreadPath(getThreadCanonicalParams(page)),
-    page,
+    canonicalPath,
+    page: result.page,
+    followUpComposer: { status: "unavailable" },
   };
 }
 
-async function loadModalThreadPage({
+async function loadModalThreadResult({
   params,
   session,
 }: {
@@ -41,7 +70,7 @@ async function loadModalThreadPage({
     username: string;
   };
   session: CurrentSessionSummary;
-}) {
+}): Promise<Extract<PublicThreadLoadResult, { status: "page" }>> {
   const result = await loadPublicThreadPage({
     session,
     threadPublicId: params.threadPublicId,
@@ -49,7 +78,7 @@ async function loadModalThreadPage({
   });
 
   if (result.status !== "redirect") {
-    return result.page;
+    return result;
   }
 
   const canonicalResult = await loadPublicThreadPage({
@@ -65,7 +94,7 @@ async function loadModalThreadPage({
     });
   }
 
-  return canonicalResult.page;
+  return canonicalResult;
 }
 
 function getThreadCanonicalParams(page: PublicThreadPageData) {
