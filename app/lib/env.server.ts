@@ -76,6 +76,8 @@ const baseServerEnvSchema = z.object({
   APP_NAME: z.string().min(1).default("Askora"),
   APP_URL: z.url().default("http://localhost:5173"),
   PUBLIC_BETA_NOINDEX: booleanFromEnvironment,
+  VITE_SUPABASE_URL: optionalUrl,
+  VITE_SUPABASE_PUBLISHABLE_KEY: optionalString,
   DATABASE_URL: optionalUrl,
   DIRECT_DATABASE_URL: optionalUrl,
   CRON_SECRET: optionalSecret,

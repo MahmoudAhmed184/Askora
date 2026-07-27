@@ -1,4 +1,2 @@
 ALTER TYPE "public"."notification_type" ADD VALUE 'follow_up_asked';--> statement-breakpoint
-ALTER TYPE "public"."notification_type" ADD VALUE 'follow_up_answered';--> statement-breakpoint
-CREATE UNIQUE INDEX "notifications_follow_up_asked_unique" ON "notifications" USING btree ("recipient_user_id","type","question_id") WHERE "notifications"."type" = 'follow_up_asked' and "notifications"."question_id" is not null;--> statement-breakpoint
-CREATE UNIQUE INDEX "notifications_follow_up_answered_unique" ON "notifications" USING btree ("recipient_user_id","type","thread_item_id") WHERE "notifications"."type" = 'follow_up_answered' and "notifications"."thread_item_id" is not null;
+ALTER TYPE "public"."notification_type" ADD VALUE 'follow_up_answered';

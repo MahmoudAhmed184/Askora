@@ -27,3 +27,4 @@ CREATE INDEX "admin_actions_action_type_idx" ON "admin_actions" USING btree ("ac
 CREATE INDEX "admin_actions_target_idx" ON "admin_actions" USING btree ("report_target_type","report_target_id");--> statement-breakpoint
 CREATE INDEX "admin_actions_target_user_id_idx" ON "admin_actions" USING btree ("target_user_id");--> statement-breakpoint
 CREATE INDEX "admin_actions_target_profile_id_idx" ON "admin_actions" USING btree ("target_profile_id");
+CREATE UNIQUE INDEX "notifications_profile_followed_unique" ON "notifications" USING btree ("recipient_user_id","type","actor_user_id") WHERE "notifications"."type" = 'profile_followed' and "notifications"."actor_user_id" is not null;--> statement-breakpoint

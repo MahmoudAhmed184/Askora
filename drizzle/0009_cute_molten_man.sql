@@ -1,2 +1,1 @@
-ALTER TYPE "public"."notification_type" ADD VALUE 'profile_followed';--> statement-breakpoint
-CREATE UNIQUE INDEX "notifications_profile_followed_unique" ON "notifications" USING btree ("recipient_user_id","type","actor_user_id") WHERE "notifications"."type" = 'profile_followed' and "notifications"."actor_user_id" is not null;
+ALTER TYPE "public"."notification_type" ADD VALUE 'profile_followed';
