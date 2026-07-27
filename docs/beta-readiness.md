@@ -39,10 +39,21 @@ A failed migration stops the deployment. To run the same step manually:
 DIRECT_DATABASE_URL="postgres://..." npm run db:migrate
 ```
 
-The GitHub Actions workflow validates typechecking, lint, unit/component tests,
-and the production build on pull requests and pushes to `main`. Configure a
-separate Supabase branch for preview deployments so preview migrations cannot
-alter the production database.
+GitHub Actions validates typechecking, lint, unit/component tests, the
+production bundle, and the no-database Playwright smoke suite on pull requests
+and pushes to `main`. The workflows use the same Node 24 runtime as Vercel,
+immutable action commit SHAs, least-privilege tokens, CodeQL, dependency review,
+and weekly Dependabot updates.
+
+Vercel's Git integration owns deployments so GitHub Actions does not need a
+long-lived Vercel token and cannot create a duplicate deployment. A successful
+Vercel production deployment triggers a secretless GitHub Actions smoke check
+for the public page and `/up` database readiness endpoint. Production migrations
+remain part of `npm run deploy:build` and use the Supabase session pooler.
+
+Do not expose production database credentials to pull-request workflows or
+preview deployments. Configure a separate Supabase branch before enabling
+database-backed Vercel previews so preview migrations cannot alter production.
 
 Migration 0016 retires the standalone starter-prompt source. It removes any
 obsolete starter-prompt questions and narrows `question_source` to

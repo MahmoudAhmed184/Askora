@@ -1,0 +1,52 @@
+name: Production deployment smoke
+
+on:
+  deployment_status:
+
+permissions: {}
+
+concurrency:
+  group: production-smoke-${{ github.event.deployment.id }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Verify production
+    if: >-
+      github.event.deployment.environment == 'Production' &&
+      github.event.deployment_status.state == 'success' &&
+      startsWith(github.event.deployment_status.target_url, 'https://')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify public page and database readiness
+        env:
+          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+        run: |
+          set -euo pipefail
+          base_url="${DEPLOYMENT_URL%/}"
+
+          curl \
+            --fail \
+            --location \
+            --max-time 20 \
+            --output /dev/null \
+            --retry 5 \
+            --retry-all-errors \
+            --retry-delay 2 \
+            --show-error \
+            --silent \
+            "$base_url/"
+
+          health_response="$(curl \
+            --fail \
+            --location \
+            --max-time 20 \
+            --retry 5 \
+            --retry-all-errors \
+            --retry-delay 2 \
+            --show-error \
+            --silent \
+            "$base_url/up")"
+
+          test "$health_response" = '{"status":"ok"}'
