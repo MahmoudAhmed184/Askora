@@ -45,7 +45,8 @@ discovery-led.
   "Anonymous".
 - **Answer editor** — choose how the question appears publicly (original,
   edited, or hidden), write the answer, set follow-up permissions, save or
-  publish.
+  publish. The asker remains identifiable in both the editor and later draft
+  cards when the question was attributed.
 - **Thread** — the published question-and-answer conversation, plus follow-ups.
   Available as a popup over the current page and as a full page for direct links
   and no-JavaScript visitors.
@@ -57,7 +58,9 @@ discovery-led.
 
 - The original question text is preserved privately even when the public wording
   is edited or hidden. Edited public wording carries a visible "Edited question"
-  badge so nobody mistakes it for the asker's exact words.
+  badge so nobody mistakes it for the asker's exact words. Hidden questions use
+  a generic blurred placeholder and a "Hidden question" badge; public markup
+  never contains the original text or a fabricated replacement question.
 - Silent edits to a published _answer_ are allowed and are not labelled. The
   edited badge is about question wording only.
 - Owners bypass their own intake gates when asking themselves — accepting

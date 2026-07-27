@@ -337,6 +337,7 @@ Logged-in asking:
 Attribution:
 
 - Attributed answered questions show the asker's display name and username link publicly.
+- Attributed questions retain the asker's linked identity in the private answer editor and draft cards so the owner always knows who they are answering.
 - If the asker later deletes or deactivates their account, attribution is anonymized/unlinked.
 
 Ask-page CTA:
@@ -427,6 +428,7 @@ Publishing:
 - The edited-question input is only offered while Edited mode is selected, and its draft value is preserved when the owner switches modes within the same editor session.
 - Editing question text should keep an internal copy of the original.
 - Hidden question text remains stored internally while the related thread/item exists for context, reports, and audit, but is not exposed publicly.
+- Public hidden-question treatments use a generic blurred placeholder and a visible "Hidden question" badge. Neither the original text nor fabricated question wording is rendered to the client.
 
 Answer management:
 

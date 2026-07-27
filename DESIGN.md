@@ -214,7 +214,9 @@ wording.
 
 The floating pill nav uses Lucide icons and typed destinations. Desktop shows
 icon plus label. Mobile keeps the icons visible, visually hides the labels,
-and preserves each accessible name. Targets are at least 44px on mobile.
+and preserves each accessible name. Targets are at least 44px on mobile. The
+navigation remains mounted across top-level app routes so its active indicator
+moves continuously, including when entering or leaving the profile route.
 
 ### Switches
 
