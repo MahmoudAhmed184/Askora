@@ -15,16 +15,16 @@ jobs:
     if: >-
       github.event.deployment.environment == 'Production' &&
       github.event.deployment_status.state == 'success' &&
-      startsWith(github.event.deployment_status.target_url, 'https://')
+      startsWith(vars.PRODUCTION_URL, 'https://')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify public page and database readiness
         env:
-          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
         run: |
           set -euo pipefail
-          base_url="${DEPLOYMENT_URL%/}"
+          base_url="${PRODUCTION_URL%/}"
 
           curl \
             --fail \
@@ -38,7 +38,7 @@ jobs:
             --silent \
             "$base_url/"
 
-          health_response="$(curl \
+          curl \
             --fail \
             --location \
             --max-time 20 \
@@ -47,6 +47,10 @@ jobs:
             --retry-delay 2 \
             --show-error \
             --silent \
-            "$base_url/up")"
-
-          test "$health_response" = '{"status":"ok"}'
+            "$base_url/up" \
+            | node --input-type=module --eval '
+                const chunks = [];
+                for await (const chunk of process.stdin) chunks.push(chunk);
+                const readiness = JSON.parse(Buffer.concat(chunks).toString());
+                if (readiness.status !== "ok") process.exit(1);
+              '

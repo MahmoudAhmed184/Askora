@@ -48,8 +48,10 @@ and weekly Dependabot updates.
 Vercel's Git integration owns deployments so GitHub Actions does not need a
 long-lived Vercel token and cannot create a duplicate deployment. A successful
 Vercel production deployment triggers a secretless GitHub Actions smoke check
-for the public page and `/up` database readiness endpoint. Production migrations
-remain part of `npm run deploy:build` and use the Supabase session pooler.
+for the public page and `/up` database readiness endpoint. The non-secret
+`PRODUCTION_URL` GitHub repository variable must contain the canonical public
+origin. Production migrations remain part of `npm run deploy:build` and use the
+Supabase session pooler.
 
 Do not expose production database credentials to pull-request workflows or
 preview deployments. Configure a separate Supabase branch before enabling
