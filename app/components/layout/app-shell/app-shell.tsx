@@ -10,16 +10,45 @@ import {
 import { cn } from "~/lib/utils";
 
 interface AppShellProps {
-  shell: AppShellData;
   children: ReactNode;
 }
 
 const SHELL_REFRESH_INTERVAL_MILLISECONDS = 60_000;
 
-export function AppShell({ children, shell }: AppShellProps) {
+export function AppShell({ children }: AppShellProps) {
   const location = useLocation();
   const navigation = useNavigation();
   useRefreshAppShell();
+  const navigationLocation = navigation.location as
+    | { pathname: string }
+    | undefined;
+  const isRouteLoading =
+    navigation.state === "loading" &&
+    navigationLocation?.pathname !== location.pathname;
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <main
+        aria-busy={isRouteLoading || undefined}
+        className={cn(
+          "mx-auto w-full max-w-7xl px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-8 transition-opacity duration-150 sm:px-6 sm:pt-10 lg:px-8",
+          isRouteLoading && "opacity-70",
+        )}
+      >
+        {children}
+      </main>
+    </div>
+  );
+}
+
+export function AppNavigation({ shell }: { shell: AppShellData | undefined }) {
+  const location = useLocation();
+  const navigation = useNavigation();
+
+  if (shell === undefined) {
+    return null;
+  }
+
   const navigationLocation = navigation.location as
     | { pathname: string }
     | undefined;
@@ -40,21 +69,11 @@ export function AppShell({ children, shell }: AppShellProps) {
         profileHref: shell.profileHref,
       })
     : undefined;
-
   const normalizedPendingValue =
     isRouteLoading && pendingValue !== activeValue ? pendingValue : undefined;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main
-        aria-busy={isRouteLoading || undefined}
-        className={cn(
-          "mx-auto w-full max-w-7xl px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-8 transition-opacity duration-150 sm:px-6 sm:pt-10 lg:px-8",
-          isRouteLoading && "opacity-70",
-        )}
-      >
-        {children}
-      </main>
+    <>
       <div
         aria-hidden="true"
         className="app-nav-scrim pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[calc(5.5rem+env(safe-area-inset-bottom))] sm:hidden"
@@ -65,7 +84,7 @@ export function AppShell({ children, shell }: AppShellProps) {
         items={appNavigation}
         pendingValue={normalizedPendingValue}
       />
-    </div>
+    </>
   );
 }
 

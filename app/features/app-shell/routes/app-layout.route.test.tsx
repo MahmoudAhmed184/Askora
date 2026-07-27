@@ -7,7 +7,6 @@ import {
   ErrorBoundary,
   shouldRevalidate,
 } from "~/features/app-shell/routes/app-layout.route";
-import type { AppShellData } from "~/types/app-shell-data";
 
 beforeAll(() => {
   vi.stubGlobal(
@@ -33,10 +32,10 @@ describe("app layout route", () => {
     ).toBe(true);
   });
 
-  it("keeps signed-in navigation around a nested route error", () => {
-    const Boundary = ErrorBoundary as ComponentType<{
+  it("keeps a safe return path around a nested route error", () => {
+    const Boundary = ErrorBoundary as unknown as ComponentType<{
       error: unknown;
-      loaderData: { shell: AppShellData };
+      loaderData: undefined;
     }>;
     const router = createMemoryRouter([
       {
@@ -44,7 +43,7 @@ describe("app layout route", () => {
         element: (
           <Boundary
             error={new Error("private database detail")}
-            loaderData={{ shell }}
+            loaderData={undefined}
           />
         ),
       },
@@ -52,20 +51,12 @@ describe("app layout route", () => {
 
     render(<RouterProvider router={router} />);
 
-    expect(screen.getByRole("heading", { name: "Something went wrong" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Feed" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Return to feed" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Something went wrong" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Return to feed" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("private database detail")).not.toBeInTheDocument();
   });
 });
-
-const shell = {
-  profileHref: "/person",
-  session: {
-    profile: {
-      username: "person",
-      displayName: "Person",
-    },
-  },
-  unreadNotificationCount: 1,
-} satisfies AppShellData;

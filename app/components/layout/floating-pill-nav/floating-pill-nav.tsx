@@ -66,9 +66,10 @@ export function FloatingPillNav({
     <nav
       aria-label={ariaLabel}
       className={cn(
-        "fixed inset-x-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[35rem] items-center justify-between gap-1 rounded-full border border-primary/15 bg-card/90 p-1.5 shadow-[var(--shadow-navbar)] backdrop-blur-md sm:bottom-7 sm:max-w-[42rem]",
+        "fixed inset-x-4 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[35rem] items-center justify-between gap-1 rounded-full border border-primary/15 bg-card/90 p-1.5 shadow-[var(--shadow-navbar)] backdrop-blur-md sm:bottom-7 sm:max-w-[46rem]",
         className,
       )}
+      data-active-value={activeValue}
       data-slot="floating-pill-nav"
       ref={navRef}
     >

@@ -2,6 +2,7 @@ import {
   data,
   redirect,
   type ShouldRevalidateFunctionArgs,
+  useRouteLoaderData,
 } from "react-router";
 
 import { AppShell } from "~/components/layout/app-shell/app-shell";
@@ -10,6 +11,7 @@ import {
   getCurrentSessionSummaryFromContext,
   type CurrentSessionSummary,
 } from "~/features/auth/services/auth.service.server";
+import { appShellRouteHandle } from "~/features/app-shell/app-shell-route";
 import { AskComposer } from "~/features/profiles/components/ask-composer";
 import { PermissionState } from "~/features/profiles/components/permission-state";
 import {
@@ -34,13 +36,13 @@ import {
 } from "~/features/profiles/queries/profile.queries.server";
 import { getPublishedAnswerControlState } from "~/features/answers/services/published-answer-controls.service.server";
 import { findPublicProfileSocialStats } from "~/features/social/services/social-data.service.server";
-import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
 import {
   createPublicNoindexHeaders,
   createRobotsMetaTag,
 } from "~/features/threads/public-thread-meta";
 import { isThreadModalOnlySearchParamChange } from "~/features/threads/thread-modal";
 import { getPublicAppConfig } from "~/lib/config.server";
+import type { loader as rootLoader } from "~/root";
 
 import type { Route } from "./+types/public-profile.route";
 
@@ -67,7 +69,6 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
           status: "unavailable" as const,
           username: resolution.username,
         },
-        shell: await loadShellForSession(session),
       },
       {
         headers: createPublicNoindexHeaders({
@@ -87,7 +88,6 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
           status: "unavailable" as const,
           username: resolution.username,
         },
-        shell: await loadShellForSession(session),
       },
       {
         headers: createPublicNoindexHeaders({
@@ -98,14 +98,10 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
     );
   }
 
-  const completedSession =
-    session.status === "authenticated" && session.profileStatus === "complete"
-      ? session
-      : undefined;
   const answerCursor = decodePublicAnswerCursor(
     new URL(request.url).searchParams.get("answers") ?? undefined,
   );
-  const [answerPage, social, shell] = await Promise.all([
+  const [answerPage, social] = await Promise.all([
     findPublishedAnswerPageForProfile({
       cursor: answerCursor,
       profileId: resolution.profile.id,
@@ -115,9 +111,6 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
       profileId: resolution.profile.id,
       viewerProfileId: getViewerProfileId(session),
     }),
-    completedSession === undefined
-      ? undefined
-      : loadAppShellData({ session: completedSession }),
   ]);
 
   return data(
@@ -137,7 +130,6 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
         session,
         social,
       }),
-      shell,
     },
     { headers },
   );
@@ -150,19 +142,14 @@ function getViewerProfileId(session: CurrentSessionSummary) {
     : undefined;
 }
 
-function loadShellForSession(session: CurrentSessionSummary) {
-  return session.status === "authenticated" &&
-    session.profileStatus === "complete"
-    ? loadAppShellData({ session })
-    : undefined;
-}
-
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return createPublicNoindexHeaders({
     loaderHeaders,
     noindex: getPublicAppConfig().betaNoindex,
   });
 }
+
+export const handle = appShellRouteHandle;
 
 export function meta({ loaderData }: Route.MetaArgs) {
   const appName = loaderData.app.appName;
@@ -226,11 +213,14 @@ export function shouldRevalidate({
 export default function PublicProfileRoute({
   loaderData,
 }: Route.ComponentProps) {
+  const rootData = useRouteLoaderData<typeof rootLoader>("root");
+  const hasAppShell = rootData?.shell !== undefined;
+
   if (loaderData.page.status === "unavailable") {
     const content = <UnavailableProfile username={loaderData.page.username} />;
 
-    if (loaderData.shell !== undefined) {
-      return <AppShell shell={loaderData.shell}>{content}</AppShell>;
+    if (hasAppShell) {
+      return <AppShell>{content}</AppShell>;
     }
 
     return <PublicShell>{content}</PublicShell>;
@@ -250,7 +240,7 @@ export default function PublicProfileRoute({
         </div>
       ) : null}
       <ProfileHeader
-        backFallbackHref={loaderData.shell === undefined ? "/" : "/feed"}
+        backFallbackHref={hasAppShell ? "/feed" : "/"}
         canReport={page.canReport}
         follow={page.follow}
         isOwnerView={isOwnerView}
@@ -286,8 +276,8 @@ export default function PublicProfileRoute({
     </div>
   );
 
-  if (loaderData.shell !== undefined) {
-    return <AppShell shell={loaderData.shell}>{content}</AppShell>;
+  if (hasAppShell) {
+    return <AppShell>{content}</AppShell>;
   }
 
   return <PublicShell>{content}</PublicShell>;

@@ -35,6 +35,9 @@ describe("FloatingPillNav", () => {
       "min-w-11",
       "sm:h-10",
     );
+    expect(
+      screen.getByRole("navigation", { name: "Primary navigation" }),
+    ).toHaveClass("sm:max-w-[46rem]");
   });
 
   it("marks the active item and renders its notification indicator", () => {
@@ -60,6 +63,7 @@ describe("FloatingPillNav", () => {
       );
     }
   });
+
 });
 
 function renderNav() {

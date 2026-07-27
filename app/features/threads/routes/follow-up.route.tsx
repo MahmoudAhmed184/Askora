@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
-import { data, Link, redirect } from "react-router";
+import { data, Link, redirect, useRouteLoaderData } from "react-router";
 
 import type { AppShellData } from "~/types/app-shell-data";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
@@ -8,7 +8,7 @@ import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
 import { Button } from "~/components/ui/button/button";
 import { getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
-import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
+import { appShellRouteHandle } from "~/features/app-shell/app-shell-route";
 import { getAvatarImageSource } from "~/features/profiles/avatar-url";
 import { FollowUpComposer } from "~/features/threads/components/follow-up-composer";
 import { ThreadContextPreview } from "~/features/threads/components/thread-context-preview";
@@ -29,6 +29,7 @@ import {
 import type { PublicThreadFollowUpState } from "~/features/threads/services/thread-permissions.service.server";
 import { getPublicAppConfig } from "~/lib/config.server";
 import { noindexHeaders } from "~/lib/response.server";
+import type { loader as rootLoader } from "~/root";
 
 import type { Route } from "./+types/follow-up.route";
 
@@ -37,10 +38,6 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
   const threadPublicId = params.threadPublicId;
   const session = getCurrentSessionSummaryFromContext(context);
   const headers = new Headers();
-  const shellPromise =
-    session.status === "authenticated" && session.profileStatus === "complete"
-      ? loadAppShellData({ session })
-      : Promise.resolve(undefined);
 
   if (hasFollowUpFlashCookie(request)) {
     headers.append("Set-Cookie", clearFollowUpFlashCookieHeader());
@@ -67,7 +64,6 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
     {
       app: getPublicAppConfig(),
       page: result.page,
-      shell: await shellPromise,
     },
     {
       headers,
@@ -75,6 +71,8 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
     },
   );
 }
+
+export const handle = appShellRouteHandle;
 
 export async function action({ context, params, request }: Route.ActionArgs) {
   const username = params.username;
@@ -173,9 +171,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function FollowUpRoute({ loaderData }: Route.ComponentProps) {
+  const rootData = useRouteLoaderData<typeof rootLoader>("root");
+  const shell = rootData?.shell;
+
   if (loaderData.page.status === "unavailable") {
     return (
-      <FollowUpShell shell={loaderData.shell}>
+      <FollowUpShell shell={shell}>
         <UnavailableFollowUp page={loaderData.page} />
       </FollowUpShell>
     );
@@ -184,7 +185,7 @@ export default function FollowUpRoute({ loaderData }: Route.ComponentProps) {
   const { page } = loaderData;
 
   return (
-    <FollowUpShell shell={loaderData.shell}>
+    <FollowUpShell shell={shell}>
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <header className="flex flex-col gap-4 rounded-3xl border bg-card p-6 shadow-[var(--shadow-card)]">
           <Button asChild className="w-fit" size="sm" variant="outline">
@@ -237,7 +238,7 @@ function FollowUpShell({
   shell: AppShellData | undefined;
 }) {
   if (shell) {
-    return <AppShell shell={shell}>{children}</AppShell>;
+    return <AppShell>{children}</AppShell>;
   }
 
   return <PublicShell>{children}</PublicShell>;

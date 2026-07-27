@@ -1,7 +1,5 @@
 import type { AppShellData } from "~/types/app-shell-data";
-import type {
-  CompletedProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import { getUnreadNotificationCount } from "~/features/notifications/services/notification.service.server";
 
 export async function loadAppShellData({

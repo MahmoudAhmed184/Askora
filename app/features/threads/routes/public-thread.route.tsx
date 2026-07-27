@@ -1,7 +1,7 @@
-import { data, redirect } from "react-router";
+import { data, redirect, useRouteLoaderData } from "react-router";
 
 import { getCurrentSessionSummaryFromContext } from "~/features/auth/services/auth.service.server";
-import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
+import { appShellRouteHandle } from "~/features/app-shell/app-shell-route";
 import { PublicThread } from "~/features/threads/components/public-thread";
 import { loadPublicThreadPage } from "~/features/threads/queries/public-thread.queries.server";
 import {
@@ -10,6 +10,7 @@ import {
 } from "~/features/threads/public-thread-meta";
 import { getPublicAppConfig } from "~/lib/config.server";
 import { noindexHeaders } from "~/lib/response.server";
+import type { loader as rootLoader } from "~/root";
 
 import type { Route } from "./+types/public-thread.route";
 
@@ -17,10 +18,6 @@ export async function loader({ context, params }: Route.LoaderArgs) {
   const username = params.username;
   const threadPublicId = params.threadPublicId;
   const session = getCurrentSessionSummaryFromContext(context);
-  const shellPromise =
-    session.status === "authenticated" && session.profileStatus === "complete"
-      ? loadAppShellData({ session })
-      : Promise.resolve(undefined);
   const result = await loadPublicThreadPage({
     session,
     threadPublicId,
@@ -45,11 +42,12 @@ export async function loader({ context, params }: Route.LoaderArgs) {
     {
       app: getPublicAppConfig(),
       page: result.page,
-      shell: await shellPromise,
     },
     responseInit,
   );
 }
+
+export const handle = appShellRouteHandle;
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return createPublicThreadHeaders({
@@ -66,11 +64,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function PublicThreadRoute({ loaderData }: Route.ComponentProps) {
+  const rootData = useRouteLoaderData<typeof rootLoader>("root");
+
   return (
     <PublicThread
       betaNoindex={loaderData.app.betaNoindex}
       page={loaderData.page}
-      shell={loaderData.shell}
+      shell={rootData?.shell}
     />
   );
 }

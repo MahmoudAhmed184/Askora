@@ -42,7 +42,10 @@ vi.mock("react-router", async () => {
   };
 });
 
-import { AppShell } from "~/components/layout/app-shell/app-shell";
+import {
+  AppNavigation,
+  AppShell,
+} from "~/components/layout/app-shell/app-shell";
 
 describe("AppShell navigation", () => {
   afterEach(() => {
@@ -55,9 +58,12 @@ describe("AppShell navigation", () => {
     routerState.navigationPathname = "/notifications";
 
     render(
-      <AppShell shell={shellData}>
-        <div>Page</div>
-      </AppShell>,
+      <>
+        <AppShell>
+          <div>Page</div>
+        </AppShell>
+        <AppNavigation shell={shellData} />
+      </>,
     );
 
     expect(screen.getByRole("link", { name: "Feed" })).toHaveAttribute(
@@ -87,7 +93,7 @@ describe("AppShell navigation", () => {
     routerState.navigationPathname = undefined;
 
     render(
-      <AppShell shell={shellData}>
+      <AppShell>
         <div>Page</div>
       </AppShell>,
     );

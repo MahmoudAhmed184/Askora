@@ -3,6 +3,7 @@ import {
   Link,
   Outlet,
   type ShouldRevalidateFunctionArgs,
+  useRouteLoaderData,
 } from "react-router";
 
 import { AppShell } from "~/components/layout/app-shell/app-shell";
@@ -10,11 +11,12 @@ import {
   requireCompletedProfileSessionAllowingInactiveFromContext,
   requireCompletedProfileSessionFromContext,
 } from "~/features/auth/services/auth.service.server";
-import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
+import { appShellRouteHandle } from "~/features/app-shell/app-shell-route";
+import type { loader as rootLoader } from "~/root";
 
 import type { Route } from "./+types/app-layout.route";
 
-export async function loader({ context, request }: Route.LoaderArgs) {
+export function loader({ context, request }: Route.LoaderArgs) {
   const session = isAccountSettingsPath(request.url)
     ? requireCompletedProfileSessionAllowingInactiveFromContext(context)
     : requireCompletedProfileSessionFromContext(context);
@@ -23,10 +25,10 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     return session;
   }
 
-  return {
-    shell: await loadAppShellData({ session }),
-  };
+  return null;
 }
+
+export const handle = appShellRouteHandle;
 
 function isAccountSettingsPath(url: string) {
   return new URL(url).pathname === "/settings/account";
@@ -38,20 +40,18 @@ export function shouldRevalidate({
   return defaultShouldRevalidate;
 }
 
-export default function AppLayoutRoute({
-  loaderData,
-}: Route.ComponentProps) {
+export default function AppLayoutRoute() {
+  const shell = useRootShell();
+
   return (
-    <AppShell shell={loaderData.shell}>
-      <Outlet context={loaderData.shell} />
+    <AppShell>
+      <Outlet context={shell} />
     </AppShell>
   );
 }
 
-export function ErrorBoundary({
-  error,
-  loaderData,
-}: Route.ErrorBoundaryProps) {
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const rootData = useRouteLoaderData<typeof rootLoader>("root");
   const title = isRouteErrorResponse(error)
     ? `${String(error.status)} ${error.statusText}`
     : "Something went wrong";
@@ -80,11 +80,21 @@ export function ErrorBoundary({
     </section>
   );
 
-  return loaderData === undefined ? (
+  return rootData?.shell === undefined ? (
     <main className="mx-auto flex min-h-screen w-full items-center px-5 py-12">
       {content}
     </main>
   ) : (
-    <AppShell shell={loaderData.shell}>{content}</AppShell>
+    <AppShell>{content}</AppShell>
   );
+}
+
+function useRootShell() {
+  const rootData = useRouteLoaderData<typeof rootLoader>("root");
+
+  if (rootData?.shell === undefined) {
+    throw new Error("Authenticated app routes require app shell data.");
+  }
+
+  return rootData.shell;
 }

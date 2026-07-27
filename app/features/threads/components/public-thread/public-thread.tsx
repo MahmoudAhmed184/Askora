@@ -41,7 +41,7 @@ export function PublicThread({ betaNoindex, page, shell }: PublicThreadProps) {
   );
 
   if (shell !== undefined) {
-    return <AppShell shell={shell}>{content}</AppShell>;
+    return <AppShell>{content}</AppShell>;
   }
 
   return <PublicShell>{content}</PublicShell>;

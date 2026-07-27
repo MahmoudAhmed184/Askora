@@ -8,6 +8,7 @@ import {
   Scripts,
   ScrollRestoration,
   type ShouldRevalidateFunctionArgs,
+  useMatches,
   useRouteError,
 } from "react-router";
 
@@ -15,8 +16,11 @@ import type { Route } from "./+types/root";
 import "./app.css";
 
 import { BrandLogo } from "~/components/shared/brand-logo/brand-logo";
+import { AppNavigation } from "~/components/layout/app-shell/app-shell";
 import { ThemeWatcher } from "~/components/shared/theme-watcher/theme-watcher";
 import { Toaster } from "~/components/ui/sonner/sonner";
+import { usesAppShell } from "~/features/app-shell/app-shell-route";
+import { loadAppShellData } from "~/features/app-shell/services/app-shell.service.server";
 import { AnswerEditorModalHost } from "~/features/answers/components/answer-editor-modal-host";
 import { loadAnswerModalData } from "~/features/answers/services/answer-modal.service.server";
 import {
@@ -39,6 +43,7 @@ import {
 import { getThreadModalParams } from "~/features/threads/thread-modal";
 import { getPublicAppConfig } from "~/lib/config.server";
 import type { PublicAppConfig } from "~/lib/config.types";
+import type { AppShellData } from "~/types/app-shell-data";
 import {
   createDocumentHeaders,
   mergeNoindexHeaders,
@@ -46,6 +51,7 @@ import {
 
 export interface RootLoaderData {
   app: PublicAppConfig;
+  shell: AppShellData | undefined;
   session: PublicSessionSummary;
   threadModal: ThreadModalData | undefined;
   answerModal: Awaited<ReturnType<typeof loadAnswerModalData>>;
@@ -66,18 +72,24 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
   const answerParams = getAnswerModalParams(searchParams);
   const threadParams = getThreadModalParams(searchParams);
+  const [shell, threadModal, answerModal] = await Promise.all([
+    session.status === "authenticated" && session.profileStatus === "complete"
+      ? loadAppShellData({ session })
+      : Promise.resolve(undefined),
+    answerParams === undefined && threadParams !== undefined
+      ? loadThreadModalData({ request, session })
+      : Promise.resolve(undefined),
+    threadParams === undefined && answerParams !== undefined
+      ? loadAnswerModalData({ request, session })
+      : Promise.resolve(undefined),
+  ]);
 
   const loaderData: RootLoaderData = {
     app: getPublicAppConfig(),
+    shell,
     session: toPublicSessionSummary(session),
-    threadModal:
-      answerParams === undefined && threadParams !== undefined
-        ? await loadThreadModalData({ request, session })
-        : undefined,
-    answerModal:
-      threadParams === undefined && answerParams !== undefined
-        ? await loadAnswerModalData({ request, session })
-        : undefined,
+    threadModal,
+    answerModal,
   };
 
   return data(loaderData, {
@@ -157,9 +169,15 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {
+  const matches = useMatches();
+  const shell = matches.some((match) => usesAppShell(match.handle))
+    ? loaderData.shell
+    : undefined;
+
   return (
     <>
       <Outlet />
+      <AppNavigation shell={shell} />
       <ThreadModalHost modal={loaderData.threadModal} />
       <AnswerEditorModalHost modal={loaderData.answerModal} />
       <ThemeWatcher />
