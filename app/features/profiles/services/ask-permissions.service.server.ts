@@ -1,7 +1,7 @@
 import type {
   CurrentSessionSummary,
-  PublicSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+  PublicSessionSummary,
+} from "~/features/auth/services/auth.service.server";
 import type { PublicQuestionIdentity } from "~/features/profiles/validations/profile.validations";
 
 export type QuestionIdentityMode =
@@ -26,6 +26,12 @@ export interface AskPermissionTarget {
   anonymousQuestionsEnabled: boolean;
   askPermission: AskPermission;
   isFollowedByActor?: boolean;
+  /**
+   * True when the actor owns this profile. Owners bypass intake gates
+   * (accepting questions, ask permission, follower requirements) so they can
+   * ask themselves, but safety gates still apply.
+   */
+  isOwnedByActor?: boolean;
 }
 
 export type AskPermissionDecision =
@@ -37,10 +43,12 @@ export type AskPermissionDecision =
       status: "denied";
       reason: AskPermissionDeniedReason;
       message: string;
-      action?: {
-        label: string;
-        href: string;
-      } | undefined;
+      action?:
+        | {
+            label: string;
+            href: string;
+          }
+        | undefined;
     };
 
 export interface PublicAskStateAllowed {
@@ -49,6 +57,8 @@ export interface PublicAskStateAllowed {
   anonymousAllowed: boolean;
   attributedAllowed: boolean;
   description: string;
+  /** True when the viewer is asking their own profile. */
+  isSelfAsk: boolean;
 }
 
 export type PublicAskState =
@@ -57,10 +67,12 @@ export type PublicAskState =
       status: "denied";
       reason: AskPermissionDeniedReason;
       message: string;
-      action?: {
-        label: string;
-        href: string;
-      } | undefined;
+      action?:
+        | {
+            label: string;
+            href: string;
+          }
+        | undefined;
     };
 
 export function evaluateAskPermission({
@@ -72,10 +84,20 @@ export function evaluateAskPermission({
   identity: PublicQuestionIdentity;
   target: AskPermissionTarget;
 }): AskPermissionDecision {
-  const baseDenial = getBaseAskDenial({ actor, target });
+  const safetyDenial = getAskSafetyDenial({ actor, target });
 
-  if (baseDenial !== undefined) {
-    return baseDenial;
+  if (safetyDenial !== undefined) {
+    return safetyDenial;
+  }
+
+  if (isSelfAsk({ actor, target })) {
+    return evaluateSelfAskPermission({ identity, target });
+  }
+
+  const intakeDenial = getAskIntakeDenial({ target });
+
+  if (intakeDenial !== undefined) {
+    return intakeDenial;
   }
 
   if (target.askPermission === "followers") {
@@ -86,7 +108,10 @@ export function evaluateAskPermission({
     return evaluateGuestAskPermission({ identity, target });
   }
 
-  if (target.askPermission === "logged_in" || target.askPermission === "everyone") {
+  if (
+    target.askPermission === "logged_in" ||
+    target.askPermission === "everyone"
+  ) {
     return evaluateAuthenticatedAskPermission({ actor, identity, target });
   }
 
@@ -170,20 +195,31 @@ export function getPublicAskState({
     };
   }
 
+  const selfAsk = isSelfAsk({ actor, target });
+
   return {
     status: "allowed",
-    defaultIdentity: anonymousAllowed ? "anonymous" : "attributed",
+    defaultIdentity: selfAsk
+      ? "attributed"
+      : anonymousAllowed
+        ? "anonymous"
+        : "attributed",
     anonymousAllowed,
     attributedAllowed,
     description: getAllowedAskDescription({
       anonymousAllowed,
       attributedAllowed,
       actor,
+      isSelfAsk: selfAsk,
     }),
+    isSelfAsk: selfAsk,
   };
 }
 
-function getBaseAskDenial({
+/**
+ * Safety gates apply to every asker, including the profile owner.
+ */
+function getAskSafetyDenial({
   actor,
   target,
 }: {
@@ -206,6 +242,17 @@ function getBaseAskDenial({
     };
   }
 
+  return undefined;
+}
+
+/**
+ * Intake gates are owner-configured and are bypassed for owner self-asks.
+ */
+function getAskIntakeDenial({
+  target,
+}: {
+  target: AskPermissionTarget;
+}): AskPermissionDecision | undefined {
   if (!target.acceptingQuestions) {
     return {
       status: "denied",
@@ -219,6 +266,37 @@ function getBaseAskDenial({
   }
 
   return undefined;
+}
+
+function isSelfAsk({
+  actor,
+  target,
+}: {
+  actor: CurrentSessionSummary | PublicSessionSummary;
+  target: AskPermissionTarget;
+}) {
+  return (
+    target.isOwnedByActor === true &&
+    actor.status === "authenticated" &&
+    actor.profileStatus === "complete"
+  );
+}
+
+function evaluateSelfAskPermission({
+  identity,
+  target,
+}: {
+  identity: PublicQuestionIdentity;
+  target: AskPermissionTarget;
+}): AskPermissionDecision {
+  if (identity === "anonymous") {
+    return evaluateAuthenticatedAnonymousPermission({ target });
+  }
+
+  return {
+    status: "allowed",
+    identityMode: "account_attributed",
+  };
 }
 
 function evaluateGuestAskPermission({
@@ -275,7 +353,10 @@ function evaluateAuthenticatedAskPermission({
   identity,
   target,
 }: {
-  actor: Exclude<CurrentSessionSummary | PublicSessionSummary, { status: "anonymous" }>;
+  actor: Exclude<
+    CurrentSessionSummary | PublicSessionSummary,
+    { status: "anonymous" }
+  >;
   identity: PublicQuestionIdentity;
   target: AskPermissionTarget;
 }): AskPermissionDecision {
@@ -340,11 +421,17 @@ function getAllowedAskDescription({
   anonymousAllowed,
   attributedAllowed,
   actor,
+  isSelfAsk: selfAsk,
 }: {
   anonymousAllowed: boolean;
   attributedAllowed: boolean;
   actor: CurrentSessionSummary | PublicSessionSummary;
+  isSelfAsk: boolean;
 }) {
+  if (selfAsk) {
+    return "Questions you ask yourself land in your own inbox, where you can draft and publish an answer like any other.";
+  }
+
   if (anonymousAllowed && attributedAllowed) {
     return "Choose whether to ask anonymously or with your profile attached.";
   }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
 import { getAvatarImageSource } from "~/features/profiles/avatar-url";
+import { ProfileBackLink } from "~/features/profiles/components/profile-back-link";
 import type { PublicProfileView } from "~/features/profiles/types/profiles.types";
 import { FollowButton } from "~/features/social/components/follow-button";
 import type { FollowControlState } from "~/features/social/types/social.types";
@@ -15,9 +16,11 @@ interface ProfileHeaderProps {
   canReport?: boolean | undefined;
   follow?: FollowControlState | undefined;
   isOwnerView?: boolean | undefined;
+  backFallbackHref?: string | undefined;
 }
 
 export function ProfileHeader({
+  backFallbackHref,
   follow,
   canReport = false,
   isOwnerView = false,
@@ -25,15 +28,20 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
   return (
     <section className="overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong">
-      {/* Banner — purple gradient with grid overlay */}
-      <div
-        aria-hidden="true"
-        className="relative h-40 overflow-hidden bg-[image:var(--gradient-brand)] sm:h-52"
-      >
-        <div className="absolute inset-0 opacity-15 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px),linear-gradient(to_bottom,var(--primary)_1px,transparent_1px)] [background-size:20px_20px]" />
+      <div className="relative">
+        <div
+          aria-hidden="true"
+          className="h-40 overflow-hidden bg-[image:var(--gradient-brand)] sm:h-52"
+        >
+          <div className="absolute inset-0 opacity-15 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px),linear-gradient(to_bottom,var(--primary)_1px,transparent_1px)] [background-size:20px_20px]" />
+        </div>
+        {isOwnerView || backFallbackHref === undefined ? null : (
+          <div className="absolute left-3 top-3 sm:left-4 sm:top-4">
+            <ProfileBackLink fallbackHref={backFallbackHref} />
+          </div>
+        )}
       </div>
 
-      {/* Identity + actions row */}
       <div className="flex flex-col gap-6 px-6 pb-6 pt-0 sm:px-8 sm:pb-8 sm:pt-0">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end">
@@ -71,7 +79,6 @@ export function ProfileHeader({
           </div>
         </div>
 
-        {/* Stats row — editorial treatment */}
         <ProfileCounts profile={profile} />
       </div>
     </section>

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  CurrentSessionSummary,
-} from "~/features/auth/services/auth.service.server";
+import type { CurrentSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   evaluateAskPermission,
   getPublicAskState,
@@ -157,6 +155,96 @@ describe("evaluateAskPermission", () => {
         target: createTarget(),
       }),
     ).toMatchObject({ status: "denied", reason: "suspended" });
+  });
+});
+
+describe("owner self-questions", () => {
+  const selfTarget = (overrides: Partial<AskPermissionTarget> = {}) =>
+    createTarget({ isOwnedByActor: true, ...overrides });
+
+  it("bypasses accepting questions, ask permission, and follower gates", () => {
+    for (const target of [
+      selfTarget({ acceptingQuestions: false }),
+      selfTarget({ askPermission: "off" }),
+      selfTarget({ askPermission: "followers", isFollowedByActor: false }),
+      selfTarget({ askPermission: "logged_in" }),
+    ]) {
+      expect(
+        evaluateAskPermission({
+          actor: completedSession,
+          identity: "attributed",
+          target,
+        }),
+      ).toEqual({ status: "allowed", identityMode: "account_attributed" });
+    }
+  });
+
+  it("still requires anonymous questions to be enabled for anonymous self-asks", () => {
+    expect(
+      evaluateAskPermission({
+        actor: completedSession,
+        identity: "anonymous",
+        target: selfTarget(),
+      }),
+    ).toEqual({ status: "allowed", identityMode: "account_anonymous" });
+
+    expect(
+      evaluateAskPermission({
+        actor: completedSession,
+        identity: "anonymous",
+        target: selfTarget({ anonymousQuestionsEnabled: false }),
+      }),
+    ).toMatchObject({ status: "denied", reason: "anonymous_disabled" });
+  });
+
+  it("still enforces suspension and inactive-profile restrictions", () => {
+    expect(
+      evaluateAskPermission({
+        actor: { ...completedSession, suspensionStatus: "active" },
+        identity: "attributed",
+        target: selfTarget({ askPermission: "off" }),
+      }),
+    ).toMatchObject({ status: "denied", reason: "suspended" });
+
+    expect(
+      evaluateAskPermission({
+        actor: completedSession,
+        identity: "attributed",
+        target: selfTarget({ isActive: false }),
+      }),
+    ).toMatchObject({ status: "denied", reason: "profile_inactive" });
+  });
+
+  it("does not treat incomplete-profile actors as owners", () => {
+    expect(
+      evaluateAskPermission({
+        actor: incompleteSession,
+        identity: "attributed",
+        target: selfTarget({ acceptingQuestions: false }),
+      }),
+    ).toMatchObject({ status: "denied", reason: "questions_closed" });
+  });
+
+  it("marks the ask state as a self ask and defaults to attributed", () => {
+    expect(
+      getPublicAskState({
+        actor: completedSession,
+        target: selfTarget({ acceptingQuestions: false, askPermission: "off" }),
+      }),
+    ).toMatchObject({
+      status: "allowed",
+      isSelfAsk: true,
+      defaultIdentity: "attributed",
+      anonymousAllowed: true,
+      attributedAllowed: true,
+    });
+
+    expect(
+      getPublicAskState({
+        actor: completedSession,
+        target: createTarget(),
+      }),
+    ).toMatchObject({ status: "allowed", isSelfAsk: false });
   });
 });
 

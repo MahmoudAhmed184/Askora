@@ -40,7 +40,7 @@ describe("InboxList", () => {
   it("shows inbox actions without restore", async () => {
     renderInboxList();
 
-    expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /drop/i })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /question actions/i }),
     ).toBeInTheDocument();
@@ -48,7 +48,9 @@ describe("InboxList", () => {
       "href",
       "/answer/qst_1",
     );
-    expect(screen.queryByRole("button", { name: /report/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /report/i }),
+    ).not.toBeInTheDocument();
     openActionsMenu();
     expect(
       await screen.findByRole("menuitem", { name: /report/i }),
@@ -57,6 +59,9 @@ describe("InboxList", () => {
       screen.getByRole("menuitem", { name: /block sender/i }),
     ).toBeInTheDocument();
     expect(
+      screen.queryByRole("menuitem", { name: /drop/i }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByRole("button", { name: /restore/i }),
     ).not.toBeInTheDocument();
   });
@@ -64,7 +69,9 @@ describe("InboxList", () => {
   it("shows filtered restore and report-plus-block default", async () => {
     renderInboxList({ folder: "filtered" });
 
-    expect(screen.getByRole("button", { name: /restore/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /restore/i }),
+    ).toBeInTheDocument();
 
     openActionsMenu();
     fireEvent.click(await screen.findByRole("menuitem", { name: /report/i }));
@@ -89,7 +96,11 @@ function renderInboxList({
       {
         path: "/",
         element: (
-          <InboxList disabled={disabled} folder={folder} questions={questions} />
+          <InboxList
+            disabled={disabled}
+            folder={folder}
+            questions={questions}
+          />
         ),
       },
     ],

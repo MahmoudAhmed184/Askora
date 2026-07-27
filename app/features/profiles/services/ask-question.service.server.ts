@@ -3,9 +3,7 @@ import { and, eq, or, type SQL } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { blocks, mutedPhrases, questions } from "~/db/schema";
-import type {
-  CurrentSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CurrentSessionSummary } from "~/features/auth/services/auth.service.server";
 import { normalizeMutedPhrase } from "~/features/moderation/validations/moderation.validations";
 import {
   evaluateAskPermission,
@@ -23,6 +21,7 @@ import {
 import {
   resolvePublicProfile,
   createDrizzlePublicProfileStore,
+  isProfileOwnedBySession,
   type PublicProfile,
   type PublicProfileStore,
 } from "~/features/profiles/queries/profile.queries.server";
@@ -141,9 +140,11 @@ export async function submitPublicQuestion({
   profileStore?: PublicProfileStore | undefined;
   store?: PublicQuestionStore | undefined;
   rateLimiter?: RateLimitCheck | undefined;
-  safetyDecider?: ((
-    input: PublicQuestionSafetyInput,
-  ) => Promise<QuestionSafetyDecision> | QuestionSafetyDecision) | undefined;
+  safetyDecider?:
+    | ((
+        input: PublicQuestionSafetyInput,
+      ) => Promise<QuestionSafetyDecision> | QuestionSafetyDecision)
+    | undefined;
   createId?: (() => string) | undefined;
   createQuestionPublicId?: (() => string) | undefined;
   now?: Date | undefined;
@@ -163,7 +164,8 @@ export async function submitPublicQuestion({
     };
   }
 
-  const resolvedProfileStore = profileStore ?? createDrizzlePublicProfileStore();
+  const resolvedProfileStore =
+    profileStore ?? createDrizzlePublicProfileStore();
   const resolution = await resolvePublicProfile({
     username,
     store: resolvedProfileStore,
@@ -310,9 +312,11 @@ async function getAskPermissionTarget({
     ...profile,
     acceptingQuestions:
       profile.acceptingQuestions && profile.suspensionStatus !== "active",
+    isOwnedByActor: isProfileOwnedBySession({ profile, session }),
   };
 
   if (
+    availableProfile.isOwnedByActor ||
     profile.askPermission !== "followers" ||
     session.status !== "authenticated" ||
     session.profileStatus !== "complete"
@@ -596,7 +600,10 @@ function getAskerIdentityFields({
     };
   }
 
-  if (identityMode === "account_anonymous" || session.profileStatus === "incomplete") {
+  if (
+    identityMode === "account_anonymous" ||
+    session.profileStatus === "incomplete"
+  ) {
     return {
       askerUserId: session.user.id,
       askerProfileId: null,

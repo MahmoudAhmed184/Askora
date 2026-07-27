@@ -4,6 +4,10 @@ import { Link, useFetcher, useLocation } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import {
+  AnonymousAvatar,
+  ProfileIdentityLink,
+} from "~/components/shared/profile-identity/profile-identity";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -47,7 +51,10 @@ export function QuestionCard({ question, disabled }: QuestionCardProps) {
   );
 }
 
-export function FilteredQuestionCard({ question, disabled }: QuestionCardProps) {
+export function FilteredQuestionCard({
+  question,
+  disabled,
+}: QuestionCardProps) {
   return (
     <QuestionCardFrame
       disabled={disabled}
@@ -72,31 +79,24 @@ function QuestionCardFrame({
   });
 
   return (
-    <article className="flex flex-col gap-6 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong sm:p-8">
-      <header className="flex items-start justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
-          <span className="rounded-full border bg-secondary px-3 py-1 font-semibold text-foreground">
-            {question.identity === "attributed" ? "Attributed" : "Anonymous"}
-          </span>
-          <time dateTime={question.createdAt}>
-            {formatQuestionCreatedAt(question.createdAt)}
-          </time>
-        </div>
+    <article className="flex flex-col gap-5 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong sm:p-7">
+      <header className="flex items-start justify-between gap-3">
+        <QuestionSenderIdentity question={question} />
         <QuestionModerationControls
           disabled={disabled || isPending}
           questionPublicId={question.publicId}
         />
       </header>
 
-      <p className="whitespace-pre-wrap break-words font-serif text-2xl font-bold italic leading-tight text-foreground">
+      <p className="whitespace-pre-wrap break-words font-serif text-2xl font-bold italic leading-snug text-foreground">
         {question.text}
       </p>
 
       <ActionResultToast result={result} />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 border-t border-dashed pt-5 sm:grid-cols-2">
         {!restoreAction && !disabled && !isPending ? (
-          <Button asChild className="w-full" size="sm">
+          <Button asChild className="w-full" size="lg">
             <Link
               defaultShouldRevalidate={false}
               id={answerHref.focusReturnId}
@@ -109,7 +109,7 @@ function QuestionCardFrame({
             </Link>
           </Button>
         ) : !restoreAction ? (
-          <Button className="w-full" disabled size="sm">
+          <Button className="w-full" disabled size="lg">
             <PencilLine data-icon="inline-start" />
             Answer question
           </Button>
@@ -137,6 +137,36 @@ function QuestionCardFrame({
   );
 }
 
+function QuestionSenderIdentity({ question }: { question: InboxQuestionView }) {
+  const timestamp = (
+    <>
+      <span aria-hidden="true">·</span>
+      <time dateTime={question.createdAt}>
+        {formatQuestionCreatedAt(question.createdAt)}
+      </time>
+    </>
+  );
+
+  if (question.sender === undefined) {
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <AnonymousAvatar />
+        <div className="flex min-w-0 flex-col">
+          <span className="font-semibold leading-tight text-foreground">
+            Anonymous
+          </span>
+          <div className="flex flex-wrap items-center gap-x-2 font-mono text-xs text-muted-foreground">
+            <span>Sender hidden</span>
+            {timestamp}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return <ProfileIdentityLink meta={timestamp} profile={question.sender} />;
+}
+
 function DeleteQuestionAction({
   disabled,
   fetcher,
@@ -152,12 +182,11 @@ function DeleteQuestionAction({
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button
-          aria-label="Delete question"
           className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
           disabled={disabled}
-          size="sm"
+          size="lg"
           type="button"
-          variant="ghost"
+          variant="outline"
         >
           <Trash2 data-icon="inline-start" />
           {label}
@@ -173,33 +202,27 @@ function DeleteQuestionAction({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className={buttonVariants({ variant: "destructive" })}
-            onClick={() => {
-              submitDeleteQuestion({ fetcher, questionPublicId });
-            }}
-          >
-            {label}
-          </AlertDialogAction>
+          <fetcher.Form method="post">
+            <input name="intent" type="hidden" value="delete" />
+            <input
+              name="questionPublicId"
+              type="hidden"
+              value={questionPublicId}
+            />
+            <AlertDialogAction
+              asChild
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              <Button disabled={disabled} type="submit" variant="destructive">
+                <Trash2 data-icon="inline-start" />
+                {label}
+              </Button>
+            </AlertDialogAction>
+          </fetcher.Form>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-
-function submitDeleteQuestion({
-  fetcher,
-  questionPublicId,
-}: {
-  fetcher: InboxFetcher;
-  questionPublicId: string;
-}) {
-  const formData = new FormData();
-
-  formData.set("intent", "delete");
-  formData.set("questionPublicId", questionPublicId);
-
-  void fetcher.submit(formData, { method: "post" });
 }
 
 function InlineActionForm({
@@ -224,7 +247,7 @@ function InlineActionForm({
       <Button
         className="w-full"
         disabled={disabled}
-        size="sm"
+        size="lg"
         type="submit"
         variant="default"
       >

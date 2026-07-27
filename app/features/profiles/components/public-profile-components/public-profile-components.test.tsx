@@ -3,26 +3,15 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 
-import {
-  AskComposer,
-  AskComposerPreview,
-} from "~/features/profiles/components/ask-composer";
+import { AskComposer } from "~/features/profiles/components/ask-composer";
 import { PermissionState } from "~/features/profiles/components/permission-state";
 import { ProfileSideRail } from "~/features/profiles/components/profile-side-rail";
 import { PublicAnswerList } from "~/features/profiles/components/public-answer-list";
 import { UnavailableProfile } from "~/features/profiles/components/unavailable-profile";
-import type {
-  PublicPublishedAnswer
-} from "~/features/answers/services/answer.service.server";;
-import type {
-  PublicAskStateAllowed
-} from "~/features/profiles/services/ask-permissions.service.server";;
-import type {
-  PublicAskFlash
-} from "~/features/profiles/services/ask-friction.service.server";;
-import type {
-  PublicProfileView
-} from "~/features/profiles/queries/profile.queries.server";;
+import type { PublicPublishedAnswer } from "~/features/answers/services/answer.service.server";
+import type { PublicAskStateAllowed } from "~/features/profiles/services/ask-permissions.service.server";
+import type { PublicAskFlash } from "~/features/profiles/services/ask-friction.service.server";
+import type { PublicProfileView } from "~/features/profiles/queries/profile.queries.server";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -45,7 +34,8 @@ describe("public profile components", () => {
         flash={{
           status: "success",
           message: "Question sent.",
-          prompt: "Create an account to get notified if a question is answered.",
+          prompt:
+            "Create an account to get notified if a question is answered.",
         }}
         profile={profile}
         timingToken="token"
@@ -54,7 +44,8 @@ describe("public profile components", () => {
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("Question sent.", {
-        description: "Create an account to get notified if a question is answered.",
+        description:
+          "Create an account to get notified if a question is answered.",
         id: "action-toast:success:Question sent.:Create an account to get notified if a question is answered.",
       });
     });
@@ -65,16 +56,18 @@ describe("public profile components", () => {
     renderWithRouter(
       <AskComposer
         ask={allowedAsk}
-        flash={{
-          status: "error",
-          values: {
-            question: "x".repeat(501),
-            identityMode: "anonymous",
-          },
-          fieldErrors: {
-            question: "Questions must be 500 characters or fewer.",
-          },
-        } satisfies PublicAskFlash}
+        flash={
+          {
+            status: "error",
+            values: {
+              question: "x".repeat(501),
+              identityMode: "anonymous",
+            },
+            fieldErrors: {
+              question: "Questions must be 500 characters or fewer.",
+            },
+          } satisfies PublicAskFlash
+        }
         profile={profile}
         timingToken="token"
       />,
@@ -109,27 +102,6 @@ describe("public profile components", () => {
     );
   });
 
-  it("renders owner ask preview without a submitting form", () => {
-    const { container } = renderWithRouter(
-      <AskComposerPreview ask={allowedAsk} profile={profile} />,
-    );
-
-    expect(
-      screen.getByRole("region", { name: "Public ask preview" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Public preview")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Question preview" })).toHaveAttribute(
-      "readonly",
-    );
-    expect(
-      screen.getByRole("button", {
-        name: "Use prompt: What changed your mind recently?",
-      }),
-    ).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Send question" })).toBeDisabled();
-    expect(container.querySelector("form")).toBeNull();
-  });
-
   it("shows permission and unavailable states", () => {
     renderWithRouter(
       <>
@@ -144,7 +116,7 @@ describe("public profile components", () => {
             },
           }}
         />
-        <PublicAnswerList answers={[]} profileUsername="person" />
+        <PublicAnswerList answers={[]} profile={answerListProfile} />
       </>,
     );
 
@@ -170,7 +142,7 @@ describe("public profile components", () => {
             questionText: "How do I start?",
           }),
         ]}
-        profileUsername="person"
+        profile={answerListProfile}
       />,
     );
 
@@ -191,7 +163,9 @@ describe("public profile components", () => {
       "?threadUsername=person&threadPublicId=thr_1",
     );
     expect(router.state.location.mask?.pathname).toBe("/person/a/thr_1");
-    expect(screen.queryByRole("link", { name: "View thread" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "View thread" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /like answer \(0\)/i }),
     ).toBeDisabled();
@@ -203,7 +177,7 @@ describe("public profile components", () => {
       <PublicAnswerList
         answers={[createPublishedAnswer()]}
         nextCursor="opaque-cursor"
-        profileUsername="person"
+        profile={answerListProfile}
       />,
     );
 
@@ -223,12 +197,16 @@ describe("public profile components", () => {
             questionTextMode: "hidden",
           }),
         ]}
-        profileUsername="person"
+        profile={answerListProfile}
       />,
     );
 
-    expect(screen.getByText("Answer without the private prompt")).toBeInTheDocument();
-    expect(screen.queryByText("What should I read next?")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Answer without the private prompt"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("What should I read next?"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders owner controls only when management is allowed", () => {
@@ -236,13 +214,15 @@ describe("public profile components", () => {
       <PublicAnswerList
         answers={[createPublishedAnswer()]}
         controls={{ canManage: true, disabled: false }}
-        profileUsername="person"
+        profile={answerListProfile}
       />,
     );
 
     openPublishedAnswerMenu();
 
-    expect(screen.getByRole("menuitem", { name: "Edit silently" })).toBeEnabled();
+    expect(
+      screen.getByRole("menuitem", { name: "Edit silently" }),
+    ).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: "Pin" })).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: "Unpublish" })).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
@@ -254,9 +234,7 @@ describe("public profile components", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save answer" })).toBeEnabled();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Cancel" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     openPublishedAnswerMenu();
     fireEvent.click(screen.getByRole("menuitem", { name: "Unpublish" }));
 
@@ -273,7 +251,7 @@ describe("public profile components", () => {
       <PublicAnswerList
         answers={[createPublishedAnswer({ publicId: "titem_2" })]}
         controls={{ canManage: false, disabled: false }}
-        profileUsername="person"
+        profile={answerListProfile}
       />,
     );
 
@@ -287,7 +265,7 @@ describe("public profile components", () => {
       <PublicAnswerList
         answers={[createPublishedAnswer()]}
         controls={{ canManage: true, disabled: true }}
-        profileUsername="person"
+        profile={answerListProfile}
       />,
     );
 
@@ -322,6 +300,80 @@ describe("public profile components", () => {
       screen.getByRole("link", { name: /what changed your mind recently/i }),
     ).toHaveAttribute("href", "/person/a/thr_1");
   });
+
+  it("serializes the anonymity switch and falls back to a hidden input when only one identity is allowed", () => {
+    const bothAllowed = renderWithRouter(
+      <AskComposer
+        ask={{ ...allowedAsk, attributedAllowed: true }}
+        flash={undefined}
+        profile={profile}
+        timingToken="token"
+      />,
+    );
+    const form = () => getForm(bothAllowed.container);
+
+    expect(screen.getByRole("switch", { name: "Anonymous" })).toBeChecked();
+    expect(new FormData(form()).get("identityMode")).toBe("anonymous");
+
+    fireEvent.click(screen.getByRole("switch", { name: "Anonymous" }));
+
+    expect(new FormData(form()).get("identityMode")).toBe("attributed");
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+
+    bothAllowed.unmount();
+
+    const onlyAnonymous = renderWithRouter(
+      <AskComposer
+        ask={allowedAsk}
+        flash={undefined}
+        profile={profile}
+        timingToken="token"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("switch", { name: "Anonymous" }),
+    ).not.toBeInTheDocument();
+    expect(
+      new FormData(getForm(onlyAnonymous.container)).get("identityMode"),
+    ).toBe("anonymous");
+  });
+
+  it("shows the edited-question badge only for edited public wording", () => {
+    const edited = renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer({ questionTextMode: "edited" })]}
+        profile={answerListProfile}
+      />,
+    );
+
+    expect(screen.getByText("Edited question")).toBeInTheDocument();
+
+    edited.unmount();
+
+    renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer({ questionTextMode: "original" })]}
+        profile={answerListProfile}
+      />,
+    );
+
+    expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
+  });
+
+  it("links the answer card identity to the profile", () => {
+    renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer()]}
+        profile={answerListProfile}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Person" })).toHaveAttribute(
+      "href",
+      "/person",
+    );
+  });
 });
 
 function renderWithRouter(element: React.ReactNode) {
@@ -353,8 +405,10 @@ const allowedAsk = {
   status: "allowed",
   defaultIdentity: "anonymous",
   anonymousAllowed: true,
+  isSelfAsk: false,
   attributedAllowed: false,
-  description: "Your question is anonymous to the recipient and public viewers.",
+  description:
+    "Your question is anonymous to the recipient and public viewers.",
 } satisfies PublicAskStateAllowed;
 
 const profile = {
@@ -395,4 +449,20 @@ function createPublishedAnswer(
     asker: undefined,
     ...overrides,
   };
+}
+
+const answerListProfile = {
+  username: "person",
+  displayName: "Person",
+  avatarUrl: null,
+};
+
+function getForm(container: HTMLElement, selector = "form") {
+  const form = container.querySelector(selector);
+
+  if (!(form instanceof HTMLFormElement)) {
+    throw new Error(`expected a form matching ${selector}`);
+  }
+
+  return form;
 }

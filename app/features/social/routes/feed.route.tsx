@@ -5,12 +5,13 @@ import {
   useLocation,
 } from "react-router";
 
+import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import { ProfileIdentityLink } from "~/components/shared/profile-identity/profile-identity";
 import { PageHeader } from "~/components/shared/page-header/page-header";
 import { Badge } from "~/components/ui/badge/badge";
 import { Button } from "~/components/ui/button/button";
 import { requireCompletedProfileSessionFromContext } from "~/features/auth/services/auth.service.server";
-import { getAvatarImageSource } from "~/features/profiles/avatar-url";
 import { LikeButton } from "~/features/social/components/like-button";
 import { loadSocialFeed } from "~/features/social/queries/feed.queries.server";
 import { decodeFeedCursor } from "~/features/social/validations/social.validations";
@@ -82,11 +83,7 @@ export default function FeedRoute({ loaderData }: Route.ComponentProps) {
       {feed.nextCursor === undefined ? null : (
         <div className="flex justify-center pt-2">
           <Button asChild variant="outline">
-            <Link
-              to={`/feed?cursor=${encodeURIComponent(
-                feed.nextCursor,
-              )}`}
-            >
+            <Link to={`/feed?cursor=${encodeURIComponent(feed.nextCursor)}`}>
               Load more
             </Link>
           </Button>
@@ -110,38 +107,43 @@ function FeedItemArticle({
 
   return (
     <article className="flex flex-col gap-5 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start">
-        <div className="flex min-w-0 gap-3">
-          <FeedAvatar item={item} />
-          <div className="flex min-w-0 flex-col gap-1">
-            <Link
-              className="break-words font-medium underline-offset-4 hover:underline"
-              to={`/${item.owner.username}`}
-            >
-              {item.owner.displayName}
-            </Link>
-            <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
-              <span className="break-all">@{item.owner.username}</span>
+      <header>
+        <ProfileIdentityLink
+          meta={
+            <>
+              <span aria-hidden="true">·</span>
               <time dateTime={item.publishedAt}>
                 {formatDate(item.publishedAt)}
               </time>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          profile={item.owner}
+        />
       </header>
 
       {item.questionText === null ? null : (
         <div className="flex flex-col gap-2 border-b border-dashed pb-5">
-          <p className="whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
-            {item.questionText}
-          </p>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p className="min-w-0 flex-1 whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
+              {item.questionText}
+            </p>
+            {item.questionTextMode === "edited" ? (
+              <EditedQuestionBadge />
+            ) : null}
+          </div>
           {item.asker === undefined ? null : (
             <p className="text-sm leading-6 text-muted-foreground">
               Asked by{" "}
-              <span className="font-medium text-foreground">
+              <Link
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+                to={`/${item.asker.username}`}
+              >
                 {item.asker.displayName}
-              </span>{" "}
-              @{item.asker.username}
+                <span className="font-mono text-xs text-muted-foreground">
+                  {" "}
+                  @{item.asker.username}
+                </span>
+              </Link>
             </p>
           )}
         </div>
@@ -170,30 +172,6 @@ function FeedItemArticle({
         </div>
       </footer>
     </article>
-  );
-}
-
-function FeedAvatar({
-  item,
-}: {
-  item: Route.ComponentProps["loaderData"]["feed"]["items"][number];
-}) {
-  if (item.owner.avatarUrl !== null) {
-    return (
-      <img
-        alt=""
-        className="size-11 shrink-0 rounded-full border bg-muted object-cover"
-        decoding="async"
-        loading="lazy"
-        src={getAvatarImageSource(item.owner.avatarUrl)}
-      />
-    );
-  }
-
-  return (
-    <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary font-serif text-lg font-bold text-primary">
-      {item.owner.displayName.slice(0, 1).toUpperCase()}
-    </span>
   );
 }
 

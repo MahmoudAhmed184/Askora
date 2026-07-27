@@ -10,9 +10,7 @@ import {
   getCurrentSessionSummaryFromContext,
   type CurrentSessionSummary,
 } from "~/features/auth/services/auth.service.server";
-import {
-  AskComposer,
-} from "~/features/profiles/components/ask-composer";
+import { AskComposer } from "~/features/profiles/components/ask-composer";
 import { PermissionState } from "~/features/profiles/components/permission-state";
 import {
   BetaNoindexBadge,
@@ -146,13 +144,15 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
 }
 
 function getViewerProfileId(session: CurrentSessionSummary) {
-  return session.status === "authenticated" && session.profileStatus === "complete"
+  return session.status === "authenticated" &&
+    session.profileStatus === "complete"
     ? session.profile.id
     : undefined;
 }
 
 function loadShellForSession(session: CurrentSessionSummary) {
-  return session.status === "authenticated" && session.profileStatus === "complete"
+  return session.status === "authenticated" &&
+    session.profileStatus === "complete"
     ? loadAppShellData({ session })
     : undefined;
 }
@@ -223,7 +223,9 @@ export function shouldRevalidate({
   return defaultShouldRevalidate;
 }
 
-export default function PublicProfileRoute({ loaderData }: Route.ComponentProps) {
+export default function PublicProfileRoute({
+  loaderData,
+}: Route.ComponentProps) {
   if (loaderData.page.status === "unavailable") {
     const content = <UnavailableProfile username={loaderData.page.username} />;
 
@@ -239,6 +241,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
   const hasPinnedAnswers = page.publishedAnswers.some(
     (answer) => answer.pinPosition !== null,
   );
+  const askSurface = renderAskSurface({ isOwnerView, page });
   const content = (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
       {loaderData.app.betaNoindex ? (
@@ -247,6 +250,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
         </div>
       ) : null}
       <ProfileHeader
+        backFallbackHref={loaderData.shell === undefined ? "/" : "/feed"}
         canReport={page.canReport}
         follow={page.follow}
         isOwnerView={isOwnerView}
@@ -255,28 +259,29 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
       <div
         className={
           hasPinnedAnswers
-            ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start"
+            ? "flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start"
             : "flex flex-col gap-6"
         }
       >
-        <div className="flex min-w-0 flex-col gap-6">
-          {renderAskSurface({ isOwnerView, page })}
-          <div>
-            <PublicAnswerList
-              answers={page.publishedAnswers}
-              canReport={page.canReport}
-              controls={page.publishedAnswerControls}
-              profileUsername={page.profile.username}
-              nextCursor={page.nextAnswerCursor}
-            />
-          </div>
-        </div>
+        {askSurface === null ? null : (
+          <div className="min-w-0 lg:col-start-1">{askSurface}</div>
+        )}
         {hasPinnedAnswers ? (
           <ProfileSideRail
             answers={page.publishedAnswers}
+            className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
             profile={page.profile}
           />
         ) : null}
+        <div className="min-w-0 lg:col-start-1">
+          <PublicAnswerList
+            answers={page.publishedAnswers}
+            canReport={page.canReport}
+            controls={page.publishedAnswerControls}
+            profile={page.profile}
+            nextCursor={page.nextAnswerCursor}
+          />
+        </div>
       </div>
     </div>
   );
@@ -285,11 +290,7 @@ export default function PublicProfileRoute({ loaderData }: Route.ComponentProps)
     return <AppShell shell={loaderData.shell}>{content}</AppShell>;
   }
 
-  return (
-    <PublicShell>
-      {content}
-    </PublicShell>
-  );
+  return <PublicShell>{content}</PublicShell>;
 }
 
 function renderAskSurface({
@@ -297,14 +298,13 @@ function renderAskSurface({
   page,
 }: {
   isOwnerView: boolean;
-  page: Extract<Route.ComponentProps["loaderData"]["page"], { status: "available" }>;
+  page: Extract<
+    Route.ComponentProps["loaderData"]["page"],
+    { status: "available" }
+  >;
 }) {
   if (page.ask.status !== "allowed") {
     return isOwnerView ? null : <PermissionState ask={page.ask} />;
-  }
-
-  if (isOwnerView) {
-    return null;
   }
 
   return (

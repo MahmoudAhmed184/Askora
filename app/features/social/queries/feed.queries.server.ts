@@ -12,13 +12,9 @@ import {
   threadItems,
   threads,
 } from "~/db/schema";
-import type {
-  AnswerQuestionIdentity
-} from "~/features/answers/services/answer.service.server";;
+import type { AnswerQuestionIdentity } from "~/features/answers/services/answer.service.server";
 import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
-import type {
-  CompletedProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   getLikeControlState,
   type LikeControlState,
@@ -78,6 +74,8 @@ export interface SocialFeedItem {
   answerText: string;
   publishedAt: string;
   questionText: string | null;
+  /** Disclosure mode for the public question text, when text is shown. */
+  questionTextMode: QuestionTextMode | undefined;
   asker:
     | {
         displayName: string;
@@ -142,7 +140,10 @@ export function createDrizzleSocialFeedStore(
     async findFeedRows({ cursor, limit, viewerProfileId, viewerUserId }) {
       const askerProfiles = alias(profiles, "feed_asker_profiles");
       const ownerBlocks = alias(blocks, "feed_owner_blocks");
-      const initialThreadItems = alias(threadItems, "feed_initial_thread_items");
+      const initialThreadItems = alias(
+        threadItems,
+        "feed_initial_thread_items",
+      );
       const sortExpression = sql<Date>`coalesce(${threadItems.publishedAt}, ${threadItems.createdAt})`;
       const cursorWhere = createCursorWhere(cursor, sortExpression);
       const baseWhere = and(
@@ -212,7 +213,9 @@ export function createDrizzleSocialFeedStore(
             ),
           ),
         )
-        .where(cursorWhere === undefined ? baseWhere : and(baseWhere, cursorWhere))
+        .where(
+          cursorWhere === undefined ? baseWhere : and(baseWhere, cursorWhere),
+        )
         .orderBy(
           desc(sortExpression),
           desc(threadItems.createdAt),
@@ -255,6 +258,7 @@ function toSocialFeedItem(
     answerText: row.answerText,
     publishedAt: getFeedSortDate(row).toISOString(),
     questionText,
+    questionTextMode: questionText === null ? undefined : row.questionTextMode,
     asker: getPublicAsker(row, questionText),
     like: getLikeControlState({
       count: row.ownerShowLikeCounts ? row.likeCount : undefined,

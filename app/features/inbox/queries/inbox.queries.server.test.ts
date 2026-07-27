@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  CompletedProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   loadInboxFolder,
   type InboxLoaderStore,
   type InboxFolder,
-  type StoredInboxQuestion
-} from "~/features/inbox/queries/inbox.queries.server";;
+  type StoredInboxQuestion,
+} from "~/features/inbox/queries/inbox.queries.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -73,6 +71,65 @@ describe("loadInboxFolder", () => {
         createdAt: "2026-05-30T12:00:00.000Z",
       },
     ]);
+  });
+
+  it("exposes public sender details for attributed questions only", async () => {
+    const inbox = createInboxLoaderStore({
+      questions: [
+        createQuestion({
+          publicId: "qst_attributed",
+          identityMode: "account_attributed",
+          askerDisplayName: "Asker",
+          askerUsername: "asker",
+          askerAvatarUrl: "https://example.test/avatar.png",
+        }),
+      ],
+    });
+
+    const folder = await loadInboxFolder({
+      folder: "inbox",
+      session: completedSession,
+      store: inbox.store,
+    });
+
+    expect(folder.questions[0]?.sender).toEqual({
+      displayName: "Asker",
+      username: "asker",
+      avatarUrl: "https://example.test/avatar.png",
+    });
+  });
+
+  it("never exposes sender details for anonymous questions", async () => {
+    const inbox = createInboxLoaderStore({
+      questions: [
+        // An account-anonymous asker: the row still carries profile columns,
+        // but nothing about them may reach the view.
+        createQuestion({
+          publicId: "qst_account_anonymous",
+          identityMode: "account_anonymous",
+          askerDisplayName: "Asker",
+          askerUsername: "asker",
+          askerAvatarUrl: "https://example.test/avatar.png",
+        }),
+        createQuestion({
+          publicId: "qst_guest_anonymous",
+          identityMode: "guest_anonymous",
+          createdAt: new Date("2026-05-30T12:00:00.000Z"),
+        }),
+      ],
+    });
+
+    const folder = await loadInboxFolder({
+      folder: "inbox",
+      session: completedSession,
+      store: inbox.store,
+    });
+
+    for (const question of folder.questions) {
+      expect(question.identity).toBe("anonymous");
+      expect(question.sender).toBeUndefined();
+      expect(JSON.stringify(question)).not.toContain("asker");
+    }
   });
 });
 

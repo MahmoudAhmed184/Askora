@@ -106,6 +106,7 @@ function createAvailablePage(): Extract<
       status: "allowed",
       defaultIdentity: "anonymous",
       anonymousAllowed: true,
+      isSelfAsk: false,
       attributedAllowed: false,
       description: "Ask anonymously.",
     },

@@ -1,7 +1,12 @@
 import { MessageCircle, Pin } from "lucide-react";
 import { Link, useLocation } from "react-router";
 
+import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import {
+  ProfileIdentityLink,
+  type ProfileIdentitySummary,
+} from "~/components/shared/profile-identity/profile-identity";
 import type { PublicPublishedAnswer } from "~/features/answers/types/answers.types";
 import { PublishedAnswerOwnerControls } from "~/features/answers/components/published-answer-owner-controls";
 import {
@@ -18,7 +23,7 @@ interface PublicAnswerListProps {
   canReport?: boolean | undefined;
   controls?: PublishedAnswerControlState;
   nextCursor?: string | undefined;
-  profileUsername: string;
+  profile: ProfileIdentitySummary;
 }
 
 export function PublicAnswerList({
@@ -26,7 +31,7 @@ export function PublicAnswerList({
   canReport = false,
   controls = hiddenPublishedAnswerControls,
   nextCursor,
-  profileUsername,
+  profile,
 }: PublicAnswerListProps) {
   if (answers.length === 0) {
     return (
@@ -68,7 +73,7 @@ export function PublicAnswerList({
             controls={controls}
             canReport={canReport}
             key={answer.publicId}
-            profileUsername={profileUsername}
+            profile={profile}
           />
         ))}
       </div>
@@ -90,34 +95,43 @@ function PublicAnswerArticle({
   answer,
   canReport,
   controls,
-  profileUsername,
+  profile,
 }: {
   answer: PublicPublishedAnswer;
   canReport: boolean;
   controls: PublishedAnswerControlState;
-  profileUsername: string;
+  profile: ProfileIdentitySummary;
 }) {
   const location = useLocation();
   const threadHref = createThreadHref({
     location,
-    profileUsername,
+    profileUsername: profile.username,
     threadPublicId: answer.threadPublicId,
   });
 
   return (
     <article className="flex flex-col gap-5 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
-          {answer.pinPosition === null ? undefined : (
-            <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
-              <Pin aria-hidden="true" className="size-3" />
-              Pinned {answer.pinPosition}
-            </span>
-          )}
-          <time dateTime={answer.publishedAt}>
-            {formatDate(answer.publishedAt)}
-          </time>
-        </div>
+      <header className="flex items-start justify-between gap-3">
+        <ProfileIdentityLink
+          meta={
+            <>
+              <span aria-hidden="true">·</span>
+              <time dateTime={answer.publishedAt}>
+                {formatDate(answer.publishedAt)}
+              </time>
+              {answer.pinPosition === null ? undefined : (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                    <Pin aria-hidden="true" className="size-3" />
+                    Pinned {answer.pinPosition}
+                  </span>
+                </>
+              )}
+            </>
+          }
+          profile={profile}
+        />
 
         {controls.canManage ? (
           <PublishedAnswerOwnerControls answer={answer} controls={controls} />
@@ -127,16 +141,27 @@ function PublicAnswerArticle({
       {answer.questionTextMode === "hidden" ||
       answer.questionText === null ? undefined : (
         <div className="flex flex-col gap-2 border-b border-dashed pb-5">
-          <p className="whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
-            {answer.questionText}
-          </p>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p className="min-w-0 flex-1 whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
+              {answer.questionText}
+            </p>
+            {answer.questionTextMode === "edited" ? (
+              <EditedQuestionBadge />
+            ) : undefined}
+          </div>
           {answer.asker === undefined ? undefined : (
             <p className="text-sm leading-6 text-muted-foreground">
               Asked by{" "}
-              <span className="font-medium text-foreground">
+              <Link
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+                to={`/${answer.asker.username}`}
+              >
                 {answer.asker.displayName}
-              </span>{" "}
-              @{answer.asker.username}
+                <span className="font-mono text-xs text-muted-foreground">
+                  {" "}
+                  @{answer.asker.username}
+                </span>
+              </Link>
             </p>
           )}
         </div>

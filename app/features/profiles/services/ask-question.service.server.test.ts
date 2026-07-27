@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  CurrentSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CurrentSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS,
   createAskTimingToken,
-} from "~/features/profiles/services/ask-friction.service.server";;
+} from "~/features/profiles/services/ask-friction.service.server";
 import {
   decideQuestionSafety,
   getPublicAskFlashForResult,
@@ -20,8 +18,8 @@ import type { PublicQuestionIdentity } from "~/features/profiles/validations/pro
 import type {
   PublicProfile,
   PublicProfileStore,
-  PublicUsernameReservation
-} from "~/features/profiles/queries/profile.queries.server";;
+  PublicUsernameReservation,
+} from "~/features/profiles/queries/profile.queries.server";
 import type {
   RateLimitDecision,
   RateLimitOptions,
@@ -120,7 +118,9 @@ describe("submitPublicQuestion", () => {
         timingToken: createAskTimingToken({
           profileId: "profile_1",
           username: "person",
-          now: new Date(now.getTime() - ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS - 1),
+          now: new Date(
+            now.getTime() - ASK_TIMING_TOKEN_MAX_AGE_MILLISECONDS - 1,
+          ),
         }),
       }),
       questionStore: questions.store,
@@ -131,7 +131,9 @@ describe("submitPublicQuestion", () => {
       values: { question: "Please keep this question" },
       formError: "Your question was not sent. Please try again.",
     });
-    expect(getPublicAskFlashForResult({ result, session: anonymousSession })).toMatchObject({
+    expect(
+      getPublicAskFlashForResult({ result, session: anonymousSession }),
+    ).toMatchObject({
       status: "error",
       values: { question: "Please keep this question" },
     });
@@ -143,10 +145,11 @@ describe("submitPublicQuestion", () => {
 
     const result = await submitQuestion({
       questionStore: questions.store,
-      rateLimiter: () => Promise.resolve({
-        allowed: false,
-        retryAfterSeconds: 60,
-      }),
+      rateLimiter: () =>
+        Promise.resolve({
+          allowed: false,
+          retryAfterSeconds: 60,
+        }),
     });
 
     expect(result).toMatchObject({
@@ -296,12 +299,58 @@ describe("submitPublicQuestion", () => {
       originalText: "What should I read next?",
       ...caseData.expected,
     });
-    expect(questions.created[0]?.normalizedTextHash).toEqual(expect.any(String));
-    expect(questions.created[0]?.safetyFingerprintHash).toEqual(expect.any(String));
+    expect(questions.created[0]?.normalizedTextHash).toEqual(
+      expect.any(String),
+    );
+    expect(questions.created[0]?.safetyFingerprintHash).toEqual(
+      expect.any(String),
+    );
     expect(questions.created[0]?.safetyMetadataRetainUntil.toISOString()).toBe(
       "2026-06-30T12:00:00.000Z",
     );
   });
+
+  it.each([
+    {
+      identityMode: "attributed",
+      expectedIdentityMode: "account_attributed",
+      expectedAskerProfileId: "profile_1",
+    },
+    {
+      identityMode: "anonymous",
+      expectedIdentityMode: "account_anonymous",
+      expectedAskerProfileId: null,
+    },
+  ] as const)(
+    "creates an $identityMode self-question despite owner intake gates",
+    async ({ expectedAskerProfileId, expectedIdentityMode, identityMode }) => {
+      const questions = createQuestionStore();
+
+      const result = await submitQuestion({
+        formData: createQuestionFormData({ identityMode }),
+        profile: createProfile({
+          acceptingQuestions: false,
+          askPermission: "off",
+        }),
+        questionStore: questions.store,
+        session: ownerSession,
+      });
+
+      expect(result).toMatchObject({
+        status: "created",
+        identityMode: expectedIdentityMode,
+      });
+      expect(questions.created).toHaveLength(1);
+      expect(questions.created[0]).toMatchObject({
+        askerUserId: "user_1",
+        askerProfileId: expectedAskerProfileId,
+        identityMode: expectedIdentityMode,
+        recipientProfileId: "profile_1",
+        recipientUserId: "user_1",
+        status: "inbox",
+      });
+    },
+  );
 
   it("uses the safety hook to filter or drop questions generically", async () => {
     const filteredQuestions = createQuestionStore();
@@ -367,7 +416,8 @@ describe("submitPublicQuestion", () => {
     await expect(
       submitQuestion({
         questionStore: questions.store,
-        safetyDecider: (input) => decideQuestionSafety(input, safetyStore.store),
+        safetyDecider: (input) =>
+          decideQuestionSafety(input, safetyStore.store),
       }),
     ).resolves.toMatchObject({
       status: "dropped",
@@ -386,7 +436,8 @@ describe("submitPublicQuestion", () => {
       submitQuestion({
         formData: createQuestionFormData({ question: "هذا سؤال مزعج   جدا" }),
         questionStore: questions.store,
-        safetyDecider: (input) => decideQuestionSafety(input, safetyStore.store),
+        safetyDecider: (input) =>
+          decideQuestionSafety(input, safetyStore.store),
       }),
     ).resolves.toMatchObject({
       status: "created",
@@ -521,8 +572,10 @@ function createSafetyStore({
   matchingBlocks?: { id: string }[];
   mutedPhrases?: { normalizedPhrase: string }[];
 } = {}) {
-  const blockLookups: Omit<PublicQuestionSafetyInput, "text" | "identityMode">[] =
-    [];
+  const blockLookups: Omit<
+    PublicQuestionSafetyInput,
+    "text" | "identityMode"
+  >[] = [];
   const mutedPhraseLookups: string[] = [];
   const store: PublicQuestionSafetyStore = {
     findMatchingBlocks(input) {
@@ -609,5 +662,19 @@ const completedSession = {
     username: "asker",
     displayName: "Asker",
     avatarUrl: null,
+  },
+} satisfies CurrentSessionSummary;
+
+const ownerSession = {
+  ...completedSession,
+  user: {
+    ...completedSession.user,
+    id: "user_1",
+  },
+  profile: {
+    ...completedSession.profile,
+    id: "profile_1",
+    username: "person",
+    displayName: "Person",
   },
 } satisfies CurrentSessionSummary;

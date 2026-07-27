@@ -12,9 +12,7 @@ import {
   threads,
 } from "~/db/schema";
 import type { notificationTypeValues } from "~/db/schema";
-import type {
-  CompletedProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import { notificationActionSchema } from "~/features/notifications/validations/notification.validations";
 import { parseFormData } from "~/lib/zod-form";
 
@@ -232,6 +230,11 @@ export function createQuestionAnsweredNotificationForQuestion({
   now: Date;
 }): QuestionAnsweredNotification | undefined {
   if (question.askerUserId === null) {
+    return undefined;
+  }
+
+  // Self-questions: the owner answering their own question needs no notice.
+  if (question.askerUserId === actorUserId) {
     return undefined;
   }
 
@@ -563,7 +566,10 @@ function selectNotificationRows(database: RuntimeDatabase) {
     })
     .from(notifications)
     .leftJoin(actorUsers, eq(actorUsers.id, notifications.actorUserId))
-    .leftJoin(actorProfiles, eq(actorProfiles.userId, notifications.actorUserId))
+    .leftJoin(
+      actorProfiles,
+      eq(actorProfiles.userId, notifications.actorUserId),
+    )
     .leftJoin(threadItems, eq(threadItems.id, notifications.threadItemId))
     .leftJoin(threads, eq(threads.id, notifications.threadId))
     .leftJoin(ownerProfiles, eq(ownerProfiles.id, threads.ownerProfileId))

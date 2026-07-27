@@ -65,25 +65,10 @@ export function QuestionModerationControls({
   variant = "menu",
 }: QuestionModerationControlsProps) {
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
-  const [handledResult, setHandledResult] = useState<
-    InboxActionResult | undefined
-  >(undefined);
   const fetcher = useFetcher<InboxFetcherData>();
   const isPending = fetcher.state !== "idle";
   const result = fetcher.data?.inbox;
   const actionProps = getActionProps(action);
-
-  if (result !== handledResult) {
-    setHandledResult(result);
-
-    if (
-      result !== undefined &&
-      result.status !== "invalid" &&
-      result.status !== "denied"
-    ) {
-      setActivePanel(null);
-    }
-  }
 
   return (
     <div>
@@ -176,7 +161,12 @@ export function QuestionModerationNoScriptFallback({
             />
             <label className="flex flex-col gap-2 text-sm font-bold">
               Reason
-              <Select defaultValue="" disabled={disabled} name="reason" required>
+              <Select
+                defaultValue=""
+                disabled={disabled}
+                name="reason"
+                required
+              >
                 <option disabled value="">
                   Choose a reason
                 </option>
@@ -351,7 +341,13 @@ function BlockDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <fetcher.Form method="post" {...actionProps}>
+        <fetcher.Form
+          method="post"
+          onSubmit={() => {
+            onOpenChange(false);
+          }}
+          {...actionProps}
+        >
           <input name="intent" type="hidden" value="block" />
           <input
             name="questionPublicId"
@@ -425,6 +421,9 @@ function ReportDialog({
           aria-label="Report question"
           className="flex flex-col gap-4"
           method="post"
+          onSubmit={() => {
+            onOpenChange(false);
+          }}
           {...actionProps}
         >
           <input name="intent" type="hidden" value="report" />

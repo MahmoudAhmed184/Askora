@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  CompletedProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   createNotificationExpiresAt,
   createQuestionAnsweredNotificationForQuestion,
@@ -10,8 +8,8 @@ import {
   handleNotificationAction,
   loadNotifications,
   type NotificationRow,
-  type NotificationStore
-} from "~/features/notifications/services/notification.service.server";;
+  type NotificationStore,
+} from "~/features/notifications/services/notification.service.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -58,6 +56,23 @@ describe("notification helpers", () => {
           id: "question_3",
           askerUserId: null,
           identityMode: "guest_anonymous",
+        },
+      }),
+    ).toBeUndefined();
+  });
+
+  it("suppresses the answered notification when the owner answers their own question", () => {
+    expect(
+      createQuestionAnsweredNotificationForQuestion({
+        actorUserId: "owner_user",
+        createId: () => "notification_self",
+        now,
+        threadId: "thread_1",
+        threadItemId: "item_1",
+        question: {
+          id: "question_self",
+          askerUserId: "owner_user",
+          identityMode: "account_attributed",
         },
       }),
     ).toBeUndefined();
@@ -193,7 +208,9 @@ describe("notification loading and actions", () => {
     expect(notifications.rows.find((row) => row.id === "mine")?.readAt).toBe(
       now,
     );
-    expect(notifications.rows.find((row) => row.id === "theirs")?.readAt).toBeNull();
+    expect(
+      notifications.rows.find((row) => row.id === "theirs")?.readAt,
+    ).toBeNull();
   });
 
   it("can mark one notification read and stay on notifications", async () => {
@@ -268,11 +285,7 @@ describe("notification loading and actions", () => {
   });
 });
 
-function createNotificationStore({
-  rows,
-}: {
-  rows: NotificationRow[];
-}) {
+function createNotificationStore({ rows }: { rows: NotificationRow[] }) {
   const store: NotificationStore = {
     countUnreadNotifications({ now: currentTime, recipientUserId }) {
       return Promise.resolve(
@@ -284,7 +297,11 @@ function createNotificationStore({
         ).length,
       );
     },
-    findNotificationByIdForRecipient({ id, now: currentTime, recipientUserId }) {
+    findNotificationByIdForRecipient({
+      id,
+      now: currentTime,
+      recipientUserId,
+    }) {
       return Promise.resolve(
         rows.find(
           (row) =>
@@ -294,7 +311,11 @@ function createNotificationStore({
         ),
       );
     },
-    findNotificationsForRecipient({ limit, now: currentTime, recipientUserId }) {
+    findNotificationsForRecipient({
+      limit,
+      now: currentTime,
+      recipientUserId,
+    }) {
       return Promise.resolve(
         rows
           .filter(

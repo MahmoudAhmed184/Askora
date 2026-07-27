@@ -22,8 +22,8 @@ import {
 } from "~/features/answers/validations/answer.validations";
 import type {
   CompletedProfileSessionSummary,
-  CurrentSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+  CurrentSessionSummary,
+} from "~/features/auth/services/auth.service.server";
 import {
   createFollowUpAnsweredNotification,
   createQuestionAnsweredNotificationForQuestion,
@@ -48,11 +48,7 @@ import {
 
 export { decodePublicAnswerCursor } from "~/features/answers/validations/public-answer-pagination.server";
 
-export type AnswerQuestionStatus =
-  | "inbox"
-  | "filtered"
-  | "draft"
-  | "answered";
+export type AnswerQuestionStatus = "inbox" | "filtered" | "draft" | "answered";
 
 export type AnswerQuestionIdentity =
   | "guest_anonymous"
@@ -588,7 +584,10 @@ export function createDrizzleAnswerStore(
           transaction,
         });
 
-        if (isFollowUpQuestion(params.question) && existingThread !== undefined) {
+        if (
+          isFollowUpQuestion(params.question) &&
+          existingThread !== undefined
+        ) {
           await lockThreadForPublishing({
             threadId: existingThread.id,
             transaction,
@@ -633,22 +632,22 @@ export function createDrizzleAnswerStore(
           })
           .where(eq(questions.id, params.question.id));
 
-        if (firstPublish) {
-          const notification = createQuestionAnsweredNotificationForQuestion({
-            actorUserId: params.actorUserId,
-            createId: params.createDatabaseId,
-            now: params.now,
-            question: params.question,
-            threadId: thread.id,
-            threadItemId: item.id,
-          });
+        const notification = firstPublish
+          ? createQuestionAnsweredNotificationForQuestion({
+              actorUserId: params.actorUserId,
+              createId: params.createDatabaseId,
+              now: params.now,
+              question: params.question,
+              threadId: thread.id,
+              threadItemId: item.id,
+            })
+          : undefined;
 
-          if (notification !== undefined) {
-            await transaction
-              .insert(notifications)
-              .values(notification)
-              .onConflictDoNothing();
-          }
+        if (notification !== undefined) {
+          await transaction
+            .insert(notifications)
+            .values(notification)
+            .onConflictDoNothing();
         }
 
         if (firstPublish && isFollowUpQuestion(params.question)) {
@@ -665,7 +664,7 @@ export function createDrizzleAnswerStore(
 
         return {
           status: "published",
-          notified: firstPublish && params.question.askerUserId !== null,
+          notified: notification !== undefined,
           threadPublicId: thread.publicId,
           threadItemPublicId: item.publicId,
         };
@@ -801,7 +800,11 @@ async function upsertThreadItem({
   published: boolean;
   thread: ExistingThread;
   transaction: Parameters<Parameters<RuntimeDatabase["transaction"]>[0]>[0];
-}): Promise<ExistingThreadItem & { previousStatus: ExistingThreadItem["status"] | undefined }> {
+}): Promise<
+  ExistingThreadItem & {
+    previousStatus: ExistingThreadItem["status"] | undefined;
+  }
+> {
   const currentItem =
     existingItem ??
     (await findExistingThreadItem({
@@ -1320,11 +1323,7 @@ function isAnswerIntent(value: string | undefined): value is AnswerIntent {
 function isQuestionTextMode(
   value: string | undefined,
 ): value is QuestionTextMode {
-  return (
-    value === "original" ||
-    value === "edited" ||
-    value === "hidden"
-  );
+  return value === "original" || value === "edited" || value === "hidden";
 }
 
 function isFollowUpPermission(
@@ -1360,7 +1359,7 @@ export interface PublicPublishedAnswer {
         displayName: string;
         username: string;
       }
-      | undefined;
+    | undefined;
 }
 
 export interface PublicPublishedAnswerRow {
@@ -1481,13 +1480,7 @@ export async function findPublishedAnswerPageForProfile({
         eq(pinnedAnswers.threadItemId, threadItems.id),
       ),
     )
-    .where(
-      and(
-        visibleWhere,
-        isNull(pinnedAnswers.threadItemId),
-        cursorWhere,
-      ),
-    )
+    .where(and(visibleWhere, isNull(pinnedAnswers.threadItemId), cursorWhere))
     .orderBy(
       desc(sortExpression),
       desc(threadItems.createdAt),
@@ -1684,7 +1677,8 @@ function getPublicQuestionText(row: PublicPublishedAnswerRow) {
 }
 
 function getViewerProfileId(session: CurrentSessionSummary) {
-  return session.status === "authenticated" && session.profileStatus === "complete"
+  return session.status === "authenticated" &&
+    session.profileStatus === "complete"
     ? session.profile.id
     : undefined;
 }

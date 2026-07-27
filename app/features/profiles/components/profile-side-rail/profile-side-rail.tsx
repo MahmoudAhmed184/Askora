@@ -4,14 +4,17 @@ import { Link, useLocation } from "react-router";
 import type { PublicPublishedAnswer } from "~/features/answers/types/answers.types";
 import type { PublicProfileView } from "~/features/profiles/types/profiles.types";
 import { createThreadModalLink } from "~/features/threads/thread-modal";
+import { cn } from "~/lib/utils";
 
 interface ProfileSideRailProps {
   answers: PublicPublishedAnswer[];
   profile: PublicProfileView;
+  className?: string | undefined;
 }
 
 export function ProfileSideRail({
   answers,
+  className,
   profile,
 }: ProfileSideRailProps) {
   const pinnedAnswers = answers
@@ -24,7 +27,7 @@ export function ProfileSideRail({
   }
 
   return (
-    <aside className="flex flex-col gap-6 lg:sticky lg:top-10">
+    <aside className={cn("flex flex-col gap-6 lg:sticky lg:top-10", className)}>
       <PinnedThreadsPanel answers={pinnedAnswers} profile={profile} />
     </aside>
   );
@@ -98,7 +101,9 @@ function PinnedThreadLink({
 }
 
 function getPinnedThreadTitle(answer: PublicPublishedAnswer) {
-  return answer.questionText ?? answer.answerText.split(/\s+/).slice(0, 10).join(" ");
+  return (
+    answer.questionText ?? answer.answerText.split(/\s+/).slice(0, 10).join(" ")
+  );
 }
 
 function formatPinnedThreadMeta(answer: PublicPublishedAnswer) {

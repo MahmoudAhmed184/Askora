@@ -1,7 +1,12 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
-import { authUsers, follows, profiles, usernameReservations } from "~/db/schema";
+import {
+  authUsers,
+  follows,
+  profiles,
+  usernameReservations,
+} from "~/db/schema";
 import {
   getPublicAskState,
   type AskPermission,
@@ -13,11 +18,9 @@ import {
 } from "~/features/profiles/services/ask-friction.service.server";
 import type {
   ActiveSuspensionStatus,
-  CurrentSessionSummary
-} from "~/features/auth/services/auth.service.server";;
-import type {
-  PublicPublishedAnswer
-} from "~/features/answers/services/answer.service.server";;
+  CurrentSessionSummary,
+} from "~/features/auth/services/auth.service.server";
+import type { PublicPublishedAnswer } from "~/features/answers/services/answer.service.server";
 import {
   hiddenPublishedAnswerControls,
   type PublishedAnswerControlState,
@@ -182,6 +185,7 @@ export function createPublicProfilePageData({
       acceptingQuestions:
         profile.acceptingQuestions && profile.suspensionStatus !== "active",
       isFollowedByActor: social.isFollowedByViewer,
+      isOwnedByActor: isProfileOwnedBySession({ profile, session }),
     },
   });
 
@@ -220,6 +224,21 @@ function canSubmitPublicReport(session: CurrentSessionSummary) {
     session.status === "authenticated" &&
     session.profileStatus === "complete" &&
     session.suspensionStatus !== "active"
+  );
+}
+
+export function isProfileOwnedBySession({
+  profile,
+  session,
+}: {
+  profile: Pick<PublicProfile, "id" | "userId">;
+  session: CurrentSessionSummary;
+}) {
+  return (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.profile.id === profile.id &&
+    session.user.id === profile.userId
   );
 }
 
@@ -346,9 +365,7 @@ function getPublicProfileView({
       answers: publishedAnswerCount,
       followers: profile.showFollowerCounts ? social.followerCount : undefined,
       following: profile.showFollowerCounts ? social.followingCount : undefined,
-      reactions: profile.showLikeCounts
-        ? publishedReactionCount
-        : undefined,
+      reactions: profile.showLikeCounts ? publishedReactionCount : undefined,
     },
   };
 }
