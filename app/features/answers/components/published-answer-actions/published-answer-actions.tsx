@@ -8,7 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
@@ -84,7 +84,9 @@ export function PublishedAnswerActions({
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [confirmIntent, setConfirmIntent] = useState<ConfirmIntent | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmIntent, setConfirmIntent] =
+    useState<ConfirmIntent>("unpublish");
   const fetcher = useFetcher<PublishedAnswerActionFetcherData>();
   const disabled = controls.disabled || fetcher.state !== "idle";
   const action = `/answers/${answer.publicId}/actions`;
@@ -114,7 +116,7 @@ export function PublishedAnswerActions({
           aria-label="Answer actions"
           avoidCollisions={false}
           className="w-56"
-          side="top"
+          side="bottom"
         >
           <DropdownMenuLabel>Answer actions</DropdownMenuLabel>
           {canReport ? (
@@ -171,6 +173,7 @@ export function PublishedAnswerActions({
                   onSelect={() => {
                     setMenuOpen(false);
                     setConfirmIntent("unpublish");
+                    setConfirmOpen(true);
                   }}
                 >
                   <EyeOff data-icon="inline-start" />
@@ -181,6 +184,7 @@ export function PublishedAnswerActions({
                   onSelect={() => {
                     setMenuOpen(false);
                     setConfirmIntent("delete");
+                    setConfirmOpen(true);
                   }}
                   variant="destructive"
                 >
@@ -217,11 +221,8 @@ export function PublishedAnswerActions({
         disabled={disabled}
         fetcher={fetcher}
         intent={confirmIntent}
-        onOpenChange={(open) => {
-          if (!open) {
-            setConfirmIntent(null);
-          }
-        }}
+        onOpenChange={setConfirmOpen}
+        open={confirmOpen}
       />
     </div>
   );
@@ -306,22 +307,17 @@ function ConfirmPublishedAnswerActionDialog({
   fetcher,
   intent,
   onOpenChange,
+  open,
 }: {
   action: string;
   disabled: boolean;
   fetcher: PublishedAnswerActionFetcher;
-  intent: ConfirmIntent | null;
+  intent: ConfirmIntent;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
 }) {
-  const lastIntentRef = useRef<ConfirmIntent>("unpublish");
-
-  if (intent !== null) {
-    lastIntentRef.current = intent;
-  }
-
-  const activeIntent = intent ?? lastIntentRef.current;
   const copy =
-    activeIntent === "delete"
+    intent === "delete"
       ? {
           description:
             "This removes the public answer and leaves a compact removed state where the thread order needs to be preserved.",
@@ -336,7 +332,7 @@ function ConfirmPublishedAnswerActionDialog({
         };
 
   return (
-    <AlertDialog open={intent !== null} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{copy.title}</AlertDialogTitle>
@@ -352,22 +348,22 @@ function ConfirmPublishedAnswerActionDialog({
             }}
           >
             <ToastResultInput />
-            <input name="intent" type="hidden" value={activeIntent} />
+            <input name="intent" type="hidden" value={intent} />
             <AlertDialogAction
               asChild
               className={buttonVariants({
                 variant:
-                  activeIntent === "delete" ? "destructive" : "default",
+                  intent === "delete" ? "destructive" : "default",
               })}
             >
               <Button
                 disabled={disabled}
                 type="submit"
                 variant={
-                  activeIntent === "delete" ? "destructive" : "default"
+                  intent === "delete" ? "destructive" : "default"
                 }
               >
-                {activeIntent === "delete" ? (
+                {intent === "delete" ? (
                   <Trash2 data-icon="inline-start" />
                 ) : (
                   <EyeOff data-icon="inline-start" />

@@ -274,7 +274,7 @@ test.describe("beta seeded smoke", () => {
     ).toBeVisible();
   });
 
-  test("owner answer actions open above cards and preserve asker identity in drafts", async ({
+  test("owner answer actions open below the trigger and preserve asker identity in drafts", async ({
     context,
     page,
   }) => {
@@ -284,7 +284,7 @@ test.describe("beta seeded smoke", () => {
     await page.getByRole("button", { name: "Answer actions" }).click();
     const actions = page.getByRole("menu", { name: "Answer actions" });
 
-    await expect(actions).toHaveAttribute("data-side", "top");
+    await expect(actions).toHaveAttribute("data-side", "bottom");
     await page.getByRole("menuitem", { name: "Unpublish" }).click();
     await page.getByRole("button", { name: "Unpublish answer" }).click();
     await expect(
