@@ -1,5 +1,5 @@
-import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { eq } from "drizzle-orm";
 import { redirect, type RouterContextProvider } from "react-router";
