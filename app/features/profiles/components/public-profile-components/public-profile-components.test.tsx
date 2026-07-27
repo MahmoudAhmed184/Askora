@@ -82,7 +82,7 @@ describe("public profile components", () => {
   });
 
   it("fills the public question with a selected prompt suggestion", () => {
-    renderWithRouter(
+    const { container } = renderWithRouter(
       <AskComposer
         ask={allowedAsk}
         flash={undefined}
@@ -91,15 +91,24 @@ describe("public profile components", () => {
       />,
     );
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Use prompt: What changed your mind recently?",
-      }),
-    );
+    const prompts = screen.getAllByRole("button", { name: /use prompt:/i });
+    const firstPrompt = prompts[0];
 
-    expect(screen.getByRole("textbox", { name: /question/i })).toHaveValue(
-      "What changed your mind recently?",
-    );
+    if (firstPrompt === undefined) {
+      throw new Error("expected at least one prompt suggestion");
+    }
+
+    const prompt = firstPrompt.textContent;
+
+    expect(prompts).toHaveLength(4);
+    expect(prompt).toBeTruthy();
+    expect(
+      container.querySelector("[data-slot='prompt-suggestion-grid']"),
+    ).toHaveClass("grid", "grid-cols-2", "sm:grid-cols-4");
+
+    fireEvent.click(firstPrompt);
+
+    expect(screen.getByRole("textbox", { name: /question/i })).toHaveValue(prompt);
   });
 
   it("shows permission and unavailable states", () => {

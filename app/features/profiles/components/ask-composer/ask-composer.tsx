@@ -16,6 +16,7 @@ import { Textarea } from "~/components/ui/textarea/textarea";
 import type { PublicAskStateAllowed } from "~/features/profiles/types/profiles.types";
 import type { PublicAskFlash } from "~/features/profiles/types/profiles.types";
 import type { PublicProfileView } from "~/features/profiles/types/profiles.types";
+import { getPromptSuggestions } from "~/features/profiles/prompt-suggestions";
 import { cn } from "~/lib/utils";
 
 interface AskComposerProps {
@@ -24,13 +25,6 @@ interface AskComposerProps {
   profile: PublicProfileView;
   timingToken: string;
 }
-
-const publicPromptSuggestions = [
-  "What changed your mind recently?",
-  "What are you tired of pretending?",
-  "What advice aged badly?",
-  "What feels easier now?",
-] as const;
 
 const promptSuggestionTilt = [
   "-rotate-2",
@@ -47,6 +41,9 @@ export function AskComposer({
 }: AskComposerProps) {
   const error = flash?.status === "error" ? flash : undefined;
   const questionRef = useRef<HTMLTextAreaElement>(null);
+  const promptSuggestions = getPromptSuggestions(
+    timingToken || profile.username,
+  );
 
   function applyPromptSuggestion(prompt: string) {
     const question = questionRef.current;
@@ -116,6 +113,7 @@ export function AskComposer({
             <PromptSuggestionGrid
               className="mt-4 pb-3"
               onSelect={applyPromptSuggestion}
+              prompts={promptSuggestions}
             />
           </div>
 
@@ -195,22 +193,25 @@ function getAskToastMessage(flash: PublicAskFlash | undefined) {
 function PromptSuggestionGrid({
   className,
   onSelect,
+  prompts,
 }: {
   className?: string | undefined;
   onSelect?: ((prompt: string) => void) | undefined;
+  prompts: readonly string[];
 }) {
   return (
     <div
       className={cn(
-        "no-scrollbar -mx-1 flex gap-3 overflow-x-auto px-1 pb-4 pt-2",
+        "grid grid-cols-2 gap-3 px-1 pb-4 pt-2 sm:grid-cols-4",
         className,
       )}
+      data-slot="prompt-suggestion-grid"
     >
-      {publicPromptSuggestions.map((prompt, index) => (
+      {prompts.map((prompt, index) => (
         <Button
           aria-label={`Use prompt: ${prompt}`}
           className={cn(
-            "h-auto min-h-24 w-40 shrink-0 justify-start whitespace-normal rounded-[12px] border-border bg-card px-3.5 py-3.5 text-left text-[0.82rem] font-medium leading-[1.4] text-muted-foreground transition-[border-color,box-shadow,color,transform] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:rotate-0 hover:scale-[1.03] hover:border-primary hover:bg-card hover:text-primary hover:shadow-[0_8px_20px_var(--accent-glow)] disabled:opacity-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100",
+            "h-auto min-h-24 w-full min-w-0 justify-start whitespace-normal rounded-[12px] border-border bg-card px-3.5 py-3.5 text-left text-[0.82rem] font-medium leading-[1.4] text-muted-foreground transition-[border-color,box-shadow,color,transform] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:rotate-0 hover:scale-[1.03] hover:border-primary hover:bg-card hover:text-primary hover:shadow-[0_8px_20px_var(--accent-glow)] disabled:opacity-100 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100",
             promptSuggestionTilt[index % promptSuggestionTilt.length],
           )}
           key={prompt}
