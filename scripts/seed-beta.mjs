@@ -192,6 +192,7 @@ export function createBetaSessionCookie({
 
 export function getBetaResetStatements() {
   return [
+    "delete from rate_limits where key like '%beta_%'",
     "delete from admin_actions where id like 'beta_%' or report_id like 'beta_%'",
     "delete from reports where id like 'beta_%' or target_id like 'beta_%' or reporter_user_id like 'beta_%' or reporter_profile_id like 'beta_%'",
     "delete from answer_like_notifications where actor_user_id like 'beta_%' or owner_user_id like 'beta_%' or thread_item_id like 'beta_%'",
