@@ -8,10 +8,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "~/components/ui/alert/alert";
-import {
-  Avatar,
-  AvatarFallback,
-} from "~/components/ui/avatar/avatar";
+import { Avatar, AvatarFallback } from "~/components/ui/avatar/avatar";
 import {
   isSessionSuspended,
   requireIncompleteProfileSessionFromContext,
@@ -24,7 +21,6 @@ import {
   type ProfileSetupFormResult,
   type ProfileSetupFormValues,
 } from "~/features/profile-setup/services/profile-setup.service.server";
-import { createSetupShareAccessCookieHeader } from "~/features/profile-setup/services/setup-share-access.service.server";
 import { getPublicAppConfig } from "~/lib/config.server";
 
 interface SetupActionData {
@@ -58,11 +54,7 @@ export async function action({ context, request }: Route.ActionArgs) {
   });
 
   if (result.status === "created") {
-    return redirect("/setup/share", {
-      headers: {
-        "Set-Cookie": createSetupShareAccessCookieHeader(result.profile.id),
-      },
-    });
+    return redirect("/feed");
   }
 
   return data<SetupActionData>(
@@ -82,7 +74,7 @@ export default function SetupRoute({ loaderData }: Route.ComponentProps) {
   );
 
   return (
-    <OnboardingShell activeStep="profile">
+    <OnboardingShell>
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] lg:items-start lg:gap-10">
         <section className="flex min-w-0 flex-col gap-6">
           <div className="flex flex-col gap-3">
@@ -106,10 +98,7 @@ export default function SetupRoute({ loaderData }: Route.ComponentProps) {
           />
         </section>
 
-        <SetupLivePreview
-          appHost={loaderData.appHost}
-          values={previewValues}
-        />
+        <SetupLivePreview appHost={loaderData.appHost} values={previewValues} />
       </div>
     </OnboardingShell>
   );
@@ -181,7 +170,10 @@ function SetupLivePreview({
         Preview — how visitors see you
       </p>
       <div className="overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]">
-        <div aria-hidden="true" className="h-20 bg-[image:var(--gradient-brand)]" />
+        <div
+          aria-hidden="true"
+          className="h-20 bg-[image:var(--gradient-brand)]"
+        />
         <div className="flex flex-col gap-3 p-5">
           <Avatar className="-mt-12 size-16 border-4 border-card text-xl">
             <AvatarFallback>{getInitial(displayName)}</AvatarFallback>
@@ -198,9 +190,7 @@ function SetupLivePreview({
             {bio.length > 0 ? (
               bio
             ) : (
-              <span className="italic opacity-70">
-                Your bio appears here.
-              </span>
+              <span className="italic opacity-70">Your bio appears here.</span>
             )}
           </p>
           <div className="flex min-w-0 items-center gap-2 rounded-full border bg-surface px-3 py-2">
@@ -215,8 +205,8 @@ function SetupLivePreview({
         </div>
       </div>
       <p className="text-xs leading-5 text-muted-foreground">
-        New profiles accept questions by default, including anonymous ones.
-        You can adjust that anytime in settings.
+        New profiles accept questions by default, including anonymous ones. You
+        can adjust that anytime in settings.
       </p>
     </aside>
   );

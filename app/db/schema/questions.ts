@@ -24,10 +24,7 @@ export const questionIdentityModeEnum = pgEnum("question_identity_mode", [
   "account_attributed",
 ]);
 
-export const questionSourceEnum = pgEnum("question_source", [
-  "public_profile",
-  "starter_prompt",
-]);
+export const questionSourceEnum = pgEnum("question_source", ["public_profile"]);
 
 export const questionDeletedByEnum = pgEnum("question_deleted_by", [
   "asker",

@@ -1,17 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  IncompleteProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { IncompleteProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
-  createCanonicalProfileUrl,
   getProfileSetupDefaults,
   submitProfileSetup,
   type ExistingProfile,
   type ExistingUsernameReservation,
   type NewProfileSetup,
-  type ProfileSetupStore
-} from "~/features/profile-setup/services/profile-setup.service.server";;
+  type ProfileSetupStore,
+} from "~/features/profile-setup/services/profile-setup.service.server";
 
 describe("submitProfileSetup", () => {
   it("blocks suspended incomplete-profile users", async () => {
@@ -44,7 +41,10 @@ describe("submitProfileSetup", () => {
 
   it("returns a username field error when the username is reserved", async () => {
     const profileSetup = createFakeProfileSetupStore({
-      usernameReservation: { id: "reservation_existing", profileId: "profile_2" },
+      usernameReservation: {
+        id: "reservation_existing",
+        profileId: "profile_2",
+      },
     });
 
     const result = await submitProfileSetup({
@@ -75,14 +75,7 @@ describe("submitProfileSetup", () => {
       createId: createIdSequence(["profile_1", "reservation_1", "event_1"]),
     });
 
-    expect(result).toEqual({
-      status: "created",
-      profile: {
-        id: "profile_1",
-        username: "creator_1",
-        displayName: "Person",
-      },
-    });
+    expect(result).toEqual({ status: "created" });
     expect(profileSetup.createdSetups).toEqual([
       {
         profileId: "profile_1",
@@ -140,12 +133,6 @@ describe("profile setup helpers", () => {
       displayName: "Person Example",
       bio: "",
     });
-  });
-
-  it("generates canonical profile URLs from APP_URL", () => {
-    expect(createCanonicalProfileUrl("https://app.example.com/", "person")).toBe(
-      "https://app.example.com/person",
-    );
   });
 });
 

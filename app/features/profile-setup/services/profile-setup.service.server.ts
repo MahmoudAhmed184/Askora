@@ -3,9 +3,7 @@ import type { ZodError } from "zod";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import { events, profiles, usernameReservations } from "~/db/schema";
-import type {
-  IncompleteProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { IncompleteProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import { profileSetupSubmissionSchema } from "~/features/profile-setup/validations/profile-setup.validations";
 import { isAllowedUsername } from "~/features/profile-setup/username-policy";
 import { createDatabaseId } from "~/lib/ids.server";
@@ -27,11 +25,6 @@ export interface ProfileSetupFieldErrors {
 export type ProfileSetupSubmissionResult =
   | {
       status: "created";
-      profile: {
-        id: string;
-        username: string;
-        displayName: string;
-      };
     }
   | {
       status: "invalid";
@@ -163,14 +156,7 @@ export async function submitProfileSetup({
 
     await store.createProfileSetup(setup);
 
-    return {
-      status: "created",
-      profile: {
-        id: setup.profileId,
-        username: setup.username,
-        displayName: setup.displayName,
-      },
-    };
+    return { status: "created" };
   } catch (error) {
     const mappedError = mapProfileSetupCreationError(error, values);
 
@@ -215,10 +201,6 @@ export function getProfileSetupDefaults(user: {
   };
 }
 
-export function createCanonicalProfileUrl(appUrl: string, username: string) {
-  return `${appUrl.replace(/\/+$/, "")}/${username}`;
-}
-
 export function createDrizzleProfileSetupStore(
   database: RuntimeDatabase = getRuntimeDatabase(),
 ): ProfileSetupStore {
@@ -236,7 +218,9 @@ export function createDrizzleProfileSetupStore(
       const [profile] = await database
         .select({ id: profiles.id, username: profiles.username })
         .from(profiles)
-        .where(and(eq(profiles.username, username), eq(profiles.isActive, true)))
+        .where(
+          and(eq(profiles.username, username), eq(profiles.isActive, true)),
+        )
         .limit(1);
 
       return profile;
@@ -284,9 +268,7 @@ export function createDrizzleProfileSetupStore(
   };
 }
 
-function parseProfileSetupFormData(
-  formData: FormData,
-): Result<
+function parseProfileSetupFormData(formData: FormData): Result<
   {
     username: string;
     displayName: string;
@@ -331,7 +313,10 @@ async function findProfileSetupConflict({
     return { status: "duplicate_profile" };
   }
 
-  if (activeUsernameProfile !== undefined || usernameReservation !== undefined) {
+  if (
+    activeUsernameProfile !== undefined ||
+    usernameReservation !== undefined
+  ) {
     return { status: "username_taken" };
   }
 
@@ -346,9 +331,7 @@ function getProfileSetupFormValues(formData: FormData): ProfileSetupFormValues {
   };
 }
 
-function getProfileSetupFieldErrors(
-  error: ZodError,
-): ProfileSetupFieldErrors {
+function getProfileSetupFieldErrors(error: ZodError): ProfileSetupFieldErrors {
   const fieldErrors: ProfileSetupFieldErrors = {};
 
   for (const issue of error.issues) {
@@ -438,10 +421,7 @@ function getConstraintFromErrorCause(error: unknown): string | undefined {
   while (isRecord(current) && !visited.has(current)) {
     visited.add(current);
 
-    if (
-      current.code === "23505" &&
-      typeof current.constraint === "string"
-    ) {
+    if (current.code === "23505" && typeof current.constraint === "string") {
       return current.constraint;
     }
 

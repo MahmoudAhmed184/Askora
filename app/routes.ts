@@ -9,7 +9,6 @@ export default [
   index("features/home/routes/home.route.tsx"),
   route("login", "features/auth/routes/login.route.tsx"),
   route("setup", "features/profile-setup/routes/setup.route.tsx"),
-  route("setup/share", "features/profile-setup/routes/setup.share.route.tsx"),
   route(
     "setup/username-availability",
     "features/profile-setup/routes/username-availability.route.ts",
@@ -17,9 +16,11 @@ export default [
   layout("features/app-shell/routes/app-layout.route.tsx", [
     route("feed", "features/social/routes/feed.route.tsx"),
     route("inbox", "features/inbox/routes/inbox.route.tsx"),
-    route("prompts", "features/prompts/routes/prompts.route.tsx"),
     route("drafts", "features/answers/routes/drafts.route.tsx"),
-    route("notifications", "features/notifications/routes/notifications.route.tsx"),
+    route(
+      "notifications",
+      "features/notifications/routes/notifications.route.tsx",
+    ),
     route("likes", "features/social/routes/like.action.route.ts"),
     route("follows", "features/social/routes/follow.action.route.ts"),
     route("answer/:questionId", "features/answers/routes/answer.route.tsx"),

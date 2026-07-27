@@ -1,6 +1,6 @@
 export const USERNAME_PATTERN = /^[a-z0-9_]{3,30}$/;
 
-export const RESERVED_USERNAMES = [
+const RESERVED_USERNAMES = [
   "login",
   "admin",
   "setup",
@@ -15,7 +15,6 @@ export const RESERVED_USERNAMES = [
   "notifications",
   "drafts",
   "filtered",
-  "prompts",
   "likes",
   "follows",
   "answer",
@@ -46,5 +45,8 @@ export function getUsernamePolicyIssue(username: string) {
 }
 
 export function isAllowedUsername(username: string) {
-  return USERNAME_PATTERN.test(username) && getUsernamePolicyIssue(username) === undefined;
+  return (
+    USERNAME_PATTERN.test(username) &&
+    getUsernamePolicyIssue(username) === undefined
+  );
 }
