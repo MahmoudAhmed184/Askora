@@ -52,4 +52,49 @@ describe("parseServerEnv", () => {
       }),
     ).toThrow(/GOOGLE_CLIENT_ID/);
   });
+
+  it("parses a versioned question-generation encryption keyring", () => {
+    const key = Buffer.alloc(32, 7).toString("base64");
+    const environment = parseServerEnv({
+      QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION: "3",
+      QUESTION_GENERATION_ENCRYPTION_KEYS: JSON.stringify({ 3: key }),
+    });
+
+    expect(environment.QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION).toBe(3);
+    expect(
+      environment.QUESTION_GENERATION_ENCRYPTION_KEYS?.get(3)?.equals(
+        Buffer.alloc(32, 7),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects incomplete or invalid question-generation encryption configuration", () => {
+    expect(() =>
+      parseServerEnv({
+        QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION: "1",
+      }),
+    ).toThrow(/QUESTION_GENERATION_ENCRYPTION_KEYS/);
+
+    expect(() =>
+      parseServerEnv({
+        QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION: "1",
+        QUESTION_GENERATION_ENCRYPTION_KEYS: JSON.stringify({ 2: "invalid" }),
+      }),
+    ).toThrow(/QUESTION_GENERATION_ENCRYPTION_KEYS/);
+  });
+
+  it("requires question-generation encryption configuration in production", () => {
+    expect(() =>
+      parseServerEnv({
+        NODE_ENV: "production",
+        DATABASE_URL: "postgres://user:password@example.com:5432/app",
+        BETTER_AUTH_SECRET: "x".repeat(32),
+        GOOGLE_CLIENT_ID: "client",
+        GOOGLE_CLIENT_SECRET: "secret",
+        RESEND_API_KEY: "resend",
+        AUTH_EMAIL_FROM: "Askora <auth@example.com>",
+        CRON_SECRET: "x".repeat(32),
+      }),
+    ).toThrow(/QUESTION_GENERATION_ENCRYPTION_KEYS/);
+  });
 });

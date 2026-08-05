@@ -127,6 +127,13 @@
       "when": 1785171504004,
       "tag": "0017_supabase_security",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785947770258,
+      "tag": "0018_premium_nekra",
+      "breakpoints": true
     }
   ]
 }

@@ -46,6 +46,11 @@ describe("cleanupExpiredAccountDeletions", () => {
     expect(state.follows).toEqual([]);
     expect(state.likes).toEqual([]);
     expect(state.answer_like_notifications).toEqual([]);
+    expect(state.question_generation_settings).toEqual([]);
+    expect(state.question_generation_batches).toEqual([]);
+    expect(
+      state.questions.some((question) => question.source === "ai_generated"),
+    ).toBe(false);
     expect(state.questions.find((question) => question.id === "recipient_unanswered"))
       .toMatchObject({
         deleted_at: now,
@@ -196,7 +201,37 @@ function createState(overrides = {}) {
         blocked_profile_id: "profile_1",
       },
     ],
+    question_generation_settings: [
+      {
+        owner_user_id: "user_1",
+        gemini_key_ciphertext: "encrypted",
+      },
+    ],
+    question_generation_batches: [
+      {
+        id: "batch_1",
+        owner_user_id: "user_1",
+        profile_id: "profile_1",
+      },
+    ],
     questions: [
+      {
+        id: "generated_answered",
+        recipient_user_id: "user_1",
+        recipient_profile_id: "profile_1",
+        asker_user_id: "user_1",
+        asker_profile_id: "profile_1",
+        source: "ai_generated",
+        generation_batch_id: "batch_1",
+        status: "answered",
+        deleted_at: null,
+        deleted_by: null,
+        original_text: "Generated question",
+        safety_fingerprint_hash: null,
+        ip_hash: null,
+        user_agent_hash: null,
+        safety_metadata_retain_until: null,
+      },
       {
         id: "recipient_unanswered",
         recipient_user_id: "user_1",
@@ -444,6 +479,33 @@ function applyCleanupMutation(state, text, values) {
   deleteMatching(state, "answer_like_notifications", "cleanup: delete_answer_like_notifications", (row) => row.actor_user_id === values[0] || row.owner_user_id === values[0], text);
   deleteMatching(state, "notifications", "cleanup: delete_recipient_notifications", (row) => row.recipient_user_id === values[0], text);
   deleteMatching(state, "blocks", "cleanup: delete_owned_blocks", (row) => row.owner_user_id === values[0] || row.owner_profile_id === values[1], text);
+  deleteMatching(
+    state,
+    "question_generation_settings",
+    "cleanup: delete_question_generation_settings",
+    (row) => row.owner_user_id === values[0],
+    text,
+  );
+
+  if (text.includes("cleanup: delete_generated_questions")) {
+    const ownedBatchIds = new Set(
+      state.question_generation_batches
+        .filter((batch) => batch.owner_user_id === values[0])
+        .map((batch) => batch.id),
+    );
+
+    state.questions = state.questions.filter(
+      (question) => !ownedBatchIds.has(question.generation_batch_id),
+    );
+  }
+
+  deleteMatching(
+    state,
+    "question_generation_batches",
+    "cleanup: delete_question_generation_batches",
+    (row) => row.owner_user_id === values[0],
+    text,
+  );
 
   if (text.includes("cleanup: unlink_actor_notifications")) {
     for (const notification of state.notifications) {
