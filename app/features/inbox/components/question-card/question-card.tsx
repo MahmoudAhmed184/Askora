@@ -91,8 +91,6 @@ function QuestionCardFrame({
         />
       </header>
 
-      {question.generated ? <GeneratedQuestionBadge /> : null}
-
       <p className="whitespace-pre-wrap break-words font-serif text-2xl font-bold italic leading-snug text-foreground" dir="auto">
         {question.text}
       </p>
@@ -157,6 +155,7 @@ function QuestionSenderIdentity({ question }: { question: InboxQuestionView }) {
       <time dateTime={question.createdAt}>
         {formatQuestionCreatedAt(question.createdAt)}
       </time>
+      {question.generated ? <GeneratedQuestionBadge className="ml-1" /> : null}
     </>
   );
 

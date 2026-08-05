@@ -150,19 +150,24 @@ function PublicAnswerArticle({
         </div>
       ) : (
         <div className="flex flex-col gap-2 border-b border-dashed pb-5">
-          <div className="flex flex-wrap items-baseline gap-2">
+          {answer.questionTextMode === "edited" ||
+          answer.ownerProvenance === "generated" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {answer.questionTextMode === "edited" ? (
+                <EditedQuestionBadge />
+              ) : undefined}
+              {answer.ownerProvenance === "generated" ? (
+                <GeneratedQuestionBadge />
+              ) : undefined}
+            </div>
+          ) : undefined}
+          <div>
             <p
-              className="min-w-0 flex-1 whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground"
+              className="whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground"
               dir="auto"
             >
               {answer.questionText}
             </p>
-            {answer.questionTextMode === "edited" ? (
-              <EditedQuestionBadge />
-            ) : undefined}
-            {answer.ownerProvenance === "generated" ? (
-              <GeneratedQuestionBadge />
-            ) : undefined}
           </div>
           {answer.asker === undefined ? undefined : (
             <p className="text-sm leading-6 text-muted-foreground">

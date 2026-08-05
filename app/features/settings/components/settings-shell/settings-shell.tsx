@@ -42,7 +42,7 @@ const settingsLinks = [
   },
   {
     to: "/settings/question-generation",
-    label: "Question generation",
+    label: "AI questions",
     icon: Sparkles,
     description:
       "Connect Gemini, choose a model, and manage private question interests.",

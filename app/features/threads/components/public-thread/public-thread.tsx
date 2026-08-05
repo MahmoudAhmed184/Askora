@@ -412,6 +412,9 @@ function ThreadQuestionEntry({
             <span aria-hidden="true">· </span>
             {time}
           </span>
+          {item.ownerProvenance === "generated" ? (
+            <GeneratedQuestionBadge />
+          ) : undefined}
         </div>
         <div className="flex flex-wrap items-baseline gap-2">
           <p
@@ -427,9 +430,6 @@ function ThreadQuestionEntry({
           </p>
           {item.questionTextMode === "edited" ? (
             <EditedQuestionBadge />
-          ) : undefined}
-          {item.ownerProvenance === "generated" ? (
-            <GeneratedQuestionBadge />
           ) : undefined}
         </div>
       </div>

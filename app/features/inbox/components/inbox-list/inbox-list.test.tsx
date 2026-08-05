@@ -79,7 +79,10 @@ describe("InboxList", () => {
       questions: [{ ...defaultQuestion, generated: true, text: "ما الذي يهمك اليوم؟" }],
     });
 
-    expect(screen.getByLabelText("Generated question")).toHaveTextContent("Generated");
+    const generatedMarker = screen.getByLabelText("Generated question");
+
+    expect(generatedMarker).toHaveTextContent("Generated");
+    expect(generatedMarker.closest("header")).not.toBeNull();
     expect(screen.getByText("ما الذي يهمك اليوم؟")).toHaveAttribute("dir", "auto");
   });
 
