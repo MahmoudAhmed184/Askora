@@ -69,10 +69,16 @@ const trustedProxyIpHeader = z.enum([
   "x-client-ip",
 ]);
 
+const vercelEnv = z.preprocess(
+  emptyStringToUndefined,
+  z.enum(["production", "preview", "development"]).optional(),
+);
+
 const baseServerEnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+  VERCEL_ENV: vercelEnv,
   APP_NAME: z.string().min(1).default("Askora"),
   APP_URL: z.url().default("http://localhost:5173"),
   PUBLIC_BETA_NOINDEX: booleanFromEnvironment,
@@ -94,7 +100,11 @@ const baseServerEnvSchema = z.object({
 
 export const serverEnvSchema = baseServerEnvSchema
   .superRefine((environment, context) => {
-    if (environment.NODE_ENV !== "production") {
+    const isStrictProduction =
+      environment.NODE_ENV === "production" &&
+      environment.VERCEL_ENV !== "preview";
+
+    if (!isStrictProduction) {
       return;
     }
 
