@@ -7,6 +7,34 @@ export const QUESTION_GENERATION_MODELS = {
 export const QUESTION_GENERATION_AUTO_MODEL =
   QUESTION_GENERATION_MODELS.gemini36Flash;
 
+export const QUESTION_GENERATION_AUTO_FALLBACK_MODEL = "gemini-3.5-flash";
+
+export const questionGenerationLanguageValues = [
+  "egyptian_arabic",
+  "modern_standard_arabic",
+  "english",
+] as const;
+
+export const questionGenerationStyleValues = [
+  "balanced",
+  "deep_reflective",
+  "professional",
+  "personal",
+  "light_fun",
+  "surprise_me",
+] as const;
+
+export const questionGenerationRequestedCountValues = [3, 5, 10] as const;
+
+export type QuestionGenerationLanguage =
+  (typeof questionGenerationLanguageValues)[number];
+
+export type QuestionGenerationStyle =
+  (typeof questionGenerationStyleValues)[number];
+
+export type QuestionGenerationRequestedCount =
+  (typeof questionGenerationRequestedCountValues)[number];
+
 export const QUESTION_GENERATION_DISCLOSURE_VERSION = 1;
 
 export const questionGenerationModelPreferenceValues = [

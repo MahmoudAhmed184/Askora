@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   normalizeQuestionGenerationInterest,
+  generatedQuestionBatchSchema,
   questionGenerationPreferencesSchema,
+  questionGenerationRequestSchema,
 } from "~/features/question-generation/question-generation.validations";
 
 describe("question generation preferences validation", () => {
@@ -48,5 +50,43 @@ describe("question generation preferences validation", () => {
     expect(normalizeQuestionGenerationInterest("  SOFTware  ")).toBe(
       "software",
     );
+  });
+
+  it("accepts only the generation request controls and strict output shape", () => {
+    expect(
+      questionGenerationRequestSchema.parse({
+        topic: "  Career  ",
+        language: "english",
+        style: "balanced",
+        requestedCount: 5,
+      }),
+    ).toMatchObject({ topic: "Career", requestedCount: 5 });
+    expect(questionGenerationRequestSchema.safeParse({
+      topic: "x".repeat(161), language: "english", style: "balanced", requestedCount: 4,
+    }).success).toBe(false);
+    expect(questionGenerationRequestSchema.safeParse({
+      language: "other", style: "balanced", requestedCount: 3,
+    }).success).toBe(false);
+    expect(generatedQuestionBatchSchema.safeParse({
+      questions: [{ text: "Question?", extra: "no" }],
+    }).success).toBe(false);
+  });
+
+  it.each([
+    "egyptian_arabic",
+    "modern_standard_arabic",
+    "english",
+  ])("accepts supported language %s", (language) => {
+    expect(questionGenerationRequestSchema.safeParse({
+      topic: "", language, style: "balanced", requestedCount: 3,
+    }).success).toBe(true);
+  });
+
+  it.each([
+    "balanced", "deep_reflective", "professional", "personal", "light_fun", "surprise_me",
+  ])("accepts supported style %s", (style) => {
+    expect(questionGenerationRequestSchema.safeParse({
+      topic: "", language: "english", style, requestedCount: 10,
+    }).success).toBe(true);
   });
 });

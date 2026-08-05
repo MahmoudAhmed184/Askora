@@ -1,8 +1,14 @@
 import { z } from "zod";
 
 import {
+  questionGenerationLanguageValues,
   questionGenerationModelPreferenceValues,
+  questionGenerationRequestedCountValues,
+  questionGenerationStyleValues,
+  type QuestionGenerationLanguage,
   type QuestionGenerationModelPreference,
+  type QuestionGenerationRequestedCount,
+  type QuestionGenerationStyle,
 } from "~/features/question-generation/question-generation.constants";
 
 export const questionGenerationSettingsIntentValues = [
@@ -17,6 +23,36 @@ export const MIN_QUESTION_GENERATION_INTEREST_LENGTH = 2;
 export const MAX_QUESTION_GENERATION_INTEREST_LENGTH = 40;
 
 const trimmedString = z.string().transform((value) => value.trim());
+
+export const questionGenerationRequestSchema = z.object({
+  topic: trimmedString.pipe(z.string().max(160)).optional().default(""),
+  language: z.enum(questionGenerationLanguageValues),
+  style: z.enum(questionGenerationStyleValues),
+  requestedCount: z.union(
+    questionGenerationRequestedCountValues.map((value) => z.literal(value)),
+  ),
+}).strict();
+
+export const generatedQuestionSchema = z.object({
+  text: trimmedString.pipe(z.string().min(1).max(500)),
+}).strict();
+
+export const generatedQuestionBatchSchema = z.object({
+  questions: z.array(generatedQuestionSchema),
+}).strict();
+
+export const generatedQuestionBatchJsonSchema = z.toJSONSchema(
+  generatedQuestionBatchSchema,
+);
+
+export interface QuestionGenerationRequest {
+  topic: string;
+  language: QuestionGenerationLanguage;
+  style: QuestionGenerationStyle;
+  requestedCount: QuestionGenerationRequestedCount;
+}
+
+export type GeneratedQuestionBatch = z.infer<typeof generatedQuestionBatchSchema>;
 
 const questionGenerationInterestSchema = trimmedString
   .pipe(

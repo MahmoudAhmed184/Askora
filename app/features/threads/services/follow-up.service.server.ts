@@ -13,6 +13,7 @@ import {
   threads,
 } from "~/db/schema";
 import type { CurrentSessionSummary } from "~/features/auth/services/auth.service.server";
+import { normalizeQuestionGenerationText } from "~/features/question-generation/question-generation-normalize";
 import {
   createFollowUpAskedNotification,
   type FollowUpAskedNotification,
@@ -898,7 +899,7 @@ function createNewFollowUpQuestion({
     threadId: thread.id,
     originalText: text,
     normalizedTextHash: hashWithHmacSha256(
-      normalizeQuestionTextForHash(text),
+      normalizeQuestionGenerationText(text),
       "question-text",
     ),
     ipHash: requestInfo.ipHash,
@@ -1091,10 +1092,6 @@ function isPublicQuestionIdentity(
   value: string | undefined,
 ): value is PublicQuestionIdentity {
   return publicQuestionIdentityValues.includes(value as PublicQuestionIdentity);
-}
-
-function normalizeQuestionTextForHash(text: string) {
-  return text.replaceAll(/\s+/g, " ").trim().toLowerCase();
 }
 
 function addDays(date: Date, days: number) {
