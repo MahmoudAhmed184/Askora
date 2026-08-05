@@ -44,6 +44,19 @@ describe("QuestionGenerationSettingsForm", () => {
     expect(screen.getByRole("form", { name: "Acknowledge data use" })).toBeInTheDocument();
   });
 
+  it("offers Gemini 3.5 Flash-Lite instead of the retired 3.1 option", () => {
+    renderSettingsForm();
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Active model" }));
+
+    expect(
+      screen.getByRole("option", { name: "Gemini 3.5 Flash-Lite" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Gemini 3.1 Flash-Lite" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("clears the credential after each completed submission", () => {
     function Harness() {
       const [submission, setSubmission] = useState(0);

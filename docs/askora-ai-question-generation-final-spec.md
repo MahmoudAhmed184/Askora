@@ -316,7 +316,7 @@ Allowed values:
 
 - `Auto` — default;
 - `Gemini 3.6 Flash`;
-- `Gemini 3.1 Flash-Lite`.
+- `Gemini 3.5 Flash-Lite`.
 
 No arbitrary model ID input is allowed.
 
@@ -588,7 +588,7 @@ Code-owned allowlist:
 const QUESTION_GENERATION_MODELS = {
   auto: "auto",
   gemini36Flash: "gemini-3.6-flash",
-  gemini31FlashLite: "gemini-3.1-flash-lite",
+  gemini35FlashLite: "gemini-3.5-flash-lite",
 } as const;
 ```
 
@@ -1545,7 +1545,7 @@ The design was checked against current official documentation for:
 - the `@google/genai` JavaScript/TypeScript SDK;
 - Gemini structured JSON output;
 - model metadata/listing;
-- Gemini 3.6 Flash, Gemini 3.5 Flash, and Gemini 3.1 Flash-Lite;
+- Gemini 3.6 Flash, Gemini 3.5 Flash, and Gemini 3.5 Flash-Lite;
 - safety settings;
 - rate-limit behavior;
 - API-key guidance and changing authorization-key behavior;

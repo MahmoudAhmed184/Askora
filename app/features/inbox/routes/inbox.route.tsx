@@ -163,5 +163,5 @@ function getInboxActionResponseStatus(result: InboxActionResult) {
 function getActiveModelLabel(model: string) {
   if (model === QUESTION_GENERATION_MODELS.auto) return "Auto";
   if (model === QUESTION_GENERATION_MODELS.gemini36Flash) return "Gemini 3.6 Flash";
-  return "Gemini 3.1 Flash-Lite";
+  return "Gemini 3.5 Flash-Lite";
 }

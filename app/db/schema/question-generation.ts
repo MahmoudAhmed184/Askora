@@ -14,7 +14,7 @@ import { profiles } from "~/db/schema/profiles";
 
 export const questionGenerationModelPreferenceEnum = pgEnum(
   "question_generation_model_preference",
-  ["auto", "gemini-3.6-flash", "gemini-3.1-flash-lite"],
+  ["auto", "gemini-3.6-flash", "gemini-3.5-flash-lite"],
 );
 
 export const questionGenerationLanguageEnum = pgEnum(
@@ -117,7 +117,7 @@ export const questionGenerationBatches = pgTable(
     ),
     check(
       "question_generation_batches_model_used_check",
-      sql`${table.modelUsed} in ('gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite')`,
+      sql`${table.modelUsed} in ('gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite')`,
     ),
     check(
       "question_generation_batches_token_counts_check",

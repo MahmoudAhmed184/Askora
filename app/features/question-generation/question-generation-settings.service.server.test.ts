@@ -22,7 +22,7 @@ describe("question generation settings", () => {
       formData: createFormData({
         intent: "connect",
         geminiApiKey: "test-key-not-to-store",
-        modelPreference: "gemini-3.1-flash-lite",
+        modelPreference: "gemini-3.5-flash-lite",
       }),
       encryptCredential: () => credentialMaterial,
       now,
@@ -35,7 +35,7 @@ describe("question generation settings", () => {
     });
 
     expect(validationInputs).toEqual([
-      { apiKey: "test-key-not-to-store", model: "gemini-3.1-flash-lite" },
+      { apiKey: "test-key-not-to-store", model: "gemini-3.5-flash-lite" },
     ]);
     expect(result.status).toBe("credential_connected");
     expect(stores.savedCredentials).toHaveLength(1);
