@@ -9,6 +9,7 @@ import { SettingsShell } from "~/features/settings/components/settings-shell";
 import { loadPrivacySettings } from "~/features/settings/services/privacy-settings.service.server";
 import { loadProfileSettings } from "~/features/settings/services/profile-settings.service.server";
 import { loadSafetySettings } from "~/features/settings/services/safety-settings.service.server";
+import { loadQuestionGenerationSettings } from "~/features/question-generation/question-generation-settings.service.server";
 import type { SettingsRouteContext } from "~/features/settings/types/settings.types";
 
 import type { Route } from "./+types/settings-layout.route";
@@ -20,11 +21,12 @@ export async function loader({ context }: Route.LoaderArgs) {
     return session;
   }
 
-  const [profile, privacy, safety, account] = await Promise.all([
+  const [profile, privacy, safety, account, questionGeneration] = await Promise.all([
     loadProfileSettings({ session }),
     loadPrivacySettings({ session }),
     loadSafetySettings({ session }),
     loadAccountSettings({ session }),
+    loadQuestionGenerationSettings({ session }),
   ]);
 
   return {
@@ -34,6 +36,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       privacy,
       profile,
       safety,
+      questionGeneration,
     },
   } satisfies SettingsRouteContext;
 }

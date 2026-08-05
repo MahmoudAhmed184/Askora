@@ -33,6 +33,10 @@ export default [
       route("profile", "features/settings/routes/profile.route.tsx"),
       route("privacy", "features/settings/routes/privacy.route.tsx"),
       route("safety", "features/settings/routes/safety.route.tsx"),
+      route(
+        "question-generation",
+        "features/settings/routes/question-generation.route.tsx",
+      ),
       route("appearance", "features/settings/routes/appearance.route.tsx"),
       route("account", "features/settings/routes/account.route.tsx"),
     ]),

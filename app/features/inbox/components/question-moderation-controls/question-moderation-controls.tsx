@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu/dropdown-menu";
 import { Field, FieldLabel } from "~/components/ui/field/field";
-import { Select } from "~/components/ui/select/select";
+import { NativeSelect, Select } from "~/components/ui/select/select";
 import { Textarea } from "~/components/ui/textarea/textarea";
 import {
   moderationReportReasonValues,
@@ -203,7 +203,7 @@ export function QuestionModerationNoScriptFallback({
             />
             <label className="flex flex-col gap-2 text-sm font-bold">
               Reason
-              <Select
+              <NativeSelect
                 defaultValue=""
                 disabled={disabled}
                 name="reason"
@@ -217,7 +217,7 @@ export function QuestionModerationNoScriptFallback({
                     {reportReasonLabels[reason]}
                   </option>
                 ))}
-              </Select>
+              </NativeSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-bold">
               Details

@@ -44,9 +44,9 @@ export interface InboxActionQuestion {
   identityMode: InboxActionQuestionIdentity;
   status: InboxActionQuestionStatus;
   deletedAt: Date | null;
-  safetyFingerprintHash: string;
+  safetyFingerprintHash: string | null;
   ipHash: string | null;
-  safetyMetadataRetainUntil: Date;
+  safetyMetadataRetainUntil: Date | null;
 }
 
 export interface NewQuestionReport {
@@ -91,7 +91,7 @@ export interface InboxActionStore {
   createReportWithSafetyActions(params: {
     report: NewQuestionReport;
     block: NewSenderBlock | undefined;
-    retainUntil: Date;
+    retainUntil: Date | null;
     updatedAt: Date;
   }): Promise<void>;
   createBlock(block: NewSenderBlock): Promise<"created" | "existing">;
@@ -294,13 +294,15 @@ export function createDrizzleInboxActionStore(
           await createBlockWithTransaction({ block, transaction });
         }
 
-        await transaction
-          .update(questions)
-          .set({
-            safetyMetadataRetainUntil: retainUntil,
-            updatedAt,
-          })
-          .where(eq(questions.id, report.targetId));
+        if (retainUntil !== null) {
+          await transaction
+            .update(questions)
+            .set({
+              safetyMetadataRetainUntil: retainUntil,
+              updatedAt,
+            })
+            .where(eq(questions.id, report.targetId));
+        }
       });
     },
     async createBlock(block) {
@@ -572,7 +574,10 @@ function createSenderBlock({
     };
   }
 
-  if (question.safetyFingerprintHash.trim().length === 0) {
+  if (
+    question.safetyFingerprintHash === null ||
+    question.safetyFingerprintHash.trim().length === 0
+  ) {
     return {
       status: "denied",
       reason: "no_blockable_sender",
@@ -605,9 +610,15 @@ async function retainQuestionSafetyMetadata({
   question: InboxActionQuestion;
   store: InboxActionStore;
 }) {
+  const retainUntil = getQuestionSafetyRetentionDate({ now, question });
+
+  if (retainUntil === null) {
+    return;
+  }
+
   await store.extendQuestionSafetyMetadataRetention({
     questionId: question.id,
-    retainUntil: getQuestionSafetyRetentionDate({ now, question }),
+    retainUntil,
     updatedAt: now,
   });
 }
@@ -619,6 +630,10 @@ function getQuestionSafetyRetentionDate({
   now: Date;
   question: InboxActionQuestion;
 }) {
+  if (question.safetyMetadataRetainUntil === null) {
+    return null;
+  }
+
   return maxDate(
     question.safetyMetadataRetainUntil,
     addDays(now, QUESTION_REPORT_RETENTION_DAYS),

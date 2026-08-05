@@ -12,6 +12,7 @@ describe("AnswerEditor", () => {
         publicId: "qst_1",
         text: "What should I read next?",
         createdAt: "2026-05-31T12:00:00.000Z",
+        ownerProvenance: null,
         sender: {
           username: "asker",
           displayName: "Known Asker",
@@ -75,6 +76,23 @@ describe("AnswerEditor", () => {
       screen.getByRole("textbox", { name: /edited question/i }),
     ).toHaveValue("Cleaned up wording");
   });
+
+  it("shows generated provenance only for generated owner questions", () => {
+    const generated = renderAnswerEditor({
+      question: {
+        ...createEditor().question,
+        ownerProvenance: "generated",
+      },
+    });
+
+    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
+
+    generated.unmount();
+    renderAnswerEditor();
+
+    expect(screen.queryByText("Generated")).not.toBeInTheDocument();
+  });
 });
 
 function renderAnswerEditor(overrides: Partial<AnswerEditorViewData> = {}) {
@@ -107,6 +125,7 @@ function createEditor(): AnswerEditorViewData {
       publicId: "qst_1",
       text: "What should I read next?",
       createdAt: "2026-05-31T12:00:00.000Z",
+      ownerProvenance: null,
       sender: undefined,
     },
     values: {

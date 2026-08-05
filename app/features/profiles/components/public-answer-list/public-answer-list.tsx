@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router";
 
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
+import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
 import {
   ProfileIdentityLink,
@@ -141,16 +142,32 @@ function PublicAnswerArticle({
       </header>
 
       {answer.questionTextMode === "hidden" || answer.questionText === null ? (
-        <HiddenQuestionPlaceholder className="border-b border-dashed pb-5" />
+        <div className="flex flex-col items-start gap-2 border-b border-dashed pb-5">
+          <HiddenQuestionPlaceholder />
+          {answer.ownerProvenance === "generated" ? (
+            <GeneratedQuestionBadge />
+          ) : undefined}
+        </div>
       ) : (
         <div className="flex flex-col gap-2 border-b border-dashed pb-5">
-          <div className="flex flex-wrap items-baseline gap-2">
-            <p className="min-w-0 flex-1 whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
+          {answer.questionTextMode === "edited" ||
+          answer.ownerProvenance === "generated" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {answer.questionTextMode === "edited" ? (
+                <EditedQuestionBadge />
+              ) : undefined}
+              {answer.ownerProvenance === "generated" ? (
+                <GeneratedQuestionBadge />
+              ) : undefined}
+            </div>
+          ) : undefined}
+          <div>
+            <p
+              className="whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground"
+              dir="auto"
+            >
               {answer.questionText}
             </p>
-            {answer.questionTextMode === "edited" ? (
-              <EditedQuestionBadge />
-            ) : undefined}
           </div>
           {answer.asker === undefined ? undefined : (
             <p className="text-sm leading-6 text-muted-foreground">

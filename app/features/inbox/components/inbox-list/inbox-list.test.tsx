@@ -74,6 +74,24 @@ describe("InboxList", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows Generated only for owner-generated inbox questions and supports automatic text direction", () => {
+    renderInboxList({
+      questions: [{ ...defaultQuestion, generated: true, text: "ما الذي يهمك اليوم؟" }],
+    });
+
+    const generatedMarker = screen.getByLabelText("Generated question");
+
+    expect(generatedMarker).toHaveTextContent("Generated");
+    expect(generatedMarker.closest("header")).not.toBeNull();
+    expect(screen.getByText("ما الذي يهمك اليوم؟")).toHaveAttribute("dir", "auto");
+  });
+
+  it("does not show Generated for manually submitted questions", () => {
+    renderInboxList();
+
+    expect(screen.queryByLabelText("Generated question")).not.toBeInTheDocument();
+  });
+
   it("shows filtered restore and report-plus-block default", async () => {
     renderInboxList({ folder: "filtered" });
 

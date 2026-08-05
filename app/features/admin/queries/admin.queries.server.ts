@@ -68,7 +68,7 @@ export interface StoredQuestionAdminTarget {
   askerProfile: StoredPublicProfileSummary | null;
   recipientProfile: StoredPublicProfileSummary;
   deletedAt: Date | null;
-  safetyFingerprintHash: string;
+  safetyFingerprintHash: string | null;
   ipHash: string | null;
   normalizedTextHash: string;
   createdAt: Date;
@@ -640,6 +640,7 @@ function getQuestionMetadata(target: StoredQuestionAdminTarget) {
   return [
     target.askerUserId === null ? "guest sender" : "account-backed sender",
     target.ipHash === null ? "no IP signal" : "IP signal retained",
+    target.safetyFingerprintHash === null ||
     target.safetyFingerprintHash.trim().length === 0
       ? "no safety fingerprint"
       : "safety fingerprint retained",
@@ -960,7 +961,13 @@ async function findQuestionSafetyCounts(
     sameIpQuestionCount,
     sameNormalizedTextQuestionCount,
   ] = await Promise.all([
-    countQuestionsBy(database, questions.safetyFingerprintHash, target.safetyFingerprintHash),
+    target.safetyFingerprintHash === null
+      ? Promise.resolve(0)
+      : countQuestionsBy(
+          database,
+          questions.safetyFingerprintHash,
+          target.safetyFingerprintHash,
+        ),
     target.ipHash === null
       ? Promise.resolve(0)
       : countQuestionsBy(database, questions.ipHash, target.ipHash),

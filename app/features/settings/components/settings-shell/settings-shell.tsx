@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   LockKeyhole,
+  Sparkles,
   Settings2,
   ShieldCheck,
   SunMoon,
@@ -38,6 +39,13 @@ const settingsLinks = [
     icon: ShieldCheck,
     description:
       "Pause intake, filter phrases, and review sender blocks created from private-question moderation.",
+  },
+  {
+    to: "/settings/question-generation",
+    label: "AI questions",
+    icon: Sparkles,
+    description:
+      "Connect Gemini, choose a model, and manage private question interests.",
   },
   {
     to: "/settings/appearance",

@@ -106,8 +106,8 @@ export function AdminActionForm({
               aria-invalid={fieldErrors.actionType === undefined ? undefined : true}
               id="actionType"
               name="actionType"
-              onChange={(event) => {
-                const nextAction = event.currentTarget.value as AdminActionType;
+              onValueChange={(value) => {
+                const nextAction = value as AdminActionType;
                 setSelectedAction(nextAction);
                 if (!requiresAdminActionNotes(nextAction)) {
                   setClientNotesError(null);

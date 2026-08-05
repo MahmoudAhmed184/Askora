@@ -35,6 +35,25 @@ describe("handleInboxAction", () => {
     ]);
   });
 
+  it("deletes generated questions without creating public-submission safety data", async () => {
+    const inbox = createInboxActionStore({
+      question: createQuestion({
+        askerProfileId: "profile_1",
+        askerUserId: "user_1",
+        safetyFingerprintHash: null,
+        safetyMetadataRetainUntil: null,
+      }),
+    });
+
+    await expect(
+      submitInboxAction({
+        formData: createActionFormData({ intent: "delete" }),
+        store: inbox.store,
+      }),
+    ).resolves.toMatchObject({ status: "deleted" });
+    expect(inbox.retentionUpdates).toEqual([]);
+  });
+
   it("discards drafted questions without leaving a draft thread item", async () => {
     const inbox = createInboxActionStore({
       draftItemQuestionIds: ["question_1"],
@@ -434,11 +453,13 @@ function createInboxActionStore({
         await store.createBlock(block);
       }
 
-      retentionUpdates.push({
-        questionId: report.targetId,
-        retainUntil,
-        updatedAt,
-      });
+      if (retainUntil !== null) {
+        retentionUpdates.push({
+          questionId: report.targetId,
+          retainUntil,
+          updatedAt,
+        });
+      }
     },
     createBlock(block) {
       const key =

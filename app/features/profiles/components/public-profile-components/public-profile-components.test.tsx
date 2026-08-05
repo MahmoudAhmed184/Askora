@@ -342,6 +342,7 @@ describe("public profile components", () => {
               disabled: false,
             },
             pinPosition: 1,
+            ownerProvenance: "generated",
             questionText: "What changed your mind recently?",
           }),
         ]}
@@ -351,9 +352,25 @@ describe("public profile components", () => {
 
     expect(screen.queryByText("Ask State")).not.toBeInTheDocument();
     expect(screen.getByText("Pinned Threads")).toBeInTheDocument();
+    expect(screen.getByText("Generated")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /what changed your mind recently/i }),
     ).toHaveAttribute("href", "/person/a/thr_1");
+  });
+
+  it("renders no provenance marker or inference attributes for public answers", () => {
+    const { container } = renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer()]}
+        profile={answerListProfile}
+      />,
+    );
+    const html = container.innerHTML;
+
+    expect(screen.queryByText("Generated")).not.toBeInTheDocument();
+    expect(html).not.toMatch(
+      /ai_generated|ownerProvenance|source=|generationBatch|gemini|modelId|tokenCount/i,
+    );
   });
 
   it("serializes the anonymity switch and falls back to a hidden input when only one identity is allowed", () => {
@@ -414,6 +431,26 @@ describe("public profile components", () => {
     );
 
     expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
+  });
+
+  it("renders the owner-only generated badge independently from edited wording", () => {
+    const { container } = renderWithRouter(
+      <PublicAnswerList
+        answers={[
+          createPublishedAnswer({
+            ownerProvenance: "generated",
+            questionTextMode: "edited",
+          }),
+        ]}
+        profile={answerListProfile}
+      />,
+    );
+
+    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.getByText("Edited question")).toBeInTheDocument();
+    expect(container.querySelector("[dir='auto']")).toHaveTextContent(
+      "What should I read next?",
+    );
   });
 
   it("links the answer card identity to the profile", () => {

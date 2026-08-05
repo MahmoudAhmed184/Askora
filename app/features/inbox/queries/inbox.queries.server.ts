@@ -20,6 +20,7 @@ export interface StoredInboxQuestion {
   recipientProfileId: string;
   recipientUserId: string;
   identityMode: InboxQuestionIdentity;
+  source: "public_profile" | "ai_generated";
   status: InboxQuestionStatus;
   originalText: string;
   deletedAt: Date | null;
@@ -40,6 +41,7 @@ export interface InboxQuestionView {
   text: string;
   identity: "anonymous" | "attributed";
   createdAt: string;
+  generated?: true;
   sender?: InboxQuestionSenderView;
 }
 
@@ -95,6 +97,7 @@ export function createDrizzleInboxLoaderStore(
           recipientProfileId: questions.recipientProfileId,
           recipientUserId: questions.recipientUserId,
           identityMode: questions.identityMode,
+          source: questions.source,
           status: questions.status,
           originalText: questions.originalText,
           deletedAt: questions.deletedAt,
@@ -159,6 +162,7 @@ function toInboxQuestionView(question: StoredInboxQuestion): InboxQuestionView {
     text: question.originalText,
     identity: isAttributed ? "attributed" : "anonymous",
     createdAt: question.createdAt.toISOString(),
+    ...(question.source === "ai_generated" ? { generated: true as const } : {}),
     ...getInboxQuestionSender(question),
   };
 }

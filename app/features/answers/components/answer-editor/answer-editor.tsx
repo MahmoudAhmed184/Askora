@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Form, useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   AnonymousAvatar,
@@ -311,14 +312,13 @@ export function AnswerEditor({
                 }
                 id="followUpPermissionOverride"
                 name="followUpPermissionOverride"
-                onChange={(event) => {
+                onValueChange={(value) => {
                   setValues((current) => ({
                     ...current,
                     followUpPermissionOverride:
-                      event.target.value === ""
+                      value === ""
                         ? null
-                        : (event.target
-                            .value as AnswerFormValues["followUpPermissionOverride"]),
+                        : (value as AnswerFormValues["followUpPermissionOverride"]),
                   }));
                 }}
                 value={normalizeFollowUpPermissionOverride(
@@ -440,9 +440,14 @@ function QuestionContext({
 
   return (
     <div className="rounded-2xl border bg-secondary/70 p-4">
-      <p className="mb-3 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-primary">
-        Question from
-      </p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-primary">
+          Question from
+        </p>
+        {question.ownerProvenance === "generated" ? (
+          <GeneratedQuestionBadge />
+        ) : undefined}
+      </div>
       {question.sender === undefined ? (
         <div className="flex min-w-0 items-center gap-3">
           <AnonymousAvatar />
@@ -464,7 +469,10 @@ function QuestionContext({
           trailing={<IdentityBadge label="Attributed" />}
         />
       )}
-      <p className="mt-4 whitespace-pre-wrap break-words border-t border-dashed pt-4 font-serif text-lg font-bold italic leading-7 text-foreground">
+      <p
+        className="mt-4 whitespace-pre-wrap break-words border-t border-dashed pt-4 font-serif text-lg font-bold italic leading-7 text-foreground"
+        dir="auto"
+      >
         {question.text}
       </p>
     </div>
