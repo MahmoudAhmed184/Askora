@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "react-router dev",
     "build": "react-router build",
-    "deploy:build": "npm run db:migrate && npm run build",
+    "deploy:build": "([ \"$VERCEL_ENV\" = preview ] || npm run db:migrate) && npm run build",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc --noEmit",
     "lint": "react-router typegen && eslint .",
