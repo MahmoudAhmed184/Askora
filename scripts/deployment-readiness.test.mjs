@@ -14,7 +14,9 @@ describe("deployment readiness configuration", () => {
     const deployCommand = packageJson.scripts?.["deploy:build"];
 
     expect(vercelConfig.buildCommand).toBe("npm run deploy:build");
-    expect(deployCommand).toBe("npm run db:migrate && npm run build");
+    expect(deployCommand).toContain("npm run db:migrate");
+    expect(deployCommand).toContain("npm run build");
+    expect(deployCommand).toContain("VERCEL_ENV");
   });
 
   it("keeps the validation workflow and retention schedule configured", async () => {
