@@ -40,13 +40,30 @@ if (!("ResizeObserver" in globalThis)) {
 
 // Node 22+ has an uninitialized experimental globalThis.localStorage that breaks jsdom window.localStorage unless mocked
 try {
-  if (typeof window !== "undefined" && (!window.localStorage || typeof window.localStorage.setItem !== "function")) {
+  const isLocalStorageUsable = (() => {
+    try {
+      const testKey = "__storage_test__";
+      window.localStorage.setItem(testKey, testKey);
+      window.localStorage.removeItem(testKey);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!isLocalStorageUsable) {
     const store = new Map<string, string>();
-    const localStorageMock = {
+    const localStorageMock: Storage = {
       getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => store.set(key, String(value)),
-      removeItem: (key: string) => store.delete(key),
-      clear: () => store.clear(),
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      clear: () => {
+        store.clear();
+      },
       key: (index: number) => Array.from(store.keys())[index] ?? null,
       get length() {
         return store.size;
