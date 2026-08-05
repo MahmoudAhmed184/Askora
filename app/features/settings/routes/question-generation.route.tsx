@@ -74,9 +74,13 @@ function getQuestionGenerationSettingsResponseStatus(
   }
 
   if (
-    result.status === "credential_invalid" ||
+    result.status === "configuration_unavailable" ||
     result.status === "provider_unavailable"
   ) {
+    return 503;
+  }
+
+  if (result.status === "credential_invalid") {
     return 422;
   }
 

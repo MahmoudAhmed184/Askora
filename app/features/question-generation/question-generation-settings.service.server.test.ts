@@ -6,6 +6,7 @@ import {
   loadQuestionGenerationSettings,
   submitQuestionGenerationSettings,
 } from "~/features/question-generation/question-generation-settings.service.server";
+import { QuestionGenerationCredentialError } from "~/features/question-generation/question-generation.crypto.server";
 import type {
   QuestionGenerationSettingsRepository,
   StoredQuestionGenerationSettings,
@@ -69,6 +70,35 @@ describe("question generation settings", () => {
     expect(stores.savedCredentials).toEqual([]);
     expect(stores.events).toEqual([
       { action: "credential_replaced", outcome: "failure" },
+    ]);
+  });
+
+  it("returns a safe configuration error when credential encryption is unavailable", async () => {
+    const stores = createRepository();
+    const result = await submitQuestionGenerationSettings({
+      formData: createFormData({
+        intent: "connect",
+        geminiApiKey: "test-key-not-to-store",
+        modelPreference: "auto",
+      }),
+      encryptCredential: () => {
+        throw new QuestionGenerationCredentialError();
+      },
+      now,
+      repository: stores.repository,
+      session,
+      validateCredential: () => Promise.resolve({ status: "validated" }),
+    });
+
+    expect(result).toMatchObject({
+      status: "configuration_unavailable",
+      formError:
+        "Askora cannot encrypt Gemini credentials right now. Contact the site operator.",
+    });
+    expect(JSON.stringify(result)).not.toContain("test-key-not-to-store");
+    expect(stores.savedCredentials).toEqual([]);
+    expect(stores.events).toEqual([
+      { action: "credential_connected", outcome: "failure" },
     ]);
   });
 

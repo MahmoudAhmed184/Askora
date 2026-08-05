@@ -10,6 +10,7 @@ import {
 import {
   decryptAndRotateQuestionGenerationCredential,
   encryptQuestionGenerationCredential,
+  QuestionGenerationCredentialError,
   type StoredQuestionGenerationCredential,
 } from "~/features/question-generation/question-generation.crypto.server";
 import {
@@ -87,7 +88,12 @@ export type QuestionGenerationSettingsSubmissionResult =
       formError: string;
     }
   | {
-      status: "credential_invalid" | "provider_unavailable" | "rate_limited" | "suspended";
+      status:
+        | "configuration_unavailable"
+        | "credential_invalid"
+        | "provider_unavailable"
+        | "rate_limited"
+        | "suspended";
       values: QuestionGenerationSettingsFormValues;
       formError: string;
       retryAfterSeconds?: number;
@@ -281,10 +287,26 @@ async function connectCredential({
       : safeError(values, "provider_unavailable");
   }
 
-  const material = encryptCredential({
-    credential: parsed.value.geminiApiKey,
-    ownerUserId: session.user.id,
-  });
+  let material: StoredQuestionGenerationCredential;
+
+  try {
+    material = encryptCredential({
+      credential: parsed.value.geminiApiKey,
+      ownerUserId: session.user.id,
+    });
+  } catch (error) {
+    if (!(error instanceof QuestionGenerationCredentialError)) {
+      throw error;
+    }
+
+    await recordCredentialValidationFailure({
+      action: securityEventAction,
+      now,
+      repository,
+      session,
+    });
+    return safeError(values, "configuration_unavailable");
+  }
 
   await repository.saveValidatedCredential({
     ownerUserId: session.user.id,
@@ -470,11 +492,17 @@ function safeError(
   values: QuestionGenerationSettingsFormValues,
   status: Extract<
     QuestionGenerationSettingsSubmissionResult["status"],
-    "credential_invalid" | "provider_unavailable" | "rate_limited" | "suspended"
+    | "configuration_unavailable"
+    | "credential_invalid"
+    | "provider_unavailable"
+    | "rate_limited"
+    | "suspended"
   >,
   retryAfterSeconds?: number,
 ): QuestionGenerationSettingsSubmissionResult {
   const messages = {
+    configuration_unavailable:
+      "Askora cannot encrypt Gemini credentials right now. Contact the site operator.",
     credential_invalid: "Gemini could not validate this key. Check it and try again.",
     provider_unavailable:
       "Gemini could not validate this connection right now. Try again later.",
