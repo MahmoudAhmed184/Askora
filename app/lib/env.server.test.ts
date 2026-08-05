@@ -97,4 +97,16 @@ describe("parseServerEnv", () => {
       }),
     ).toThrow(/QUESTION_GENERATION_ENCRYPTION_KEYS/);
   });
+
+  it("skips production-only requirements on Vercel preview", () => {
+    const environment = parseServerEnv({
+      NODE_ENV: "production",
+      VERCEL_ENV: "preview",
+      APP_URL: "https://preview.example.com",
+    });
+
+    expect(environment.NODE_ENV).toBe("production");
+    expect(environment.VERCEL_ENV).toBe("preview");
+    expect(environment.DATABASE_URL).toBeUndefined();
+  });
 });
