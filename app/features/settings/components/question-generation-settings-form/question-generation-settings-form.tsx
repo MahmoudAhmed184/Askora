@@ -198,9 +198,9 @@ export function QuestionGenerationSettingsForm({
                   aria-invalid={fieldErrors.modelPreference !== undefined}
                   id="modelPreference"
                   name="modelPreference"
-                  onChange={(event) => {
+                  onValueChange={(value) => {
                     setModelPreference(
-                      event.currentTarget.value as QuestionGenerationModelPreference,
+                      value as QuestionGenerationModelPreference,
                     );
                   }}
                   value={modelPreference}

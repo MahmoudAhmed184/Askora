@@ -12,8 +12,12 @@ describe("InboxQuestionGenerationDialog", () => {
 
     expect(screen.getByRole("dialog", { name: "Generate questions" })).toBeInTheDocument();
     expect(screen.getByLabelText("What would you like questions about today?")).toHaveAttribute("dir", "auto");
-    expect(screen.getByLabelText("Style")).toHaveValue("balanced");
-    expect(screen.getByLabelText("Quantity")).toHaveValue("5");
+    expect(screen.getByLabelText("Style")).toHaveTextContent("Balanced");
+    expect(screen.getByLabelText("Quantity")).toHaveTextContent("5");
+    expect(screen.getByRole("form", { name: "Generate questions" })).toHaveFormValues({
+      style: "balanced",
+      requestedCount: "5",
+    });
     expect(screen.getByText("Active model: Auto")).toBeInTheDocument();
   });
 

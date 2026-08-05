@@ -172,24 +172,24 @@ export function InboxQuestionGenerationDialog({
               </Field>
               <Field>
                 <FieldLabel htmlFor={languageId}>Language</FieldLabel>
-                <Select disabled={isPending} id={languageId} name="language" onChange={(event) => {
-                  setLanguage(event.target.value as QuestionGenerationLanguage);
+                <Select disabled={isPending} id={languageId} name="language" onValueChange={(value) => {
+                  setLanguage(value as QuestionGenerationLanguage);
                 }} value={language}>
                   {questionGenerationLanguageValues.map((value) => <option key={value} value={value}>{languageLabels[value]}</option>)}
                 </Select>
               </Field>
               <Field>
                 <FieldLabel htmlFor={styleId}>Style</FieldLabel>
-                <Select disabled={isPending} id={styleId} name="style" onChange={(event) => {
-                  setStyle(event.target.value as QuestionGenerationStyle);
+                <Select disabled={isPending} id={styleId} name="style" onValueChange={(value) => {
+                  setStyle(value as QuestionGenerationStyle);
                 }} value={style}>
                   {questionGenerationStyleValues.map((value) => <option key={value} value={value}>{styleLabels[value]}</option>)}
                 </Select>
               </Field>
               <Field>
                 <FieldLabel htmlFor={countId}>Quantity</FieldLabel>
-                <Select disabled={isPending} id={countId} name="requestedCount" onChange={(event) => {
-                  setRequestedCount(Number(event.target.value) as QuestionGenerationRequestedCount);
+                <Select disabled={isPending} id={countId} name="requestedCount" onValueChange={(value) => {
+                  setRequestedCount(Number(value) as QuestionGenerationRequestedCount);
                 }} value={requestedCount}>
                   {questionGenerationRequestedCountValues.map((value) => <option key={value} value={value}>{value}</option>)}
                 </Select>

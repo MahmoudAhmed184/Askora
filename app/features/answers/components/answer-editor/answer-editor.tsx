@@ -312,14 +312,13 @@ export function AnswerEditor({
                 }
                 id="followUpPermissionOverride"
                 name="followUpPermissionOverride"
-                onChange={(event) => {
+                onValueChange={(value) => {
                   setValues((current) => ({
                     ...current,
                     followUpPermissionOverride:
-                      event.target.value === ""
+                      value === ""
                         ? null
-                        : (event.target
-                            .value as AnswerFormValues["followUpPermissionOverride"]),
+                        : (value as AnswerFormValues["followUpPermissionOverride"]),
                   }));
                 }}
                 value={normalizeFollowUpPermissionOverride(

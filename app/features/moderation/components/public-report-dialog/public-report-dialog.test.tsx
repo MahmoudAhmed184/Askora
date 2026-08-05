@@ -17,7 +17,10 @@ describe("PublicReportDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Report answer" }));
 
     expect(screen.getByRole("dialog", { name: "Report answer" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Reason")).toHaveAttribute("name", "reason");
+    expect(screen.getByLabelText("Reason")).toHaveTextContent("Choose a reason");
+    expect(screen.getByRole("form", { name: "Report answer" })).toHaveFormValues({
+      reason: "",
+    });
     expect(screen.getByLabelText("Details")).toHaveAttribute("maxLength", "500");
     expect(screen.getByDisplayValue("thread_item")).toHaveAttribute(
       "name",

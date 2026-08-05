@@ -8,9 +8,7 @@ describe("AdminActionForm", () => {
   it("opens confirmation before applying severe moderation actions", () => {
     renderAdminActionForm();
 
-    fireEvent.change(screen.getByLabelText("Action"), {
-      target: { value: "remove_public_content" },
-    });
+    selectAction("Remove public content *");
     fireEvent.change(screen.getByLabelText("Notes"), {
       target: { value: "Published private information." },
     });
@@ -27,9 +25,6 @@ describe("AdminActionForm", () => {
   it("lets dismiss submit without a confirmation dialog", () => {
     renderAdminActionForm();
 
-    fireEvent.change(screen.getByLabelText("Action"), {
-      target: { value: "dismiss" },
-    });
     fireEvent.click(screen.getByRole("button", { name: "Apply action" }));
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -38,9 +33,7 @@ describe("AdminActionForm", () => {
   it("shows required notes inline before severe confirmation", () => {
     renderAdminActionForm();
 
-    fireEvent.change(screen.getByLabelText("Action"), {
-      target: { value: "remove_public_content" },
-    });
+    selectAction("Remove public content *");
     fireEvent.click(screen.getByRole("button", { name: "Apply action" }));
 
     expect(
@@ -49,6 +42,11 @@ describe("AdminActionForm", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 });
+
+function selectAction(name: string) {
+  fireEvent.click(screen.getByRole("combobox", { name: "Action" }));
+  fireEvent.click(screen.getByRole("option", { name }));
+}
 
 function renderAdminActionForm() {
   const router = createMemoryRouter([
