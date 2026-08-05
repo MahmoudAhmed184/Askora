@@ -10,27 +10,19 @@ import { InboxList } from "~/features/inbox/components/inbox-list";
 import { InboxWorkflowShell } from "~/features/inbox/components/inbox-workflow-nav";
 import {
   InboxQuestionGenerationDialog,
-  type InboxGenerationActionResult,
 } from "~/features/question-generation/components/inbox-question-generation-dialog";
 import { QUESTION_GENERATION_MODELS } from "~/features/question-generation/question-generation.constants";
-import { QuestionGenerationError } from "~/features/question-generation/question-generation.errors";
-import { generateQuestionBatch } from "~/features/question-generation/question-generation.service.server";
 import { loadQuestionGenerationSettings } from "~/features/question-generation/question-generation-settings.service.server";
-import { questionGenerationRequestSchema } from "~/features/question-generation/question-generation.validations";
 import {
   handleInboxAction,
   type InboxActionResult,
 } from "~/features/inbox/services/inbox-actions.service.server";
 import { loadInboxFolder } from "~/features/inbox/queries/inbox.queries.server";
+import { handleInboxGenerationAction } from "~/features/inbox/services/inbox-generation-action.server";
 
 interface InboxRouteActionData {
   inbox: InboxActionResult;
   generation?: never;
-}
-
-interface InboxGenerationRouteActionData {
-  generation: InboxGenerationActionResult;
-  inbox?: never;
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
@@ -166,69 +158,6 @@ function getInboxActionResponseStatus(result: InboxActionResult) {
 
       return 403;
   }
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export async function handleInboxGenerationAction({
-  formData,
-  session,
-  generate = generateQuestionBatch,
-}: {
-  formData: FormData;
-  session: Parameters<typeof generateQuestionBatch>[0]["session"];
-  generate?: typeof generateQuestionBatch;
-}) {
-  const parsed = questionGenerationRequestSchema.safeParse({
-    topic: getFormText(formData, "topic"),
-    language: getFormText(formData, "language"),
-    style: getFormText(formData, "style"),
-    requestedCount: Number(getFormText(formData, "requestedCount")),
-  });
-
-  if (!parsed.success) {
-    return data<InboxGenerationRouteActionData>(
-      { generation: { status: "invalid", formError: "Check the generation fields and try again." } },
-      { status: 400 },
-    );
-  }
-
-  try {
-    const result = await generate({ input: parsed.data, session });
-    return data<InboxGenerationRouteActionData>(
-      { generation: { status: "generated", questions: result.questions } },
-      { status: 200 },
-    );
-  } catch (error) {
-    const result = toInboxGenerationErrorResult(error);
-    return data<InboxGenerationRouteActionData>(
-      { generation: result },
-      { status: getInboxGenerationErrorResponseStatus(error) },
-    );
-  }
-}
-
-function toInboxGenerationErrorResult(error: unknown): InboxGenerationActionResult {
-  if (error instanceof QuestionGenerationError) {
-    return error.retryAfterSeconds === undefined
-      ? { status: "failed", formError: error.message }
-      : { status: "failed", formError: error.message, retryAfterSeconds: error.retryAfterSeconds };
-  }
-
-  return { status: "failed", formError: "The batch could not be created. Try again." };
-}
-
-function getInboxGenerationErrorResponseStatus(error: unknown) {
-  if (!(error instanceof QuestionGenerationError)) return 500;
-  if (error.code === "rate_limited") return 429;
-  if (error.code === "unauthorized") return 401;
-  if (error.code === "persistence_failed") return 500;
-  if (error.code === "provider_unavailable" || error.code === "provider_timeout") return 503;
-  return 422;
-}
-
-function getFormText(formData: FormData, key: string) {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
 }
 
 function getActiveModelLabel(model: string) {

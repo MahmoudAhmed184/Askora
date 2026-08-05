@@ -73,6 +73,7 @@ export interface PublicThreadItemRow {
   questionTextMode: QuestionTextMode;
   displayQuestionText: string | null;
   identityMode: AnswerQuestionIdentity;
+  source: "public_profile" | "ai_generated";
   askerDisplayName: string | null;
   askerUsername: string | null;
   askerAvatarUrl?: string | null;
@@ -163,6 +164,7 @@ export interface PublicThreadAnswerItem {
     username: string;
     avatarUrl: string | null;
   };
+  ownerProvenance?: "generated";
 }
 
 export interface PublicThreadRemovedItem {
@@ -364,6 +366,7 @@ export function createDrizzlePublicThreadStore(
           questionTextMode: threadItems.questionTextMode,
           displayQuestionText: threadItems.displayQuestionText,
           identityMode: questions.identityMode,
+          source: questions.source,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
           askerAvatarUrl: askerProfiles.avatarUrl,
@@ -509,7 +512,22 @@ function toPublicThreadAnswerItem({
     }),
     ...(questionText === undefined ? {} : { questionText }),
     ...getPublicAsker(row, questionText),
+    ...(isThreadOwnerSession(owner, session) && row.source === "ai_generated"
+      ? { ownerProvenance: "generated" as const }
+      : {}),
   };
+}
+
+function isThreadOwnerSession(
+  owner: Pick<PublicThreadItemOwner, "profileId" | "userId">,
+  session: CurrentSessionSummary,
+) {
+  return (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.profile.id === owner.profileId &&
+    session.user.id === owner.userId
+  );
 }
 
 function getPublicAsker(

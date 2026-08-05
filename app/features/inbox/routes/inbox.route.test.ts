@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { QuestionGenerationError } from "~/features/question-generation/question-generation.errors";
-import { handleInboxGenerationAction } from "~/features/inbox/routes/inbox.route";
+import { handleInboxGenerationAction } from "~/features/inbox/services/inbox-generation-action.server";
 import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 
 describe("inbox generation action", () => {

@@ -1,6 +1,7 @@
 import { Pin } from "lucide-react";
 import { Link, useLocation } from "react-router";
 
+import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import type { PublicPublishedAnswer } from "~/features/answers/types/answers.types";
 import type { PublicProfileView } from "~/features/profiles/types/profiles.types";
 import { createThreadModalLink } from "~/features/threads/thread-modal";
@@ -93,6 +94,9 @@ function PinnedThreadLink({
       <h3 className="line-clamp-2 text-sm font-bold leading-5 text-primary group-hover:underline">
         {getPinnedThreadTitle(answer)}
       </h3>
+      {answer.ownerProvenance === "generated" ? (
+        <GeneratedQuestionBadge className="mt-2" />
+      ) : undefined}
       <p className="mt-1 font-mono text-[0.68rem] text-muted-foreground">
         {formatPinnedThreadMeta(answer)}
       </p>

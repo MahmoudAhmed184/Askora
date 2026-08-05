@@ -5,6 +5,7 @@ import type { AppShellData } from "~/types/app-shell-data";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
+import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
 import {
   AnonymousAvatar,
@@ -346,7 +347,12 @@ function AnswerThreadItem({
     <article className="scroll-mt-24" id={`item-${item.publicId}`}>
       <div className="flex flex-col gap-5">
         {item.questionTextMode === "hidden" ? (
-          <HiddenQuestionPlaceholder />
+          <div className="flex flex-col items-start gap-2">
+            <HiddenQuestionPlaceholder />
+            {item.ownerProvenance === "generated" ? (
+              <GeneratedQuestionBadge />
+            ) : undefined}
+          </div>
         ) : item.questionText === undefined ? undefined : (
           <ThreadQuestionEntry
             index={index}
@@ -415,11 +421,15 @@ function ThreadQuestionEntry({
                 ? "text-2xl leading-tight text-primary"
                 : "text-lg leading-7 text-foreground",
             )}
+            dir="auto"
           >
             {item.questionText}
           </p>
           {item.questionTextMode === "edited" ? (
             <EditedQuestionBadge />
+          ) : undefined}
+          {item.ownerProvenance === "generated" ? (
+            <GeneratedQuestionBadge />
           ) : undefined}
         </div>
       </div>

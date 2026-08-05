@@ -61,6 +61,7 @@ export interface AnswerWorkflowQuestion {
   askerUsername: string | null;
   askerAvatarUrl: string | null;
   identityMode: AnswerQuestionIdentity;
+  source: "public_profile" | "ai_generated";
   status: AnswerQuestionStatus;
   originalText: string;
   deletedAt: Date | null;
@@ -92,6 +93,7 @@ export interface StoredDraftAnswerQuestion {
   itemUpdatedAt: Date;
   questionCreatedAt: Date;
   identityMode: AnswerQuestionIdentity;
+  source: "public_profile" | "ai_generated";
   askerDisplayName: string | null;
   askerUsername: string | null;
   askerAvatarUrl: string | null;
@@ -147,6 +149,7 @@ export interface AnswerEditorViewData {
     publicId: string;
     text: string;
     createdAt: string;
+    ownerProvenance: "generated" | null;
     sender:
       | {
           displayName: string;
@@ -165,6 +168,7 @@ export interface DraftAnswerView {
   answerPreview: string;
   updatedAt: string;
   questionCreatedAt: string;
+  ownerProvenance: "generated" | null;
   sender:
     | {
         displayName: string;
@@ -284,6 +288,7 @@ export async function loadAnswerEditor({
         publicId: question.question.publicId,
         text: question.question.originalText,
         createdAt: question.question.createdAt.toISOString(),
+        ownerProvenance: getOwnerQuestionProvenance(question.question.source),
         sender: getAnswerQuestionSender(question.question),
       },
       values: toAnswerFormValues(draft, question.question),
@@ -322,6 +327,7 @@ export async function loadDraftAnswers({
       answerPreview: createAnswerPreview(draft.answerText),
       updatedAt: draft.itemUpdatedAt.toISOString(),
       questionCreatedAt: draft.questionCreatedAt.toISOString(),
+      ownerProvenance: getOwnerQuestionProvenance(draft.source),
       sender: getAnswerQuestionSender(draft),
     }));
 
@@ -446,6 +452,7 @@ export function createDrizzleAnswerStore(
           askerUsername: askerProfiles.username,
           askerAvatarUrl: askerProfiles.avatarUrl,
           identityMode: questions.identityMode,
+          source: questions.source,
           status: questions.status,
           originalText: questions.originalText,
           deletedAt: questions.deletedAt,
@@ -509,6 +516,7 @@ export function createDrizzleAnswerStore(
           itemUpdatedAt: threadItems.updatedAt,
           questionCreatedAt: questions.createdAt,
           identityMode: questions.identityMode,
+          source: questions.source,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
           askerAvatarUrl: askerProfiles.avatarUrl,
@@ -1351,6 +1359,7 @@ export interface PublicPublishedAnswer {
         username: string;
       }
     | undefined;
+  ownerProvenance?: "generated";
 }
 
 export interface PublicPublishedAnswerRow {
@@ -1369,6 +1378,7 @@ export interface PublicPublishedAnswerRow {
   questionTextMode: PublicAnswerQuestionTextMode;
   displayQuestionText: string | null;
   identityMode: AnswerQuestionIdentity;
+  source: "public_profile" | "ai_generated";
   askerDisplayName: string | null;
   askerUsername: string | null;
   ownerProfileId: string;
@@ -1425,6 +1435,7 @@ export async function findPublishedAnswerPageForProfile({
     questionTextMode: threadItems.questionTextMode,
     displayQuestionText: threadItems.displayQuestionText,
     identityMode: questions.identityMode,
+    source: questions.source,
     askerDisplayName: askerProfiles.displayName,
     askerUsername: askerProfiles.username,
     ownerProfileId: profiles.id,
@@ -1581,7 +1592,23 @@ function toPublicPublishedAnswer(
             username: row.askerUsername,
           }
         : undefined,
+    ...(isPublishedAnswerOwnedBySession(row, session) &&
+    row.source === "ai_generated"
+      ? { ownerProvenance: "generated" as const }
+      : {}),
   };
+}
+
+function isPublishedAnswerOwnedBySession(
+  row: Pick<PublicPublishedAnswerRow, "ownerProfileId" | "ownerUserId">,
+  session: CurrentSessionSummary,
+) {
+  return (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.profile.id === row.ownerProfileId &&
+    session.user.id === row.ownerUserId
+  );
 }
 
 function isVisiblePublishedAnswerRow(row: PublicPublishedAnswerRow) {
@@ -1672,6 +1699,12 @@ function getViewerProfileId(session: CurrentSessionSummary) {
     session.profileStatus === "complete"
     ? session.profile.id
     : undefined;
+}
+
+function getOwnerQuestionProvenance(
+  source: "public_profile" | "ai_generated",
+): "generated" | null {
+  return source === "ai_generated" ? "generated" : null;
 }
 
 const anonymousSession = {

@@ -223,6 +223,32 @@ describe("loadPublicThreadPage", () => {
     });
   });
 
+  it("exposes derived generated provenance only to the thread owner", async () => {
+    const rows = [createItem({ source: "ai_generated" })];
+    const ownerPage = getPage(await loadAvailableThread({ rows, session: ownerSession }));
+    const guestPage = getPage(
+      await loadAvailableThread({ rows, session: anonymousSession }),
+    );
+    const nonOwnerPage = getPage(
+      await loadAvailableThread({ rows, session: nonOwnerSession }),
+    );
+
+    expect(ownerPage.items[0]).toMatchObject({
+      type: "answer",
+      ownerProvenance: "generated",
+    });
+
+    for (const publicPage of [guestPage, nonOwnerPage]) {
+      const firstItem = publicPage.items[0];
+      const serialized = JSON.stringify(publicPage);
+
+      expect(firstItem).not.toHaveProperty("ownerProvenance");
+      expect(serialized).not.toMatch(
+        /ai_generated|ownerProvenance|source|generationBatch|gemini|model|token/i,
+      );
+    }
+  });
+
   it("sets follow and per-answer like state for non-owner viewers", async () => {
     await expect(
       loadAvailableThread({
@@ -360,6 +386,7 @@ function createItem(
     questionTextMode: "original",
     displayQuestionText: "What should I read next?",
     identityMode: "guest_anonymous",
+    source: "public_profile",
     askerDisplayName: null,
     askerUsername: null,
     ...overrides,

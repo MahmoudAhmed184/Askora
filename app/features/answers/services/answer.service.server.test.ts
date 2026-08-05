@@ -341,6 +341,25 @@ describe("answer workflows", () => {
     });
   });
 
+  it("derives generated provenance for the owner answer editor", async () => {
+    const answers = createAnswerStore({
+      question: createQuestion({ source: "ai_generated" }),
+    });
+
+    await expect(
+      loadAnswerEditor({
+        questionPublicId: "qst_1",
+        session: completedSession,
+        store: answers.store,
+      }),
+    ).resolves.toMatchObject({
+      status: "found",
+      editor: {
+        question: { ownerProvenance: "generated" },
+      },
+    });
+  });
+
   it("saves follow-up drafts without hiding the published thread", async () => {
     const answers = createAnswerStore({
       items: [createThreadItem()],
@@ -625,9 +644,30 @@ describe("loadDraftAnswers", () => {
             "Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer D...",
           updatedAt: "2026-05-31T12:00:00.000Z",
           questionCreatedAt: "2026-05-31T12:00:00.000Z",
+          ownerProvenance: null,
           sender: undefined,
         },
       ],
+    });
+  });
+
+  it("retains generated provenance after the question becomes a draft", async () => {
+    const answers = createAnswerStore({
+      question: createQuestion({ source: "ai_generated" }),
+    });
+
+    await submitAnswer({
+      formData: createAnswerFormData({
+        intent: "save_draft",
+        answerText: "Generated question draft",
+      }),
+      store: answers.store,
+    });
+
+    await expect(
+      loadDraftAnswers({ session: completedSession, store: answers.store }),
+    ).resolves.toMatchObject({
+      drafts: [{ ownerProvenance: "generated" }],
     });
   });
 });
@@ -731,6 +771,34 @@ describe("createPublicPublishedAnswers", () => {
     expect(serializedAnswers).not.toContain("Deleted answer");
     expect(serializedAnswers).not.toContain("Unpublished answer");
     expect(serializedAnswers).not.toContain("Thread hidden answer");
+  });
+
+  it("exposes only derived provenance to the owner and omits it for public viewers", () => {
+    const generatedRow = createPublicAnswerRow({ source: "ai_generated" });
+    const ownerAnswers = createPublicPublishedAnswers([generatedRow], {
+      session: completedSession,
+    });
+    const guestAnswers = createPublicPublishedAnswers([generatedRow]);
+    const nonOwnerAnswers = createPublicPublishedAnswers([generatedRow], {
+      session: {
+        ...completedSession,
+        user: { ...completedSession.user, id: "user_2" },
+        profile: { ...completedSession.profile, id: "profile_2" },
+      },
+    });
+
+    expect(ownerAnswers).toEqual([
+      expect.objectContaining({ ownerProvenance: "generated" }),
+    ]);
+
+    for (const publicAnswers of [guestAnswers, nonOwnerAnswers]) {
+      const serialized = JSON.stringify(publicAnswers);
+
+      expect(publicAnswers[0]).not.toHaveProperty("ownerProvenance");
+      expect(serialized).not.toMatch(
+        /ai_generated|ownerProvenance|source|generationBatch|gemini|model|token/i,
+      );
+    }
   });
 });
 
@@ -861,6 +929,7 @@ function createPublicAnswerRow(
     questionTextMode: "original",
     displayQuestionText: "What should I read next?",
     identityMode: "guest_anonymous",
+    source: "public_profile",
     askerDisplayName: null,
     askerUsername: null,
     ownerProfileId: "profile_1",
@@ -979,6 +1048,7 @@ function createAnswerStore({
           itemUpdatedAt: item.updatedAt,
           questionCreatedAt: question.createdAt,
           identityMode: question.identityMode,
+          source: question.source,
           askerDisplayName: question.askerDisplayName,
           askerUsername: question.askerUsername,
           askerAvatarUrl: question.askerAvatarUrl,
@@ -1300,6 +1370,7 @@ function createQuestion(
     askerUsername: null,
     askerAvatarUrl: null,
     identityMode: "guest_anonymous",
+    source: "public_profile",
     status: "inbox",
     originalText: "What should I read next?",
     deletedAt: null,
