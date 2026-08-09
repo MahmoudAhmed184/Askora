@@ -63,6 +63,8 @@ export interface StoredQuestionAdminTarget {
   status: "inbox" | "filtered" | "draft" | "answered";
   originalText: string;
   identityMode: "guest_anonymous" | "account_anonymous" | "account_attributed";
+  /** Server-only provenance used to normalize moderation metadata. */
+  source?: "public_profile" | "ai_generated";
   askerUserId: string | null;
   askerProfileId: string | null;
   askerProfile: StoredPublicProfileSummary | null;
@@ -639,11 +641,10 @@ function isRemovePublicContentAvailable(report: StoredAdminReport) {
 function getQuestionMetadata(target: StoredQuestionAdminTarget) {
   return [
     target.askerUserId === null ? "guest sender" : "account-backed sender",
-    target.ipHash === null ? "no IP signal" : "IP signal retained",
-    target.safetyFingerprintHash === null ||
-    target.safetyFingerprintHash.trim().length === 0
-      ? "no safety fingerprint"
-      : "safety fingerprint retained",
+    // Do not expose per-row safety-signal presence. Generated questions have
+    // null request fingerprints by design; rendering that absence would let
+    // administrators infer the private AI provenance from a report DTO.
+    "safety signals handled by moderation",
   ];
 }
 
@@ -737,6 +738,7 @@ async function findQuestionTarget(
       status: questions.status,
       originalText: questions.originalText,
       identityMode: questions.identityMode,
+      source: questions.source,
       askerUserId: questions.askerUserId,
       askerProfileId: questions.askerProfileId,
       askerProfileUserId: askerProfiles.userId,
@@ -771,6 +773,7 @@ async function findQuestionTarget(
     status: question.status,
     originalText: question.originalText,
     identityMode: question.identityMode,
+    source: question.source,
     askerUserId: question.askerUserId,
     askerProfileId: question.askerProfileId,
     askerProfile:

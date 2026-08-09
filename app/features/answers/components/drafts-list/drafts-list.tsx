@@ -74,7 +74,7 @@ function DraftCard({
           <DraftQuestionSender draft={draft} />
           <p
             className="break-words font-serif text-xl font-bold italic leading-8 text-foreground"
-            dir="auto"
+            dir={draft.direction}
           >
             {draft.questionText}
           </p>

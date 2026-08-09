@@ -640,6 +640,7 @@ describe("loadDraftAnswers", () => {
         {
           questionPublicId: "qst_1",
           questionText: "What should I read next?",
+          direction: "ltr",
           answerPreview:
             "Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer Draft answer D...",
           updatedAt: "2026-05-31T12:00:00.000Z",

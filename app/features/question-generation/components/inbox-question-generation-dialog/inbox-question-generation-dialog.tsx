@@ -1,6 +1,6 @@
 import { LoaderCircle, Sparkles } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { Link, useFetcher, useRevalidator } from "react-router";
+import { Link, useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
 import { Button } from "~/components/ui/button/button";
@@ -73,7 +73,6 @@ export function InboxQuestionGenerationDialog({
   const [style, setStyle] = useState<QuestionGenerationStyle>("balanced");
   const [requestedCount, setRequestedCount] = useState<QuestionGenerationRequestedCount>(5);
   const fetcher = useFetcher<InboxGenerationFetcherData>();
-  const revalidator = useRevalidator();
   const result = fetcher.data?.generation;
   const isPending = fetcher.state !== "idle";
   const isConfigured = availability.connected && availability.disclosureAcknowledged;
@@ -97,13 +96,12 @@ export function InboxQuestionGenerationDialog({
       setLanguage("english");
       setStyle("balanced");
       setRequestedCount(5);
-      void revalidator.revalidate();
     }, 0);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [result, revalidator]);
+  }, [result]);
 
   return (
     <>
@@ -128,7 +126,7 @@ export function InboxQuestionGenerationDialog({
         open={open}
       >
         <DialogContent
-          className="max-h-[100svh] w-full max-w-lg rounded-b-none sm:max-h-[calc(100svh-2rem)] sm:rounded-2xl"
+          className="bottom-0 left-0 top-auto max-h-[100svh] w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-5"
           onEscapeKeyDown={(event) => {
             if (isPending) event.preventDefault();
           }}
@@ -144,14 +142,27 @@ export function InboxQuestionGenerationDialog({
           </DialogHeader>
 
           {!isConfigured ? (
-            <div className="rounded-xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">
-              {!availability.connected
-                ? "Connect Gemini before generating questions."
-                : "Acknowledge the data-use disclosure before generating questions."}{" "}
-              <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/settings/question-generation">
-                Open Question generation settings
-              </Link>
-            </div>
+            <>
+              <div className="rounded-xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">
+                {!availability.connected
+                  ? "Connect Gemini before generating questions."
+                  : "Acknowledge the data-use disclosure before generating questions."}{" "}
+                <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/settings/question-generation">
+                  Open Question generation settings
+                </Link>
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    setOpen(false);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </>
           ) : (
             <fetcher.Form aria-label="Generate questions" className="flex flex-col gap-4" method="post">
               <input name="intent" type="hidden" value="generate_questions" />
@@ -162,7 +173,6 @@ export function InboxQuestionGenerationDialog({
                   dir="auto"
                   disabled={isPending}
                   id={topicId}
-                  maxLength={160}
                   name="topic"
                   onChange={(event) => {
                     setTopic(event.target.value);
@@ -195,9 +205,24 @@ export function InboxQuestionGenerationDialog({
                 </Select>
               </Field>
               <p className="text-sm text-muted-foreground">Active model: {availability.activeModelLabel}</p>
-              <FieldError id={errorId} message={result?.status === "generated" ? undefined : result?.formError} />
+              <FieldError
+                id={errorId}
+                message={
+                  result?.status === "generated"
+                    ? undefined
+                    : result === undefined
+                      ? undefined
+                      : appendRetryAfter(result.formError, result.retryAfterSeconds)
+                }
+              />
               <p aria-live="polite" className="sr-only">
-                {isPending ? "Generating questions. Please wait." : result?.status === "generated" ? `${String(result.questions.length)} questions added to your inbox.` : result?.formError}
+                {isPending
+                  ? "Generating questions. Please wait."
+                  : result?.status === "generated"
+                    ? `${String(result.questions.length)} questions added to your inbox.`
+                    : result === undefined
+                      ? undefined
+                      : appendRetryAfter(result.formError, result.retryAfterSeconds)}
               </p>
               <DialogFooter>
                 <Button disabled={isPending} onClick={() => {
@@ -214,10 +239,33 @@ export function InboxQuestionGenerationDialog({
       </Dialog>
 
       <ActionToast
-        message={result?.status === "generated" ? `${String(result.questions.length)} questions added to your inbox.` : undefined}
-        tone="success"
+        message={
+          result?.status === "generated"
+            ? `${String(result.questions.length)} questions added to your inbox.`
+            : result === undefined
+              ? undefined
+              : appendRetryAfter(result.formError, result.retryAfterSeconds)
+        }
+        tone={result?.status === "generated" ? "success" : "error"}
         trigger={result}
       />
     </>
   );
+}
+
+function appendRetryAfter(message: string, retryAfterSeconds: number | undefined) {
+  if (retryAfterSeconds === undefined) {
+    return message;
+  }
+
+  return `${message} Try again in ${formatRetryAfter(retryAfterSeconds)}.`;
+}
+
+function formatRetryAfter(seconds: number) {
+  if (seconds < 60) {
+    return `${String(seconds)} seconds`;
+  }
+
+  const minutes = Math.ceil(seconds / 60);
+  return `${String(minutes)} minute${minutes === 1 ? "" : "s"}`;
 }

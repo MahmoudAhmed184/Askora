@@ -8,7 +8,13 @@ describe("question-generation migration", () => {
     const migration = await readFile(resolve("drizzle/0018_premium_nekra.sql"), "utf8");
 
     expect(migration).toContain(
-      'ALTER TYPE "public"."question_source" ADD VALUE \'ai_generated\'',
+      'ALTER TABLE "questions" ALTER COLUMN "source" SET DATA TYPE text USING "source"::text',
+    );
+    expect(migration).toContain(
+      'CREATE TYPE "public"."question_source" AS ENUM(\'public_profile\', \'ai_generated\')',
+    );
+    expect(migration).toContain(
+      'ALTER TABLE "questions" ALTER COLUMN "source" SET DEFAULT \'public_profile\'::"public"."question_source"',
     );
     expect(migration).toContain(
       'CONSTRAINT "questions_source_generation_batch_check" CHECK',

@@ -448,7 +448,7 @@ describe("public profile components", () => {
 
     expect(screen.getByText("Generated")).toBeInTheDocument();
     expect(screen.getByText("Edited question")).toBeInTheDocument();
-    expect(container.querySelector("[dir='auto']")).toHaveTextContent(
+    expect(container.querySelector("[dir='ltr']")).toHaveTextContent(
       "What should I read next?",
     );
   });
@@ -556,6 +556,7 @@ function createPublishedAnswer(
     pinPosition: null,
     questionTextMode: "original",
     questionText: "What should I read next?",
+    direction: "ltr",
     like: {
       threadItemPublicId: "titem_1",
       isLiked: false,

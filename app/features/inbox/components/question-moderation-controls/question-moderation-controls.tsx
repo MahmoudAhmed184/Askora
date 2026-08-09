@@ -53,6 +53,7 @@ interface QuestionModerationControlsProps {
   canDelete?: boolean | undefined;
   deleteLabel?: "Delete" | "Drop" | undefined;
   variant?: "menu" | "inline";
+  allowSafetyActions?: boolean;
 }
 
 interface InboxFetcherData {
@@ -85,6 +86,7 @@ export function QuestionModerationControls({
   disabled,
   questionPublicId,
   variant = "menu",
+  allowSafetyActions = true,
 }: QuestionModerationControlsProps) {
   const [activePanel, setActivePanel] = useState<ActivePanel>(null);
   const fetcher = useFetcher<InboxFetcherData>();
@@ -92,18 +94,24 @@ export function QuestionModerationControls({
   const result = fetcher.data?.inbox;
   const actionProps = getActionProps(action);
 
+  if (!allowSafetyActions && !canDelete) {
+    return null;
+  }
+
   return (
     <div>
       {variant === "inline" ? (
-        <InlineActions
-          disabled={disabled || isPending}
-          onBlock={() => {
-            setActivePanel("block");
-          }}
-          onReport={() => {
-            setActivePanel("report");
-          }}
-        />
+        allowSafetyActions ? (
+          <InlineActions
+            disabled={disabled || isPending}
+            onBlock={() => {
+              setActivePanel("block");
+            }}
+            onReport={() => {
+              setActivePanel("report");
+            }}
+          />
+        ) : null
       ) : (
         <QuestionActionsMenu
           disabled={disabled || isPending}
@@ -125,6 +133,7 @@ export function QuestionModerationControls({
           onReport={() => {
             setActivePanel("report");
           }}
+          allowSafetyActions={allowSafetyActions}
           onDelete={() => {
             setActivePanel("delete");
           }}
@@ -170,11 +179,16 @@ export function QuestionModerationControls({
         />
       ) : null}
 
-      <QuestionModerationNoScriptFallback
-        action={action}
-        disabled={disabled}
-        questionPublicId={questionPublicId}
-      />
+      {allowSafetyActions || canDelete ? (
+        <QuestionModerationNoScriptFallback
+          action={action}
+          allowSafetyActions={allowSafetyActions}
+          canDelete={canDelete}
+          deleteLabel={deleteLabel}
+          disabled={disabled}
+          questionPublicId={questionPublicId}
+        />
+      ) : null}
 
       <ActionResultToast result={result} />
     </div>
@@ -183,84 +197,111 @@ export function QuestionModerationControls({
 
 export function QuestionModerationNoScriptFallback({
   action,
+  allowSafetyActions = true,
+  canDelete = false,
+  deleteLabel = "Delete",
   disabled,
   questionPublicId,
 }: Pick<
   QuestionModerationControlsProps,
-  "action" | "disabled" | "questionPublicId"
+  | "action"
+  | "disabled"
+  | "questionPublicId"
+  | "canDelete"
+  | "deleteLabel"
+  | "allowSafetyActions"
 >) {
   return (
     <noscript>
       <details className="mt-3 rounded-xl border bg-secondary p-4">
         <summary className="cursor-pointer font-bold">Safety actions</summary>
         <div className="mt-4 flex flex-col gap-5">
-          <form action={action} className="flex flex-col gap-3" method="post">
-            <input name="intent" type="hidden" value="report" />
-            <input
-              name="questionPublicId"
-              type="hidden"
-              value={questionPublicId}
-            />
-            <label className="flex flex-col gap-2 text-sm font-bold">
-              Reason
-              <NativeSelect
-                defaultValue=""
-                disabled={disabled}
-                name="reason"
-                required
-              >
-                <option disabled value="">
-                  Choose a reason
-                </option>
-                {moderationReportReasonValues.map((reason) => (
-                  <option key={reason} value={reason}>
-                    {reportReasonLabels[reason]}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-bold">
-              Details
-              <Textarea
-                disabled={disabled}
-                maxLength={500}
-                name="details"
-                placeholder="Optional context for moderators"
-                rows={3}
-              />
-            </label>
-            <label className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+          {canDelete ? (
+            <form action={action} className="flex flex-col gap-2" method="post">
+              <input name="intent" type="hidden" value="delete" />
               <input
-                className="mt-1 size-4 accent-primary"
-                defaultChecked
-                disabled={disabled}
-                name="alsoBlockSender"
-                type="checkbox"
+                name="questionPublicId"
+                type="hidden"
+                value={questionPublicId}
               />
-              Also block sender
-            </label>
-            <Button disabled={disabled} type="submit">
-              <Flag data-icon="inline-start" />
-              Submit report
-            </Button>
-          </form>
+              <Button disabled={disabled} type="submit" variant="destructive">
+                <Trash2 data-icon="inline-start" />
+                {deleteLabel}
+              </Button>
+            </form>
+          ) : null}
 
-          <form action={action} className="flex flex-col gap-2" method="post">
-            <input name="intent" type="hidden" value="block" />
-            <input
-              name="questionPublicId"
-              type="hidden"
-              value={questionPublicId}
-            />
-            <p className="text-sm leading-6 text-muted-foreground">
-              Blocking silently sends future questions from this sender through
-              the safety filter.
-            </p>
-            <Button disabled={disabled} type="submit" variant="destructive">
-              <Ban data-icon="inline-start" />
-              Block sender
-            </Button>
-          </form>
+          {allowSafetyActions ? (
+            <>
+              <form action={action} className="flex flex-col gap-3" method="post">
+                <input name="intent" type="hidden" value="report" />
+                <input
+                  name="questionPublicId"
+                  type="hidden"
+                  value={questionPublicId}
+                />
+                <label className="flex flex-col gap-2 text-sm font-bold">
+                  Reason
+                  <NativeSelect
+                    defaultValue=""
+                    disabled={disabled}
+                    name="reason"
+                    required
+                  >
+                    <option disabled value="">
+                      Choose a reason
+                    </option>
+                    {moderationReportReasonValues.map((reason) => (
+                      <option key={reason} value={reason}>
+                        {reportReasonLabels[reason]}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-bold">
+                  Details
+                  <Textarea
+                    disabled={disabled}
+                    maxLength={500}
+                    name="details"
+                    placeholder="Optional context for moderators"
+                    rows={3}
+                  />
+                </label>
+                <label className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+                  <input
+                    className="mt-1 size-4 accent-primary"
+                    defaultChecked
+                    disabled={disabled}
+                    name="alsoBlockSender"
+                    type="checkbox"
+                  />
+                  Also block sender
+                </label>
+                <Button disabled={disabled} type="submit">
+                  <Flag data-icon="inline-start" />
+                  Submit report
+                </Button>
+              </form>
+
+              <form action={action} className="flex flex-col gap-2" method="post">
+                <input name="intent" type="hidden" value="block" />
+                <input
+                  name="questionPublicId"
+                  type="hidden"
+                  value={questionPublicId}
+                />
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Blocking silently sends future questions from this sender through
+                  the safety filter.
+                </p>
+                <Button disabled={disabled} type="submit" variant="destructive">
+                  <Ban data-icon="inline-start" />
+                  Block sender
+                </Button>
+              </form>
+            </>
+          ) : null}
         </div>
       </details>
     </noscript>
@@ -302,6 +343,7 @@ function InlineActions({
 }
 
 function QuestionActionsMenu({
+  allowSafetyActions,
   canDelete,
   deleteLabel,
   disabled,
@@ -311,6 +353,7 @@ function QuestionActionsMenu({
   onDelete,
   onReport,
 }: {
+  allowSafetyActions: boolean;
   canDelete: boolean;
   deleteLabel: "Delete" | "Drop";
   disabled: boolean;
@@ -335,26 +378,30 @@ function QuestionActionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56" side="bottom">
         <DropdownMenuGroup>
-          <DropdownMenuItem
-            disabled={disabled}
-            onSelect={(event) => {
-              event.preventDefault();
-              onReport();
-            }}
-          >
-            <Flag data-icon="inline-start" />
-            Report
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={disabled}
-            onSelect={(event) => {
-              event.preventDefault();
-              onBlock();
-            }}
-          >
-            <Ban data-icon="inline-start" />
-            Block sender
-          </DropdownMenuItem>
+          {allowSafetyActions ? (
+            <>
+              <DropdownMenuItem
+                disabled={disabled}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onReport();
+                }}
+              >
+                <Flag data-icon="inline-start" />
+                Report
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={disabled}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onBlock();
+                }}
+              >
+                <Ban data-icon="inline-start" />
+                Block sender
+              </DropdownMenuItem>
+            </>
+          ) : null}
           {canDelete ? (
             <DropdownMenuItem
               disabled={disabled}

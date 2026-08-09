@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { QuestionGenerationError } from "~/features/question-generation/question-generation.errors";
 import { handleInboxGenerationAction } from "~/features/inbox/services/inbox-generation-action.server";
@@ -29,7 +29,35 @@ describe("inbox generation action", () => {
     });
 
     expect(response.init?.status).toBe(429);
+    expect(new Headers(response.init?.headers).get("Retry-After")).toBe("45");
     expect(response.data).toEqual({ generation: { status: "failed", formError: "Too many generation attempts. Try again later.", retryAfterSeconds: 45 } });
+  });
+
+  it("records only privacy-safe failure diagnostics", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    try {
+      await handleInboxGenerationAction({
+        formData: formData(),
+        generate: () =>
+          Promise.reject(new QuestionGenerationError("provider_quota")),
+        session,
+      });
+
+      const calls = errorSpy.mock.calls as unknown[][];
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.[0]).toBe("question_generation_failed");
+      expect(calls[0]?.[1]).toMatchObject({
+        category: "provider_quota",
+        executionStage: "provider",
+        profileId: "profile_1",
+        userId: "user_1",
+      });
+      const serialized = JSON.stringify(calls[0]);
+      expect(serialized).not.toMatch(/topic|Values|gemini|provider body|secret/iu);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("rejects invalid request fields before invoking generation", async () => {

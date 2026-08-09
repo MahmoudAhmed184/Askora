@@ -95,6 +95,7 @@ function createAvailablePage(): Extract<
         pinPosition: null,
         questionText: "What should I read next?",
         questionTextMode: "original",
+        direction: "ltr",
         like: {
           threadItemPublicId: "titem_1",
           isLiked: false,

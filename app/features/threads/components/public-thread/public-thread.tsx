@@ -424,7 +424,7 @@ function ThreadQuestionEntry({
                 ? "text-2xl leading-tight text-primary"
                 : "text-lg leading-7 text-foreground",
             )}
-            dir="auto"
+            dir={item.direction}
           >
             {item.questionText}
           </p>

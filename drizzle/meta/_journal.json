@@ -141,6 +141,13 @@
       "when": 1785953356605,
       "tag": "0019_cheerful_runaways",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786280994258,
+      "tag": "0020_curvy_black_panther",
+      "breakpoints": true
     }
   ]
 }

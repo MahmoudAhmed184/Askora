@@ -60,6 +60,23 @@ describe("validateGeminiCredential", () => {
 
     expect(result).toEqual({ status: "failed", reason: "model_unavailable" });
   });
+
+  it("fails closed when model action metadata is absent", async () => {
+    const result = await validateGeminiCredential({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      clientFactory: () => ({
+        models: {
+          get: () =>
+            Promise.resolve({
+              name: "models/gemini-3.6-flash",
+            }),
+        },
+      }),
+    });
+
+    expect(result).toEqual({ status: "failed", reason: "model_unavailable" });
+  });
 });
 
 function failingClient(error: Error): GeminiCredentialValidationClient {

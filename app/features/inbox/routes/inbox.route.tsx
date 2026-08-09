@@ -19,6 +19,7 @@ import {
 } from "~/features/inbox/services/inbox-actions.service.server";
 import { loadInboxFolder } from "~/features/inbox/queries/inbox.queries.server";
 import { handleInboxGenerationAction } from "~/features/inbox/services/inbox-generation-action.server";
+import { requireTrustedMutationOrigin } from "~/lib/request-origin.server";
 
 interface InboxRouteActionData {
   inbox: InboxActionResult;
@@ -49,6 +50,12 @@ export async function loader({ context }: Route.LoaderArgs) {
 }
 
 export async function action({ context, request }: Route.ActionArgs) {
+  const originResponse = requireTrustedMutationOrigin(request);
+
+  if (originResponse !== undefined) {
+    return originResponse;
+  }
+
   const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {

@@ -5,7 +5,7 @@ import {
 } from "node:http";
 
 const host = "127.0.0.1";
-const port = 5174;
+const port = Number(process.env.GEMINI_MOCK_PORT ?? "5174");
 
 const questions = {
   english: [

@@ -27,6 +27,7 @@ describe("question generation settings", () => {
       encryptCredential: () => credentialMaterial,
       now,
       repository: stores.repository,
+      rateLimiter: allowRateLimit,
       session,
       validateCredential: (input) => {
         validationInputs.push(input);
@@ -61,6 +62,7 @@ describe("question generation settings", () => {
       encryptCredential: () => credentialMaterial,
       now,
       repository: stores.repository,
+      rateLimiter: allowRateLimit,
       session,
       validateCredential: () =>
         Promise.resolve({ status: "failed", reason: "invalid_credential" } as const),
@@ -71,6 +73,30 @@ describe("question generation settings", () => {
     expect(stores.events).toEqual([
       { action: "credential_replaced", outcome: "failure" },
     ]);
+  });
+
+  it.each([
+    ["permission_or_billing", "provider_permission"],
+    ["quota", "provider_quota"],
+    ["model_unavailable", "provider_model_unavailable"],
+    ["unavailable", "provider_unavailable"],
+  ] as const)("preserves actionable provider failure %s", async (reason, status) => {
+    const stores = createRepository();
+    const result = await submitQuestionGenerationSettings({
+      formData: createFormData({
+        intent: "connect",
+        geminiApiKey: "test-key-not-to-store",
+        modelPreference: "auto",
+      }),
+      repository: stores.repository,
+      rateLimiter: allowRateLimit,
+      session,
+      validateCredential: () => Promise.resolve({ status: "failed", reason }),
+    });
+
+    expect(result.status).toBe(status);
+    expect(JSON.stringify(result)).not.toMatch(/provider detail|response body|test-key/iu);
+    expect(stores.savedCredentials).toEqual([]);
   });
 
   it("returns a safe configuration error when credential encryption is unavailable", async () => {
@@ -86,6 +112,7 @@ describe("question generation settings", () => {
       },
       now,
       repository: stores.repository,
+      rateLimiter: allowRateLimit,
       session,
       validateCredential: () => Promise.resolve({ status: "validated" }),
     });
@@ -136,6 +163,7 @@ describe("question generation settings", () => {
       }),
       now,
       repository: stores.repository,
+      rateLimiter: allowRateLimit,
       session,
     });
     const disclosure = await submitQuestionGenerationSettings({
@@ -173,6 +201,20 @@ describe("question generation settings", () => {
     expect(stores.clearCalls).toEqual([{ ownerUserId: "user_1", profileId: "profile_1", now }]);
   });
 
+  it("allows a suspended owner to delete credential material", async () => {
+    const stores = createRepository({ settings: connectedSettings });
+
+    const result = await submitQuestionGenerationSettings({
+      formData: createFormData({ intent: "disconnect" }),
+      now,
+      repository: stores.repository,
+      session: { ...session, suspensionStatus: "active" },
+    });
+
+    expect(result.status).toBe("credential_disconnected");
+    expect(stores.clearCalls).toHaveLength(1);
+  });
+
   it("preserves invalid interest tags for correction", async () => {
     const stores = createRepository();
     const result = await submitQuestionGenerationSettings({
@@ -205,13 +247,44 @@ describe("question generation settings", () => {
     });
 
     expect(credential).toBe("server-only-test-key");
-    expect(stores.rotations).toEqual([{ ownerUserId: "user_1", material: credentialMaterial, now }]);
+    expect(stores.rotations).toEqual([{
+      ownerUserId: "user_1",
+      material: credentialMaterial,
+      previousMaterial: {
+        ciphertext: "existing-ciphertext",
+        nonce: "existing-nonce",
+        authTag: "existing-tag",
+        keyVersion: 1,
+      },
+      now,
+    }]);
+  });
+
+  it("does not retry a stale rotation after a concurrent replacement", async () => {
+    const stores = createRepository({
+      settings: connectedSettings,
+      rotationResult: false,
+    });
+    const credential = await getQuestionGenerationCredential({
+      decryptCredential: () => ({
+        credential: "server-only-test-key",
+        rotatedMaterial: credentialMaterial,
+      }),
+      now,
+      ownerUserId: session.user.id,
+      repository: stores.repository,
+    });
+
+    expect(credential).toBe("server-only-test-key");
+    expect(stores.rotations).toHaveLength(1);
   });
 });
 
 function createRepository({
+  rotationResult = true,
   settings,
 }: {
+  rotationResult?: boolean;
   settings?: StoredQuestionGenerationSettings | undefined;
 } = {}) {
   const savedCredentials: Parameters<
@@ -249,7 +322,7 @@ function createRepository({
     },
     replaceCredentialMaterial: (input) => {
       rotations.push(input);
-      return Promise.resolve();
+      return Promise.resolve(rotationResult);
     },
     recordSecurityEvent: ({ action, outcome }) => {
       events.push({ action, outcome });
@@ -277,6 +350,8 @@ function createFormData(values: Record<string, string>) {
 
   return formData;
 }
+
+const allowRateLimit = () => Promise.resolve({ allowed: true } as const);
 
 const credentialMaterial = {
   ciphertext: "ciphertext",

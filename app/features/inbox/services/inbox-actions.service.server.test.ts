@@ -347,6 +347,32 @@ describe("handleInboxAction", () => {
     });
     expect(inbox.blocks).toEqual([]);
   });
+
+  it("rejects report and block actions for generated questions", async () => {
+    for (const intent of ["report", "block"] as const) {
+      const inbox = createInboxActionStore({
+        question: createQuestion({
+          source: "ai_generated",
+          askerUserId: "user_1",
+          askerProfileId: "profile_1",
+          safetyFingerprintHash: null,
+          safetyMetadataRetainUntil: null,
+        }),
+      });
+
+      await expect(
+        submitInboxAction({
+          formData: createActionFormData({ intent }),
+          store: inbox.store,
+        }),
+      ).resolves.toMatchObject({
+        status: "denied",
+        reason: "generated_safety_action",
+      });
+      expect(inbox.reports).toEqual([]);
+      expect(inbox.blocks).toEqual([]);
+    }
+  });
 });
 
 async function submitInboxAction({

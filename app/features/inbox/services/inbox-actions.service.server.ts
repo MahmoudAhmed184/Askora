@@ -42,6 +42,7 @@ export interface InboxActionQuestion {
   askerUserId: string | null;
   askerProfileId: string | null;
   identityMode: InboxActionQuestionIdentity;
+  source?: "public_profile" | "ai_generated";
   status: InboxActionQuestionStatus;
   deletedAt: Date | null;
   safetyFingerprintHash: string | null;
@@ -125,7 +126,8 @@ export type InboxActionDeniedReason =
   | "closed"
   | "not_filtered"
   | "self_block"
-  | "no_blockable_sender";
+  | "no_blockable_sender"
+  | "generated_safety_action";
 
 export type InboxActionResult =
   | {
@@ -213,6 +215,7 @@ export function createDrizzleInboxActionStore(
           askerUserId: questions.askerUserId,
           askerProfileId: questions.askerProfileId,
           identityMode: questions.identityMode,
+          source: questions.source,
           status: questions.status,
           deletedAt: questions.deletedAt,
           safetyFingerprintHash: questions.safetyFingerprintHash,
@@ -494,6 +497,13 @@ async function findActionableQuestion({
     return { status: "denied", reason: "closed" };
   }
 
+  if (
+    question.source === "ai_generated" &&
+    (intent === "report" || intent === "block")
+  ) {
+    return { status: "denied", reason: "generated_safety_action" };
+  }
+
   return {
     status: "allowed",
     question,
@@ -717,6 +727,8 @@ function getDeniedMessage(reason: InboxActionDeniedReason) {
       return "You cannot block your own sender identity.";
     case "no_blockable_sender":
       return "This sender cannot be blocked from this question.";
+    case "generated_safety_action":
+      return "Generated questions do not support sender safety actions.";
   }
 }
 

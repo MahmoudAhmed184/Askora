@@ -360,7 +360,7 @@ async function executeCleanupStatements({ client, email, now, profileId, userId 
             from reports
             where reports.target_type = 'question'
               and reports.target_id = questions.id
-              and reports.created_at > $4 - interval '180 days'
+              and reports.created_at > $4::timestamptz - interval '180 days'
           )
       `,
       values: [userId, profileId, REDACTED_QUESTION_TEXT, now],

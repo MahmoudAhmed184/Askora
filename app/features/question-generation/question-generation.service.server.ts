@@ -12,6 +12,7 @@ import {
   type GeminiQuestionGenerationResult,
 } from "~/features/question-generation/gemini-question-generator.server";
 import {
+  normalizeLegacyQuestionText,
   normalizeQuestionGenerationText,
 } from "~/features/question-generation/question-generation-normalize";
 import {
@@ -29,8 +30,8 @@ import { createDatabaseId, createPublicId } from "~/lib/ids.server";
 import { checkRateLimit, type RateLimitDecision, type RateLimitOptions } from "~/lib/rate-limit.server";
 
 const GENERATION_RATE_LIMITS = [
-  { max: 5, windowSeconds: 10 * 60, suffix: "10-minute" },
-  { max: 25, windowSeconds: 24 * 60 * 60, suffix: "24-hour" },
+  { algorithm: "fixed" as const, max: 5, windowSeconds: 10 * 60, suffix: "10-minute" },
+  { algorithm: "rolling" as const, max: 25, windowSeconds: 24 * 60 * 60, suffix: "24-hour" },
 ] as const;
 
 export interface GeneratedInboxQuestion {
@@ -135,10 +136,17 @@ export async function generateQuestionBatch({
       normalizeQuestionGenerationText(text),
       "question-text",
     ),
+    legacyNormalizedTextHash: hashWithHmacSha256(
+      normalizeLegacyQuestionText(text),
+      "question-text",
+    ),
   }));
-  const hashes = generatedQuestions.map((question) => question.normalizedTextHash);
+  const compatibilityHashes = generatedQuestions.flatMap((question) => [
+    question.normalizedTextHash,
+    question.legacyNormalizedTextHash,
+  ]);
   const existing = await repository.findExistingNormalizedTextHashes({
-    hashes,
+    hashes: compatibilityHashes,
     profileId: profile.id,
   });
   if (existing.length > 0) throw new QuestionGenerationError("duplicate");
@@ -200,6 +208,7 @@ async function persistGeneratedBatch({
     publicId: string;
     text: string;
     normalizedTextHash: string;
+    legacyNormalizedTextHash: string;
   }[];
   now: Date;
   profileId: string;
@@ -251,6 +260,7 @@ async function enforceGenerationRateLimits({
   for (const limit of GENERATION_RATE_LIMITS) {
     const decision = await rateLimiter({
       key: `question-generation:attempt:${limit.suffix}:${userId}`,
+      algorithm: limit.algorithm,
       max: limit.max,
       windowSeconds: limit.windowSeconds,
       now: () => now.getTime(),
@@ -296,12 +306,13 @@ export function validateGeneratedQuestions({
 
 function normalizeQuestionText(text: string) {
   const trimmed = text.trim();
-  const question = /[?؟]$/.test(trimmed) ? trimmed : `${trimmed}?`;
-  return question.length <= 500 ? question : trimmed;
+  const terminal = trimmed.endsWith("؟") ? "؟" : "?";
+  const body = trimmed.replace(/[?؟]+\s*$/u, "").trimEnd();
+  return `${Array.from(body).slice(0, 499).join("")}${terminal}`;
 }
 
 function isQuestionContractValid(text: string) {
-  return text.length <= 500 && text.length > 0 &&
+  return Array.from(text).length <= 500 && Array.from(text).length > 0 &&
     (text.match(/[?؟]/g) ?? []).length === 1 &&
     !["<", ">", "`", "[", "]", "{", "}", "_", "*"].some((marker) => text.includes(marker)) &&
     !/(?:https?:\/\/|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|co)\b|\b\S+@\S+\.[a-z]+\b|\+?\d[\d\s()-]{6,}\d|[#@])/iu.test(text) &&
@@ -314,9 +325,31 @@ function matchesSelectedLanguage(text: string, language: QuestionGenerationReque
   const letters = arabic + latin;
   if (letters === 0) return false;
   if (language === "english") return latin / letters >= 0.8 && arabic / letters <= 0.1;
-  return arabic / letters >= 0.6 && latin / letters <= 0.4;
+
+  if (arabic / letters < 0.6 || latin / letters > 0.4) {
+    return false;
+  }
+
+  return language === "egyptian_arabic"
+    ? hasEgyptianArabicMarker(text)
+    : !hasEgyptianArabicMarker(text) && hasModernStandardArabicMarker(text);
 }
 
 function isUnsafeQuestion(text: string) {
-  return /\b(?:password|api key|authentication code|credit card|bank account|phone number|email address|exact address|exact location|suicide|self-harm|weapon|bomb|medical diagnosis|legal advice|financial advice|explicit sex|nude|hate|racial|religion|ethnicity|sexuality|disability|trauma|abuse|political persuasion|vote for|illegal|crime|violence|kill|exploit|evasion)\b|(?:كلمة المرور|مفتاح api|انتحار|إيذاء النفس|عنوانك|موقعك|رقم هاتف|بريدك|جنس|عرق|دين|إعاقة|صدمة|سياسة|انتخب|عنف|قتل|جريمة)/iu.test(text);
+  return [
+    /\b(?:password|passcode|api\s*key|secret|authentication\s+code|verification\s+code|credit\s+card|bank\s+account|passport(?:\s+(?:number|details|no\.?)?)?|national\s+(?:id|identification)|government[-\s]+(?:issued\s+)?id|social[-\s]+security(?:\s+number)?|ssn|phone\s+number|email\s+address|exact\s+(?:address|location)|suicide|self[-\s]?harm|weapon|bomb|medical\s+diagnosis|medical\s+advice|(?:dose|dosage|dosing)\s+(?:of\s+)?(?:insulin|medication|medicine|prescription|drug|antibiotic|painkiller|supplement)|(?:insulin|medication|medicine|prescription|drug|antibiotic|painkiller|supplement)\s+(?:dose|dosage|dosing)|(?:what|which|how\s+much)\s+(?:medication|medicine|drug|insulin)\b[^?\n]{0,80}\b(?:take|use|dose|dosage)\b|prescribe|legal\s+advice|financial\s+advice|explicit\s+sex|nude|hate|racial|religion|ethnicity|sexuality|disability|trauma|abuse|political\s+persuasion|(?:which|what)\s+political\s+(?:party|candidate|movement)\b[^?\n]{0,80}\b(?:support|choose|back|vote)|vote\s+for|illegal|crime|violence|kill|exploit|evasion|buy\s+now|sell\s+now|hire\s+me|donate|subscribe|follow\s+me|contact\s+me|dm\s+me)\b/iu,
+    /(?:كلمة\s+المرور|رمز\s+(?:التحقق|المصادقة)|مفتاح\s+api|رقم\s+(?:جواز|بطاقة|هاتف|قومي|الهوية(?:\s+الوطنية)?|هوية)|بيانات\s+جواز|حساب\s+بنكي|بطاقة\s+ائتمان|الضمان\s+الاجتماعي|عنوان(?:ك|ك\s+الدقيق)|موقع(?:ك|ك\s+الدقيق)|انتحار|إيذاء\s+النفس|(?:جرعة|جرعات)\s+(?:من\s+)?(?:الأنسولين|دواء|دواءك)|ما\s+(?:الجرعة|كمية)\s+(?:الدواء|الأنسولين)|تشخيص\s+طبي|نصيحة\s+(?:طبية|قانونية|مالية)|سلاح|قنبلة|جنس|عرق|دين|إعاقة|صدمة|سياسة|انتخب|عنف|قتل|جريمة|اشتر(?:ي|وا)|تبرع|تابعني|راسلني)/iu,
+    /(?:https?:\/\/|ftp:\/\/|www\.)\S+/iu,
+    /\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?!(?:js|jsx|ts|tsx)\b)[a-z]{2,63}\b/iu,
+    /\b\S+@\S+\.[a-z]{2,63}\b/iu,
+    /\+?\d[\d\s().-]{6,}\d/u,
+  ].some((pattern) => pattern.test(text));
+}
+
+function hasEgyptianArabicMarker(text: string) {
+  return /(?:إيه|ليه|إزاي|ازاي|عايز|عايزة|بتعمل|دلوقتي|كده|مش|ده|دي|إنت|انت|إحنا|احنا|هت|ممكن|لسه|أوي|اوي|فين|عامل)/u.test(text);
+}
+
+function hasModernStandardArabicMarker(text: string) {
+  return /(?:ماذا|كيف|ما\s+الذي|ما\s+الّذي|هل\s+يمكن|يمكنك|تستطيع|ترغب|لديك|أين|متى|لماذا|الذي|التي|ينبغي|سوف)/u.test(text);
 }

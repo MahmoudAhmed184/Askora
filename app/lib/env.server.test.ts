@@ -83,6 +83,19 @@ describe("parseServerEnv", () => {
     ).toThrow(/QUESTION_GENERATION_ENCRYPTION_KEYS/);
   });
 
+  it("rejects non-canonical aliases and out-of-range encryption versions", () => {
+    const key = Buffer.alloc(32, 7).toString("base64");
+
+    for (const version of ["01", "1e0", "0", "2147483648"]) {
+      expect(() =>
+        parseServerEnv({
+          QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION: "1",
+          QUESTION_GENERATION_ENCRYPTION_KEYS: JSON.stringify({ [version]: key }),
+        }),
+      ).toThrow(/QUESTION_GENERATION_ENCRYPTION_KEYS/);
+    }
+  });
+
   it("requires question-generation encryption configuration in production", () => {
     expect(() =>
       parseServerEnv({

@@ -1,7 +1,17 @@
 CREATE TYPE "public"."question_generation_language" AS ENUM('egyptian_arabic', 'modern_standard_arabic', 'english');--> statement-breakpoint
 CREATE TYPE "public"."question_generation_model_preference" AS ENUM('auto', 'gemini-3.6-flash', 'gemini-3.1-flash-lite');--> statement-breakpoint
 CREATE TYPE "public"."question_generation_style" AS ENUM('balanced', 'deep_reflective', 'professional', 'personal', 'light_fun', 'surprise_me');--> statement-breakpoint
-ALTER TYPE "public"."question_source" ADD VALUE 'ai_generated';--> statement-breakpoint
+-- PostgreSQL cannot use a value added with ALTER TYPE until the surrounding
+-- transaction commits. Drizzle applies each migration in one transaction, so
+-- rebuild the enum through text instead. This preserves every existing source
+-- value and reinstates the public_profile default before any new constraints
+-- reference ai_generated.
+ALTER TABLE "questions" ALTER COLUMN "source" DROP DEFAULT;--> statement-breakpoint
+ALTER TABLE "questions" ALTER COLUMN "source" SET DATA TYPE text USING "source"::text;--> statement-breakpoint
+DROP TYPE "public"."question_source";--> statement-breakpoint
+CREATE TYPE "public"."question_source" AS ENUM('public_profile', 'ai_generated');--> statement-breakpoint
+ALTER TABLE "questions" ALTER COLUMN "source" SET DATA TYPE "public"."question_source" USING "source"::"public"."question_source";--> statement-breakpoint
+ALTER TABLE "questions" ALTER COLUMN "source" SET DEFAULT 'public_profile'::"public"."question_source";--> statement-breakpoint
 CREATE TABLE "question_generation_batches" (
 	"id" text PRIMARY KEY NOT NULL,
 	"owner_user_id" text NOT NULL,

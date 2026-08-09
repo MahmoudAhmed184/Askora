@@ -13,6 +13,7 @@ describe("AnswerEditor", () => {
         text: "What should I read next?",
         createdAt: "2026-05-31T12:00:00.000Z",
         ownerProvenance: null,
+        direction: "ltr",
         sender: {
           username: "asker",
           displayName: "Known Asker",
@@ -126,6 +127,7 @@ function createEditor(): AnswerEditorViewData {
       text: "What should I read next?",
       createdAt: "2026-05-31T12:00:00.000Z",
       ownerProvenance: null,
+      direction: "ltr",
       sender: undefined,
     },
     values: {

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { QuestionGenerationSettingsForm } from "~/features/settings/components/question-generation-settings-form";
 import type {
   QuestionGenerationSettingsFormValues,
+  QuestionGenerationSettingsSubmissionResult,
   QuestionGenerationSettingsViewData,
 } from "~/features/question-generation/question-generation-settings.service.server";
 
@@ -32,6 +33,55 @@ describe("QuestionGenerationSettingsForm", () => {
     expect(screen.getByRole("form", { name: "Question generation preferences" })).toHaveFormValues({
       questionInterests: "Books",
     });
+  });
+
+  it("applies Unicode length and duplicate rules when committing interests", () => {
+    renderSettingsForm();
+
+    const interest = screen.getByLabelText("Question interests");
+    fireEvent.change(interest, { target: { value: "😀" } });
+    fireEvent.keyDown(interest, { key: "Enter" });
+    expect(screen.queryByText("😀")).not.toBeInTheDocument();
+
+    fireEvent.change(interest, { target: { value: "موسيقى" } });
+    fireEvent.keyDown(interest, { key: "Enter" });
+    fireEvent.change(interest, { target: { value: "موسيقى" } });
+    fireEvent.blur(interest);
+
+    expect(screen.getAllByText("موسيقى")).toHaveLength(1);
+    expect(
+      screen.getByRole("form", { name: "Question generation preferences" }),
+    ).toHaveFormValues({ questionInterests: "موسيقى" });
+  });
+
+  it("serializes a valid typed interest when Save is clicked directly", () => {
+    renderSettingsForm();
+
+    const interest = screen.getByLabelText("Question interests");
+    fireEvent.change(interest, { target: { value: "Direct save" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+
+    expect(
+      screen.getByRole("form", { name: "Question generation preferences" }),
+    ).toHaveFormValues({ questionInterests: "Direct save" });
+  });
+
+  it("keeps a legal unbroken interest and its remove action within the chip", () => {
+    const unbrokenInterest = "x".repeat(40);
+    renderSettingsForm({
+      settings: {
+        ...defaultSettings,
+        questionInterests: [unbrokenInterest],
+      },
+    });
+
+    const label = screen.getByText(unbrokenInterest);
+    const chip = label.closest("li");
+    expect(chip).toHaveClass("max-w-full", "min-w-0");
+    expect(label).toHaveClass("min-w-0", "break-all");
+    expect(
+      screen.getByRole("button", { name: `Remove ${unbrokenInterest}` }),
+    ).toHaveClass("shrink-0");
   });
 
   it("exposes an accessible disclosure acknowledgement", () => {
@@ -105,18 +155,88 @@ describe("QuestionGenerationSettingsForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Complete submission" }));
     expect(apiKey).toHaveValue("");
   });
+
+  it("keeps loader-backed preferences for a failed non-preference POST", () => {
+    const outcomes: QuestionGenerationSettingsSubmissionResult[] = [
+      {
+        status: "invalid",
+        values: formValues,
+        fieldErrors: { geminiApiKey: "Enter a key." },
+        formError: "Check the question-generation settings and try again.",
+      },
+      { status: "credential_connected", values: formValues },
+      { status: "credential_disconnected", values: formValues },
+      { status: "disclosure_acknowledged", values: formValues },
+    ];
+
+    for (const result of outcomes) {
+      const view = renderSettingsForm({
+        result,
+        settings: {
+          ...defaultSettings,
+          modelPreference: "gemini-3.5-flash-lite",
+          questionInterests: ["Books", "Arabic literature"],
+        },
+      });
+
+      expect(screen.getByRole("combobox", { name: "Active model" })).toHaveTextContent(
+        "Gemini 3.5 Flash-Lite",
+      );
+      expect(screen.getByText("Books")).toBeInTheDocument();
+      expect(screen.getByText("Arabic literature")).toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
+  it("keeps credential deletion available while the owner is suspended", () => {
+    renderSettingsForm({
+      disabled: true,
+      settings: { ...defaultSettings, connected: true },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Disconnect Gemini" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Replace key" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Save preferences" }),
+    ).toBeDisabled();
+  });
+
+  it("shows the rate-limit retry time in visible and live feedback", () => {
+    renderSettingsForm({
+      result: {
+        status: "rate_limited",
+        values: formValues,
+        formError: "Too many key checks. Try again later.",
+        retryAfterSeconds: 75,
+      },
+    });
+
+    expect(
+      screen.getAllByText(/Try again in 2 minutes\./u).length,
+    ).toBeGreaterThanOrEqual(1);
+  });
 });
 
-function renderSettingsForm() {
+function renderSettingsForm({
+  disabled = false,
+  result,
+  settings = defaultSettings,
+}: {
+  disabled?: boolean;
+  result?: QuestionGenerationSettingsSubmissionResult;
+  settings?: QuestionGenerationSettingsViewData;
+} = {}) {
   const router = createMemoryRouter(
     [
       {
         path: "/",
         element: (
           <QuestionGenerationSettingsForm
-            disabled={false}
-            result={undefined}
-            settings={defaultSettings}
+            disabled={disabled}
+            result={result}
+            settings={settings}
           />
         ),
       },
@@ -124,7 +244,7 @@ function renderSettingsForm() {
     { initialEntries: ["/"] },
   );
 
-  render(<RouterProvider router={router} />);
+  return render(<RouterProvider router={router} />);
 }
 
 const defaultSettings = {

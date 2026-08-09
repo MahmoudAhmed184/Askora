@@ -29,7 +29,7 @@ const optionalQuestionGenerationEncryptionKeys = z.preprocess(
 
 const optionalQuestionGenerationEncryptionKeyVersion = z.preprocess(
   emptyStringToUndefined,
-  z.coerce.number().int().positive().optional(),
+  z.coerce.number().int().positive().max(2_147_483_647).optional(),
 );
 
 const booleanFromEnvironment = z.preprocess((value) => {
@@ -205,14 +205,36 @@ function parseQuestionGenerationEncryptionKeys(
   const keys = new Map<number, Buffer>();
 
   for (const [version, encodedKey] of Object.entries(parsed)) {
+    if (!/^[1-9]\d*$/.test(version)) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "QUESTION_GENERATION_ENCRYPTION_KEYS must use canonical positive decimal version names",
+      });
+      return z.NEVER;
+    }
+
     const numericVersion = Number(version);
     const key = decodeQuestionGenerationEncryptionKey(encodedKey);
 
-    if (!Number.isSafeInteger(numericVersion) || numericVersion <= 0 || key === undefined) {
+    if (
+      !Number.isSafeInteger(numericVersion) ||
+      numericVersion > 2_147_483_647 ||
+      key === undefined
+    ) {
       context.addIssue({
         code: "custom",
         message:
           "QUESTION_GENERATION_ENCRYPTION_KEYS must map positive numeric versions to base64-encoded 32-byte keys",
+      });
+      return z.NEVER;
+    }
+
+    if (keys.has(numericVersion)) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "QUESTION_GENERATION_ENCRYPTION_KEYS must not contain duplicate numeric versions",
       });
       return z.NEVER;
     }

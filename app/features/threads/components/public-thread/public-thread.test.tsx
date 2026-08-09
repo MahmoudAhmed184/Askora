@@ -130,6 +130,7 @@ describe("PublicThread", () => {
             publishedAt: "2026-05-31T12:00:00.000Z",
             pinPosition: null,
             questionTextMode: "hidden",
+            direction: "ltr",
             like: createLikeState("titem_hidden"),
           },
         ],
@@ -275,7 +276,7 @@ describe("PublicThread", () => {
 
     expect(screen.getByText("Generated")).toBeInTheDocument();
     expect(screen.getByText("Edited question")).toBeInTheDocument();
-    expect(container.querySelector("[dir='auto']")).toHaveTextContent(
+    expect(container.querySelector("[dir='ltr']")).toHaveTextContent(
       "What should I read next?",
     );
   });
@@ -408,6 +409,7 @@ function createAnswerItem(
     like: createLikeState(overrides.publicId ?? "titem_1"),
     questionText: "What should I read next?",
     questionTextMode: "original",
+    direction: "ltr",
     ...overrides,
   };
 }

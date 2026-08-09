@@ -20,6 +20,7 @@ describe("DraftsList", () => {
                   updatedAt: "2026-05-31T12:00:00.000Z",
                   questionCreatedAt: "2026-05-30T12:00:00.000Z",
                   ownerProvenance: null,
+                  direction: "ltr",
                   sender: {
                     username: "asker",
                     displayName: "Known Asker",
@@ -66,6 +67,7 @@ describe("DraftsList", () => {
                   updatedAt: "2026-05-31T12:00:00.000Z",
                   questionCreatedAt: "2026-05-30T12:00:00.000Z",
                   ownerProvenance: "generated",
+                  direction: "rtl",
                   sender: undefined,
                 },
               ]}
@@ -80,7 +82,7 @@ describe("DraftsList", () => {
 
     expect(screen.getByText("Generated")).toBeInTheDocument();
     expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
-    expect(container.querySelector("[dir='auto']")).toHaveTextContent(
+    expect(container.querySelector("[dir='rtl']")).toHaveTextContent(
       "ما الذي أتعلمه بعد ذلك؟",
     );
   });

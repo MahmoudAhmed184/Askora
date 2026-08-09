@@ -66,11 +66,41 @@ describe("QuestionModerationControls", () => {
     expect(markup).toMatch(/<select[^>]+name="reason" required="">/);
     expect(markup).toContain('name="alsoBlockSender"');
   });
+
+  it("removes generated safety actions while retaining the no-JavaScript delete path", () => {
+    const markup = renderToStaticMarkup(
+      <QuestionModerationNoScriptFallback
+        action="/inbox"
+        allowSafetyActions={false}
+        canDelete
+        deleteLabel="Drop"
+        disabled={false}
+        questionPublicId="generated_qst"
+      />,
+    );
+
+    expect(markup).toContain('name="intent" value="delete"');
+    expect(markup).not.toContain('name="intent" value="report"');
+    expect(markup).not.toContain('name="intent" value="block"');
+  });
+
+  it("keeps generated owner controls limited to delete", async () => {
+    renderModerationControls({ allowSafetyActions: false, canDelete: true });
+
+    openActionsMenu();
+    expect(await screen.findByRole("menuitem", { name: "Drop" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /report/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /block/i })).not.toBeInTheDocument();
+  });
 });
 
 function renderModerationControls({
+  allowSafetyActions = true,
+  canDelete = false,
   variant = "menu",
 }: {
+  allowSafetyActions?: boolean;
+  canDelete?: boolean;
   variant?: "menu" | "inline";
 } = {}) {
   const router = createMemoryRouter(
@@ -79,6 +109,9 @@ function renderModerationControls({
         path: "/",
         element: (
           <QuestionModerationControls
+            allowSafetyActions={allowSafetyActions}
+            canDelete={canDelete}
+            deleteLabel="Drop"
             disabled={false}
             questionPublicId="qst_1"
             variant={variant}

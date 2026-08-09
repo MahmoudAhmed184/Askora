@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import {
@@ -51,7 +51,13 @@ export interface GeneratedQuestionPersistenceInput {
     candidateTokenCount: number | undefined;
     totalTokenCount: number | undefined;
   };
-  questions: { id: string; publicId: string; text: string; normalizedTextHash: string }[];
+  questions: {
+    id: string;
+    publicId: string;
+    text: string;
+    normalizedTextHash: string;
+    legacyNormalizedTextHash?: string;
+  }[];
   batchId: string;
   now: Date;
 }
@@ -111,9 +117,10 @@ export interface QuestionGenerationSettingsRepository {
   }): Promise<void>;
   replaceCredentialMaterial(params: {
     ownerUserId: string;
+    previousMaterial: StoredQuestionGenerationCredential;
     material: StoredQuestionGenerationCredential;
     now: Date;
-  }): Promise<void>;
+  }): Promise<boolean>;
   recordSecurityEvent(params: {
     ownerUserId: string;
     profileId: string;
@@ -250,8 +257,13 @@ export function createDrizzleQuestionGenerationSettingsRepository(
           },
         });
     },
-    async replaceCredentialMaterial({ material, now, ownerUserId }) {
-      await database
+    async replaceCredentialMaterial({
+      material,
+      now,
+      ownerUserId,
+      previousMaterial,
+    }) {
+      const updated = await database
         .update(questionGenerationSettings)
         .set({
           geminiKeyCiphertext: material.ciphertext,
@@ -260,7 +272,29 @@ export function createDrizzleQuestionGenerationSettingsRepository(
           geminiKeyVersion: material.keyVersion,
           updatedAt: now,
         })
-        .where(eq(questionGenerationSettings.ownerUserId, ownerUserId));
+        .where(
+          and(
+            eq(questionGenerationSettings.ownerUserId, ownerUserId),
+            eq(
+              questionGenerationSettings.geminiKeyCiphertext,
+              previousMaterial.ciphertext,
+            ),
+            eq(questionGenerationSettings.geminiKeyNonce, previousMaterial.nonce),
+            eq(
+              questionGenerationSettings.geminiKeyAuthTag,
+              previousMaterial.authTag,
+            ),
+            eq(
+              questionGenerationSettings.geminiKeyVersion,
+              previousMaterial.keyVersion,
+            ),
+          ),
+        )
+        .returning({ ownerUserId: questionGenerationSettings.ownerUserId });
+
+      // A zero-row update is a concurrent disconnect/replacement. Do not
+      // retry the stale rotation or recreate material that the owner removed.
+      return updated.length > 0;
     },
     async recordSecurityEvent({ action, now, outcome, ownerUserId, profileId }) {
       await database.insert(events).values({
@@ -307,7 +341,7 @@ export function createDrizzleQuestionGenerationRepository(
       const rows = await database
         .select({
           id: threadItems.id,
-          question: questions.originalText,
+          question: threadItems.displayQuestionText,
           answer: threadItems.answerText,
           pinPosition: pinnedAnswers.position,
           publishedAt: threadItems.publishedAt,
@@ -331,6 +365,7 @@ export function createDrizzleQuestionGenerationRepository(
             eq(threads.status, "published"),
             eq(threadItems.status, "published"),
             isNull(threadItems.deletedAt),
+            isNotNull(threadItems.displayQuestionText),
           ),
         )
         .orderBy(
@@ -341,7 +376,7 @@ export function createDrizzleQuestionGenerationRepository(
         .limit(20);
 
       return rows.flatMap((row) =>
-        row.publishedAt === null
+        row.publishedAt === null || row.question === null
           ? []
           : [{
               id: row.id,
@@ -395,7 +430,12 @@ export function createDrizzleQuestionGenerationRepository(
           throw new QuestionGenerationError("profile_unavailable");
         }
 
-        const hashes = params.questions.map((question) => question.normalizedTextHash);
+        const hashes = params.questions.flatMap((question) => [
+          question.normalizedTextHash,
+          ...(question.legacyNormalizedTextHash === undefined
+            ? []
+            : [question.legacyNormalizedTextHash]),
+        ]);
         const existing = await transaction
           .select({ normalizedTextHash: questions.normalizedTextHash })
           .from(questions)

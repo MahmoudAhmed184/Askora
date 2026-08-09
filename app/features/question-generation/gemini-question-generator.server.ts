@@ -57,30 +57,43 @@ export async function generateGeminiQuestions({
   context,
   preference,
   requestedCount,
+  now = () => Date.now(),
 }: {
   apiKey: string;
   clientFactory?: (apiKey: string) => GeminiQuestionGenerationClient;
   context: QuestionGenerationContext;
   preference: QuestionGenerationModelPreference;
   requestedCount: number;
+  now?: () => number;
 }): Promise<GeminiQuestionGenerationResult> {
   const client = clientFactory(apiKey);
+  const deadline = now() + GEMINI_GENERATION_TIMEOUT_MILLISECONDS;
   const primary = preference === QUESTION_GENERATION_MODELS.auto
     ? QUESTION_GENERATION_AUTO_MODEL
     : preference;
 
   try {
-    return await generateWithModel({ client, context, model: primary, requestedCount });
+    return await generateWithModel({
+      client,
+      context,
+      deadline,
+      model: primary,
+      now,
+      requestedCount,
+    });
   } catch (error) {
     if (
       preference === QUESTION_GENERATION_MODELS.auto &&
-      isModelUnavailableError(error)
+      isModelUnavailableError(error) &&
+      now() < deadline
     ) {
       try {
         return await generateWithModel({
           client,
           context,
+          deadline,
           model: QUESTION_GENERATION_AUTO_FALLBACK_MODEL,
+          now,
           requestedCount,
         });
       } catch (fallbackError) {
@@ -99,19 +112,29 @@ function createGeminiQuestionGenerationClient(apiKey: string) {
 async function generateWithModel({
   client,
   context,
+  deadline,
   model,
+  now,
   requestedCount,
 }: {
   client: GeminiQuestionGenerationClient;
   context: QuestionGenerationContext;
+  deadline: number;
   model: string;
+  now: () => number;
   requestedCount: number;
 }): Promise<GeminiQuestionGenerationResult> {
+  const timeout = deadline - now();
+
+  if (timeout <= 0) {
+    throw new QuestionGenerationError("provider_timeout");
+  }
+
   const response = await client.models.generateContent({
     model,
     contents: createQuestionGenerationPrompt({ context, requestedCount }),
     config: {
-      httpOptions: { timeout: GEMINI_GENERATION_TIMEOUT_MILLISECONDS },
+      httpOptions: { timeout },
       responseMimeType: "application/json",
       responseJsonSchema: generatedQuestionBatchJsonSchema,
       safetySettings: createSafetySettings(),
@@ -238,6 +261,16 @@ function getProviderCode(error: unknown) {
 }
 
 function isTimeoutError(error: unknown) {
-  return typeof error === "object" && error !== null && "name" in error &&
-    error.name === "TimeoutError";
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const name = "name" in error && typeof error.name === "string"
+    ? error.name
+    : undefined;
+  const code = "code" in error && typeof error.code === "string"
+    ? error.code
+    : undefined;
+
+  return name === "TimeoutError" || name === "AbortError" || code === "ABORT_ERR";
 }

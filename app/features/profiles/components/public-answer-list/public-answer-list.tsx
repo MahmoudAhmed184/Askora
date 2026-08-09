@@ -164,7 +164,7 @@ function PublicAnswerArticle({
           <div>
             <p
               className="whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground"
-              dir="auto"
+              dir={answer.direction}
             >
               {answer.questionText}
             </p>

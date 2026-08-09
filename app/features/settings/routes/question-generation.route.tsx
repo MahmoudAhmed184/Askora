@@ -8,6 +8,7 @@ import {
   type QuestionGenerationSettingsSubmissionResult,
 } from "~/features/question-generation/question-generation-settings.service.server";
 import type { SettingsRouteContext } from "~/features/settings/types/settings.types";
+import { requireTrustedMutationOrigin } from "~/lib/request-origin.server";
 
 interface QuestionGenerationSettingsActionData {
   questionGeneration: QuestionGenerationSettingsSubmissionResult;
@@ -17,6 +18,12 @@ export async function action(
   { context, request }: Route.ActionArgs,
   submitSettings = submitQuestionGenerationSettings,
 ) {
+  const originResponse = requireTrustedMutationOrigin(request);
+
+  if (originResponse !== undefined) {
+    return originResponse;
+  }
+
   const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
@@ -30,7 +37,12 @@ export async function action(
 
   return data<QuestionGenerationSettingsActionData>(
     { questionGeneration: result },
-    { status: getQuestionGenerationSettingsResponseStatus(result) },
+    {
+      status: getQuestionGenerationSettingsResponseStatus(result),
+      ...(result.status !== "rate_limited" || result.retryAfterSeconds === undefined
+        ? {}
+        : { headers: { "Retry-After": String(result.retryAfterSeconds) } }),
+    },
   );
 }
 
@@ -45,7 +57,6 @@ export default function QuestionGenerationSettingsRoute() {
   return (
     <QuestionGenerationSettingsForm
       disabled={isSuspended}
-      key={getQuestionGenerationFormKey(actionData?.questionGeneration)}
       result={actionData?.questionGeneration}
       settings={settings.questionGeneration}
     />
@@ -80,23 +91,17 @@ function getQuestionGenerationSettingsResponseStatus(
     return 503;
   }
 
-  if (result.status === "credential_invalid") {
+  if (result.status === "provider_quota") {
+    return 429;
+  }
+
+  if (
+    result.status === "credential_invalid" ||
+    result.status === "provider_permission" ||
+    result.status === "provider_model_unavailable"
+  ) {
     return 422;
   }
 
   return 400;
-}
-
-function getQuestionGenerationFormKey(
-  result: QuestionGenerationSettingsSubmissionResult | undefined,
-) {
-  if (result === undefined) {
-    return "loaded";
-  }
-
-  return [
-    result.status,
-    result.values.modelPreference,
-    result.values.questionInterests.join(":"),
-  ].join(":");
 }

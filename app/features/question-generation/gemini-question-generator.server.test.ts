@@ -48,6 +48,7 @@ describe("generateGeminiQuestions", () => {
     ["Auto quota", "auto", { status: 429 }, "provider_quota"],
     ["explicit unavailable", "gemini-3.6-flash", { status: 404 }, "provider_model_unavailable"],
     ["Auto timeout", "auto", { name: "TimeoutError" }, "provider_timeout"],
+    ["SDK abort timeout", "gemini-3.6-flash", { name: "AbortError" }, "provider_timeout"],
   ] as const)("does not fall back for %s", async (_name, preference, error, code) => {
     let calls = 0;
     await expect(generateGeminiQuestions({
@@ -60,6 +61,66 @@ describe("generateGeminiQuestions", () => {
         return Promise.reject(providerError(error));
       } } }),
     })).rejects.toMatchObject({ code });
+    expect(calls).toBe(1);
+  });
+
+  it("shares one deadline across Auto primary and fallback attempts", async () => {
+    let clock = 1_000;
+    const timeouts: number[] = [];
+    let calls = 0;
+
+    const result = await generateGeminiQuestions({
+      apiKey: "test-key",
+      preference: "auto",
+      requestedCount: 3,
+      context: createContext(),
+      now: () => clock,
+      clientFactory: () => ({
+        models: {
+          generateContent: ({ config }) => {
+            const httpOptions = config.httpOptions as { timeout: number };
+            timeouts.push(httpOptions.timeout);
+            calls += 1;
+
+            if (calls === 1) {
+              clock = 30_500;
+              return Promise.reject(providerError({ status: 404 }));
+            }
+
+            return Promise.resolve({
+              text: JSON.stringify({ questions: questions() }),
+            });
+          },
+        },
+      }),
+    });
+
+    expect(result.modelUsed).toBe("gemini-3.5-flash");
+    expect(timeouts).toEqual([30_000, 500]);
+  });
+
+  it("does not start Auto fallback after the overall deadline expires", async () => {
+    let clock = 0;
+    let calls = 0;
+
+    await expect(
+      generateGeminiQuestions({
+        apiKey: "test-key",
+        preference: "auto",
+        requestedCount: 3,
+        context: createContext(),
+        now: () => clock,
+        clientFactory: () => ({
+          models: {
+            generateContent: () => {
+              calls += 1;
+              clock = 30_001;
+              return Promise.reject(providerError({ status: 404 }));
+            },
+          },
+        }),
+      }),
+    ).rejects.toMatchObject({ code: "provider_model_unavailable" });
     expect(calls).toBe(1);
   });
 

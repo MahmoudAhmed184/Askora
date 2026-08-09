@@ -19,6 +19,7 @@ export async function handleInboxGenerationAction({
   session: Parameters<typeof generateQuestionBatch>[0]["session"];
   generate?: typeof generateQuestionBatch;
 }) {
+  const startedAt = Date.now();
   const parsed = questionGenerationRequestSchema.safeParse({
     topic: getFormText(formData, "topic"),
     language: getFormText(formData, "language"),
@@ -46,11 +47,77 @@ export async function handleInboxGenerationAction({
       { status: 200 },
     );
   } catch (error) {
+    recordGenerationFailureDiagnostic({
+      durationMilliseconds: Date.now() - startedAt,
+      error,
+      profileId: session.profile.id,
+      userId: session.user.id,
+    });
+    const status = getInboxGenerationErrorResponseStatus(error);
+    const generation = toInboxGenerationErrorResult(error);
+
     return data<InboxGenerationRouteActionData>(
-      { generation: toInboxGenerationErrorResult(error) },
-      { status: getInboxGenerationErrorResponseStatus(error) },
+      { generation },
+      {
+        status,
+        ...(generation.status !== "failed" || generation.retryAfterSeconds === undefined
+          ? {}
+          : { headers: { "Retry-After": String(generation.retryAfterSeconds) } }),
+      },
     );
   }
+}
+
+function recordGenerationFailureDiagnostic({
+  durationMilliseconds,
+  error,
+  profileId,
+  userId,
+}: {
+  durationMilliseconds: number;
+  error: unknown;
+  profileId: string;
+  userId: string;
+}) {
+  const category = error instanceof QuestionGenerationError
+    ? error.code
+    : "unexpected_error";
+
+  console.error("question_generation_failed", {
+    category,
+    durationMilliseconds,
+    executionStage: getGenerationExecutionStage(error),
+    profileId,
+    userId,
+  });
+}
+
+function getGenerationExecutionStage(error: unknown) {
+  if (!(error instanceof QuestionGenerationError)) {
+    return "unknown";
+  }
+
+  if (error.code.startsWith("provider_")) {
+    return "provider";
+  }
+
+  if (error.code === "persistence_failed" || error.code === "duplicate") {
+    return "persistence";
+  }
+
+  if (error.code === "invalid_output" || error.code === "policy_rejected") {
+    return "validation";
+  }
+
+  if (error.code.includes("credential")) {
+    return "credential";
+  }
+
+  if (error.code === "rate_limited") {
+    return "rate_limit";
+  }
+
+  return "authorization";
 }
 
 function toInboxGenerationErrorResult(

@@ -67,8 +67,7 @@ function createGeminiCredentialValidationClient(apiKey: string) {
 function supportsTextGeneration(metadata: Model) {
   return (
     metadata.name !== undefined &&
-    (metadata.supportedActions === undefined ||
-      metadata.supportedActions.includes("generateContent"))
+    metadata.supportedActions?.includes("generateContent") === true
   );
 }
 

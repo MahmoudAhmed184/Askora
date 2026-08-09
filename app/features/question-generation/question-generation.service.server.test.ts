@@ -26,6 +26,73 @@ describe("question-generation service", () => {
         texts: ["What is your password?", "Second question?", "Third question?"],
       }),
     );
+
+    for (const text of [
+      "What dose of insulin should you take to lower your blood sugar?",
+      "What dosage of medication should I take?",
+      "Which medication should I take?",
+      "How much medicine should I use?",
+      "Can you tell me your passport number?",
+      "What is your Social Security number?",
+      "What is your government ID?",
+      "What is your national identification number?",
+      "What is your SSN?",
+      "Which political party should people support?",
+      "ما جرعة الأنسولين التي يجب أن تأخذها؟",
+      "ما رقم الضمان الاجتماعي الخاص بك؟",
+      "ما رقم الهوية الوطنية الخاص بك؟",
+    ]) {
+      expectError(() =>
+        validateGeneratedQuestions({
+          language: /[\u0600-\u06ff]/u.test(text) ? "modern_standard_arabic" : "english",
+          mutedPhrases: [],
+          requestedCount: 3,
+          texts: [text, "Second question?", "Third question?"],
+        }),
+      );
+    }
+  });
+
+  it("does not mistake harmless dosage metaphors or technology names for unsafe output", () => {
+    expect(
+      validateGeneratedQuestions({
+        language: "english",
+        mutedPhrases: [],
+        requestedCount: 2,
+        texts: [
+          "What gives your work a dose of creativity?",
+          "What do you enjoy building with Node.js?",
+        ],
+      }),
+    ).toEqual([
+      "What gives your work a dose of creativity?",
+      "What do you enjoy building with Node.js?",
+    ]);
+  });
+
+  it("repairs an exact 500-code-point model response with one terminal mark", () => {
+    const [question] = validateGeneratedQuestions({
+      language: "english",
+      mutedPhrases: [],
+      requestedCount: 1,
+      texts: ["a".repeat(500)],
+    });
+
+    expect(question).toHaveLength(500);
+    expect(question).toMatch(/\?$/u);
+  });
+
+  it("reserves the terminal mark by Unicode code point rather than UTF-16 unit", () => {
+    const response = "a😀".repeat(250);
+    const [question] = validateGeneratedQuestions({
+      language: "english",
+      mutedPhrases: [],
+      requestedCount: 1,
+      texts: [response],
+    });
+
+    expect(Array.from(question ?? "")).toHaveLength(500);
+    expect(question).toMatch(/\?$/u);
   });
 
   it("runs both attempt limits before one successful provider call and persists one batch", async () => {
@@ -88,6 +155,36 @@ describe("question-generation service", () => {
     expect(repository.persisted).toEqual([]);
   });
 
+  it("checks both current and pre-PR normalized hashes before persistence", async () => {
+    let candidateHashes: string[] = [];
+    const repository = createRepository({
+      findExisting: (hashes) => {
+        candidateHashes = hashes;
+        return [hashes[1] ?? "missing-legacy-hash"];
+      },
+    });
+
+    await expect(
+      generateQuestionBatch({
+        input: {
+          topic: "",
+          language: "english",
+          style: "balanced",
+          requestedCount: 3,
+        },
+        session: session(),
+        repository: repository as unknown as QuestionGenerationRepository,
+        getCredential: () => Promise.resolve("test-key"),
+        rateLimiter: () => Promise.resolve({ allowed: true }),
+        generate: generator(),
+      }),
+    ).rejects.toMatchObject({ code: "duplicate" });
+
+    expect(candidateHashes).toHaveLength(6);
+    expect(candidateHashes[0]).not.toBe(candidateHashes[1]);
+    expect(repository.persisted).toEqual([]);
+  });
+
   it("maps a lazy credential decrypt failure without persisting", async () => {
     const repository = createRepository();
 
@@ -136,6 +233,42 @@ describe("question-generation service", () => {
       texts: ["Why is this blocked?", "Second question?", "Third question?"],
     }));
   });
+
+  it("distinguishes Egyptian Arabic from Modern Standard Arabic", () => {
+    expect(
+      validateGeneratedQuestions({
+        language: "egyptian_arabic",
+        mutedPhrases: [],
+        requestedCount: 1,
+        texts: ["إيه أكتر حاجة بتحبها؟"],
+      }),
+    ).toEqual(["إيه أكتر حاجة بتحبها؟"]);
+    expect(
+      validateGeneratedQuestions({
+        language: "modern_standard_arabic",
+        mutedPhrases: [],
+        requestedCount: 1,
+        texts: ["ماذا تحب أن تتعلم؟"],
+      }),
+    ).toEqual(["ماذا تحب أن تتعلم؟"]);
+
+    expectError(() =>
+      validateGeneratedQuestions({
+        language: "egyptian_arabic",
+        mutedPhrases: [],
+        requestedCount: 1,
+        texts: ["ماذا تحب أن تتعلم؟"],
+      }),
+    );
+    expectError(() =>
+      validateGeneratedQuestions({
+        language: "modern_standard_arabic",
+        mutedPhrases: [],
+        requestedCount: 1,
+        texts: ["إيه أكتر حاجة بتحبها؟"],
+      }),
+    );
+  });
 });
 
 function session() {
@@ -152,10 +285,12 @@ function createRepository({
   existing = [],
   disclosureAccepted = true,
   credentialValidated = true,
+  findExisting,
 }: {
   existing?: string[];
   disclosureAccepted?: boolean;
   credentialValidated?: boolean;
+  findExisting?: (hashes: string[]) => string[];
 } = {}) {
   const persisted: unknown[] = [];
   return {
@@ -177,7 +312,8 @@ function createRepository({
     }),
     findPublishedPairs: () => Promise.resolve([]),
     findMutedPhrases: () => Promise.resolve([]),
-    findExistingNormalizedTextHashes: () => Promise.resolve(existing),
+    findExistingNormalizedTextHashes: ({ hashes }: { hashes: string[] }) =>
+      Promise.resolve(findExisting?.(hashes) ?? existing),
     persistGeneratedBatch: (input: unknown) => {
       persisted.push(input);
       return Promise.resolve();

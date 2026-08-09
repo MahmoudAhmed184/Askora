@@ -46,6 +46,37 @@ describe("question generation preferences validation", () => {
     ).toBe(false);
   });
 
+  it("counts Unicode code points for topic and interest limits", () => {
+    expect(
+      questionGenerationRequestSchema.safeParse({
+        topic: "😀".repeat(160),
+        language: "english",
+        style: "balanced",
+        requestedCount: 3,
+      }).success,
+    ).toBe(true);
+    expect(
+      questionGenerationRequestSchema.safeParse({
+        topic: "😀".repeat(161),
+        language: "english",
+        style: "balanced",
+        requestedCount: 3,
+      }).success,
+    ).toBe(false);
+    expect(
+      questionGenerationPreferencesSchema.safeParse({
+        modelPreference: "auto",
+        questionInterests: "😀".repeat(40),
+      }).success,
+    ).toBe(true);
+    expect(
+      questionGenerationPreferencesSchema.safeParse({
+        modelPreference: "auto",
+        questionInterests: "😀".repeat(41),
+      }).success,
+    ).toBe(false);
+  });
+
   it("normalizes comparisons without changing the stored interest wording", () => {
     expect(normalizeQuestionGenerationInterest("  SOFTware  ")).toBe(
       "software",

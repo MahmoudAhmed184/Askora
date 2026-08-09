@@ -17,6 +17,7 @@ describe("InboxList", () => {
           text: "What should I read next?",
           identity: "anonymous",
           createdAt: "2026-05-31T12:00:00.000Z",
+          direction: "ltr",
           ipHash: "ip_hash_secret",
           userAgentHash: "user_agent_secret",
           safetyFingerprintHash: "fingerprint_secret",
@@ -76,14 +77,21 @@ describe("InboxList", () => {
 
   it("shows Generated only for owner-generated inbox questions and supports automatic text direction", () => {
     renderInboxList({
-      questions: [{ ...defaultQuestion, generated: true, text: "ما الذي يهمك اليوم؟" }],
+      questions: [
+        {
+          ...defaultQuestion,
+          generated: true,
+          text: "ما الذي يهمك اليوم؟",
+          direction: "rtl",
+        },
+      ],
     });
 
     const generatedMarker = screen.getByLabelText("Generated question");
 
     expect(generatedMarker).toHaveTextContent("Generated");
     expect(generatedMarker.closest("header")).not.toBeNull();
-    expect(screen.getByText("ما الذي يهمك اليوم؟")).toHaveAttribute("dir", "auto");
+    expect(screen.getByText("ما الذي يهمك اليوم؟")).toHaveAttribute("dir", "rtl");
   });
 
   it("does not show Generated for manually submitted questions", () => {
@@ -153,4 +161,5 @@ const defaultQuestion = {
   text: "What should I read next?",
   identity: "anonymous",
   createdAt: "2026-05-31T12:00:00.000Z",
+  direction: "ltr",
 } satisfies InboxQuestionView;

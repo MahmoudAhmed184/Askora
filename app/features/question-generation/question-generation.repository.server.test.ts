@@ -15,5 +15,9 @@ describe("question-generation repository query shapes", () => {
     expect(source).toContain("database.transaction");
     expect(source).toContain("new QuestionGenerationError(\"duplicate\")");
     expect(source).toContain("threads.ownerProfileId, profileId");
+    expect(source).toContain("question: threadItems.displayQuestionText");
+    expect(source).toContain("isNotNull(threadItems.displayQuestionText)");
+    expect(source).toContain("previousMaterial.ciphertext");
+    expect(source).toContain(".returning({ ownerUserId");
   });
 });

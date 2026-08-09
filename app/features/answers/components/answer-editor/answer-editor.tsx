@@ -353,6 +353,7 @@ export function AnswerEditor({
           <div className="flex flex-wrap gap-2">
             <QuestionModerationControls
               action="/inbox"
+              allowSafetyActions={editor.question.ownerProvenance !== "generated"}
               disabled={disabled || isSubmitting}
               questionPublicId={editor.question.publicId}
               variant="inline"
@@ -471,7 +472,7 @@ function QuestionContext({
       )}
       <p
         className="mt-4 whitespace-pre-wrap break-words border-t border-dashed pt-4 font-serif text-lg font-bold italic leading-7 text-foreground"
-        dir="auto"
+        dir={question.direction}
       >
         {question.text}
       </p>

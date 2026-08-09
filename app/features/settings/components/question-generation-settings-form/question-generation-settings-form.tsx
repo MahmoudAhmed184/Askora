@@ -25,6 +25,10 @@ import {
   questionGenerationModelPreferenceValues,
   type QuestionGenerationModelPreference,
 } from "~/features/question-generation/question-generation.constants";
+import {
+  MAX_QUESTION_GENERATION_INTEREST_LENGTH,
+  MIN_QUESTION_GENERATION_INTEREST_LENGTH,
+} from "~/features/question-generation/question-generation.validations";
 import type {
   QuestionGenerationSettingsFieldErrors,
   QuestionGenerationSettingsSubmissionResult,
@@ -48,7 +52,14 @@ export function QuestionGenerationSettingsForm({
   result,
   settings,
 }: QuestionGenerationSettingsFormProps) {
-  const initialValues = result?.values;
+  // Only a failed preferences submission is relevant to local preference
+  // state. Connection, disclosure, and disconnect forms intentionally omit
+  // these fields; using their parsed defaults would erase loader-backed
+  // preferences during a full-document POST render.
+  const initialValues =
+    result?.status === "invalid" && result.values.intent === "save_preferences"
+      ? result.values
+      : undefined;
   const [modelPreference, setModelPreference] =
     useState<QuestionGenerationModelPreference>(
       initialValues?.modelPreference ?? settings.modelPreference,
@@ -60,6 +71,10 @@ export function QuestionGenerationSettingsForm({
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
   const fieldErrors = getFieldErrors(result);
 
+  const pendingInterest = getValidPendingInterest({ interests, value: interestInput });
+  const submittedInterests =
+    pendingInterest === undefined ? interests : [...interests, pendingInterest];
+
   useEffect(() => {
     if (result !== undefined) {
       apiKeyInputRef.current?.form?.reset();
@@ -67,9 +82,12 @@ export function QuestionGenerationSettingsForm({
   }, [result]);
 
   function addInterest() {
-    const nextInterest = interestInput.trim();
+    const nextInterest = getValidPendingInterest({
+      interests,
+      value: interestInput,
+    });
 
-    if (nextInterest.length === 0) {
+    if (nextInterest === undefined) {
       return;
     }
 
@@ -156,7 +174,6 @@ export function QuestionGenerationSettingsForm({
           <Form method="post">
             <input name="intent" type="hidden" value="disconnect" />
             <PendingButton
-              disabled={disabled}
               pendingName="intent"
               pendingText="Disconnecting"
               pendingValue="disconnect"
@@ -182,11 +199,7 @@ export function QuestionGenerationSettingsForm({
         />
         <Form aria-label="Question generation preferences" method="post">
           <input name="intent" type="hidden" value="save_preferences" />
-          <input
-            name="questionInterests"
-            type="hidden"
-            value={interests.join("\n")}
-          />
+          <input name="questionInterests" type="hidden" value={submittedInterests.join("\n")} />
           <FieldGroup className="gap-5">
             <fieldset className="contents" disabled={disabled}>
               <Field
@@ -231,9 +244,14 @@ export function QuestionGenerationSettingsForm({
                     aria-invalid={fieldErrors.questionInterests !== undefined}
                     dir="auto"
                     id="questionInterest"
-                    maxLength={40}
                     onChange={(event) => {
                       setInterestInput(event.currentTarget.value);
+                    }}
+                    onBlur={() => {
+                      if (pendingInterest !== undefined) {
+                        setInterests((current) => [...current, pendingInterest]);
+                        setInterestInput("");
+                      }
                     }}
                     onKeyDown={handleInterestKeyDown}
                     placeholder="Add an interest"
@@ -376,12 +394,12 @@ function InterestList({
   return (
     <ul aria-label="Saved interests" className="flex flex-wrap gap-2">
       {interests.map((interest, index) => (
-        <li key={`${interest}:${String(index)}`}>
-          <span className="inline-flex items-center gap-1 rounded-full border bg-card py-1 pl-3 pr-1 text-sm">
-            <span dir="auto">{interest}</span>
+        <li className="max-w-full min-w-0" key={`${interest}:${String(index)}`}>
+          <span className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border bg-card py-1 pl-3 pr-1 text-sm">
+            <span className="min-w-0 break-all" dir="auto">{interest}</span>
             <Button
               aria-label={`Remove ${interest}`}
-              className="size-7 rounded-full p-0"
+              className="size-7 shrink-0 rounded-full p-0"
               onClick={() => {
                 onRemove(index);
               }}
@@ -395,6 +413,31 @@ function InterestList({
       ))}
     </ul>
   );
+}
+
+function getValidPendingInterest({
+  interests,
+  value,
+}: {
+  interests: string[];
+  value: string;
+}) {
+  const normalized = value.trim();
+  const characterCount = Array.from(normalized).length;
+
+  if (
+    characterCount < MIN_QUESTION_GENERATION_INTEREST_LENGTH ||
+    characterCount > MAX_QUESTION_GENERATION_INTEREST_LENGTH ||
+    interests.some(
+      (interest) =>
+        interest.normalize("NFKC").trim().toLocaleLowerCase("und") ===
+        normalized.normalize("NFKC").toLocaleLowerCase("und"),
+    )
+  ) {
+    return undefined;
+  }
+
+  return normalized;
 }
 
 function getFieldErrors(
@@ -426,7 +469,10 @@ function getSettingsToastMessage(
   }
 
   if (!isSuccess(result)) {
-    return result.formError;
+    return appendRetryAfter(
+      result.formError,
+      "retryAfterSeconds" in result ? result.retryAfterSeconds : undefined,
+    );
   }
 
   const messages = {
@@ -438,6 +484,23 @@ function getSettingsToastMessage(
   } as const;
 
   return messages[result.status];
+}
+
+function appendRetryAfter(message: string, retryAfterSeconds: number | undefined) {
+  if (retryAfterSeconds === undefined) {
+    return message;
+  }
+
+  return `${message} Try again in ${formatRetryAfter(retryAfterSeconds)}.`;
+}
+
+function formatRetryAfter(seconds: number) {
+  if (seconds < 60) {
+    return `${String(seconds)} seconds`;
+  }
+
+  const minutes = Math.ceil(seconds / 60);
+  return `${String(minutes)} minute${minutes === 1 ? "" : "s"}`;
 }
 
 function getLiveMessage(

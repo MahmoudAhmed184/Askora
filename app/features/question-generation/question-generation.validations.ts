@@ -24,8 +24,17 @@ export const MAX_QUESTION_GENERATION_INTEREST_LENGTH = 40;
 
 const trimmedString = z.string().transform((value) => value.trim());
 
+const unicodeCharacterString = (maximum: number, message: string) =>
+  z.string().refine(
+    (value) => Array.from(value).length <= maximum,
+    message,
+  );
+
 export const questionGenerationRequestSchema = z.object({
-  topic: trimmedString.pipe(z.string().max(160)).optional().default(""),
+  topic: trimmedString
+    .pipe(unicodeCharacterString(160, "Topic must be 160 characters or fewer."))
+    .optional()
+    .default(""),
   language: z.enum(questionGenerationLanguageValues),
   style: z.enum(questionGenerationStyleValues),
   requestedCount: z.union(
@@ -34,7 +43,12 @@ export const questionGenerationRequestSchema = z.object({
 }).strict();
 
 export const generatedQuestionSchema = z.object({
-  text: trimmedString.pipe(z.string().min(1).max(500)),
+  text: trimmedString.pipe(
+    z
+      .string()
+      .min(1)
+      .pipe(unicodeCharacterString(500, "Question must be 500 characters or fewer.")),
+  ),
 }).strict();
 
 export const generatedQuestionBatchSchema = z.object({
@@ -58,16 +72,16 @@ const questionGenerationInterestSchema = trimmedString
   .pipe(
     z
       .string()
-      .min(
-        MIN_QUESTION_GENERATION_INTEREST_LENGTH,
+      .refine(
+        (value) => Array.from(value).length >= MIN_QUESTION_GENERATION_INTEREST_LENGTH,
         "Each interest must be at least 2 characters.",
       ),
   )
   .pipe(
     z
       .string()
-      .max(
-        MAX_QUESTION_GENERATION_INTEREST_LENGTH,
+      .refine(
+        (value) => Array.from(value).length <= MAX_QUESTION_GENERATION_INTEREST_LENGTH,
         "Each interest must be 40 characters or fewer.",
       ),
   );

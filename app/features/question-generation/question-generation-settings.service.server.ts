@@ -15,6 +15,7 @@ import {
 } from "~/features/question-generation/question-generation.crypto.server";
 import {
   validateGeminiCredential,
+  type GeminiCredentialValidationFailure,
   type GeminiCredentialValidationResult,
 } from "~/features/question-generation/gemini-credential-validation.server";
 import {
@@ -91,6 +92,9 @@ export type QuestionGenerationSettingsSubmissionResult =
       status:
         | "configuration_unavailable"
         | "credential_invalid"
+        | "provider_permission"
+        | "provider_quota"
+        | "provider_model_unavailable"
         | "provider_unavailable"
         | "rate_limited"
         | "suspended";
@@ -136,7 +140,7 @@ export async function submitQuestionGenerationSettings({
 }): Promise<QuestionGenerationSettingsSubmissionResult> {
   const values = getQuestionGenerationSettingsFormValues(formData);
 
-  if (session.suspensionStatus === "active") {
+  if (session.suspensionStatus === "active" && values.intent !== "disconnect") {
     return safeError(values, "suspended");
   }
 
@@ -201,6 +205,7 @@ export async function getQuestionGenerationCredential({
     await repository.replaceCredentialMaterial({
       ownerUserId,
       material: decrypted.rotatedMaterial,
+      previousMaterial: material,
       now,
     });
   }
@@ -282,9 +287,7 @@ async function connectCredential({
       repository,
       session,
     });
-    return validation.reason === "invalid_credential"
-      ? safeError(values, "credential_invalid")
-      : safeError(values, "provider_unavailable");
+    return safeError(values, getCredentialValidationErrorStatus(validation.reason));
   }
 
   let material: StoredQuestionGenerationCredential;
@@ -494,6 +497,9 @@ function safeError(
     QuestionGenerationSettingsSubmissionResult["status"],
     | "configuration_unavailable"
     | "credential_invalid"
+    | "provider_permission"
+    | "provider_quota"
+    | "provider_model_unavailable"
     | "provider_unavailable"
     | "rate_limited"
     | "suspended"
@@ -504,6 +510,12 @@ function safeError(
     configuration_unavailable:
       "Askora cannot encrypt Gemini credentials right now. Contact the site operator.",
     credential_invalid: "Gemini could not validate this key. Check it and try again.",
+    provider_permission:
+      "Gemini rejected this project. Check the API is enabled and billing is configured.",
+    provider_quota:
+      "Gemini quota is unavailable for this project. Check billing or try again later.",
+    provider_model_unavailable:
+      "The selected Gemini model is unavailable. Choose another model and try again.",
     provider_unavailable:
       "Gemini could not validate this connection right now. Try again later.",
     rate_limited: "Too many key checks. Try again later.",
@@ -513,6 +525,30 @@ function safeError(
   return retryAfterSeconds === undefined
     ? { status, values, formError: messages[status] }
     : { status, values, formError: messages[status], retryAfterSeconds };
+}
+
+function getCredentialValidationErrorStatus(
+  reason: GeminiCredentialValidationFailure,
+): Extract<
+  QuestionGenerationSettingsSubmissionResult["status"],
+  | "credential_invalid"
+  | "provider_permission"
+  | "provider_quota"
+  | "provider_model_unavailable"
+  | "provider_unavailable"
+> {
+  switch (reason) {
+    case "invalid_credential":
+      return "credential_invalid";
+    case "permission_or_billing":
+      return "provider_permission";
+    case "quota":
+      return "provider_quota";
+    case "model_unavailable":
+      return "provider_model_unavailable";
+    case "unavailable":
+      return "provider_unavailable";
+  }
 }
 
 function toFormValues(

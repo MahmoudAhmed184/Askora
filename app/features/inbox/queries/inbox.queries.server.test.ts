@@ -63,12 +63,14 @@ describe("loadInboxFolder", () => {
         text: "Latest question",
         identity: "attributed",
         createdAt: "2026-05-31T12:00:00.000Z",
+        direction: "ltr",
       },
       {
         publicId: "qst_old",
         text: "What should I read next?",
         identity: "anonymous",
         createdAt: "2026-05-30T12:00:00.000Z",
+        direction: "ltr",
       },
     ]);
   });
@@ -149,6 +151,7 @@ describe("loadInboxFolder", () => {
     });
 
     expect(folder.questions[0]).toMatchObject({ generated: true });
+    expect(folder.questions[0]?.direction).toBe("ltr");
     expect(JSON.stringify(folder.questions[0])).not.toContain("ai_generated");
     expect(JSON.stringify(folder.questions[0])).not.toMatch(/source|batch|model|token/iu);
   });
