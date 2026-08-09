@@ -258,6 +258,27 @@ async function executeCleanupStatements({ client, email, now, profileId, userId 
       values: [userId],
     },
     {
+      sql: "/* cleanup: delete_question_generation_settings */ delete from question_generation_settings where owner_user_id = $1",
+      values: [userId],
+    },
+    {
+      sql: `
+        /* cleanup: delete_generated_questions */
+        delete from questions
+        where source = 'ai_generated'
+          and generation_batch_id in (
+            select id
+            from question_generation_batches
+            where owner_user_id = $1
+          )
+      `,
+      values: [userId],
+    },
+    {
+      sql: "/* cleanup: delete_question_generation_batches */ delete from question_generation_batches where owner_user_id = $1",
+      values: [userId],
+    },
+    {
       sql: "/* cleanup: delete_verifications */ delete from verifications where identifier = $1",
       values: [email],
     },
@@ -339,7 +360,7 @@ async function executeCleanupStatements({ client, email, now, profileId, userId 
             from reports
             where reports.target_type = 'question'
               and reports.target_id = questions.id
-              and reports.created_at > $4 - interval '180 days'
+              and reports.created_at > $4::timestamptz - interval '180 days'
           )
       `,
       values: [userId, profileId, REDACTED_QUESTION_TEXT, now],

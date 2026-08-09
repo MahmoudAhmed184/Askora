@@ -156,6 +156,7 @@ describe("createPublicProfilePageData", () => {
           pinPosition: null,
           questionTextMode: "hidden",
           questionText: null,
+          direction: "ltr",
           like: {
             threadItemPublicId: "titem_1",
             isLiked: false,
@@ -368,6 +369,7 @@ function createPublishedAnswer({
     pinPosition: null,
     questionTextMode: "original",
     questionText: "What should I read next?",
+    direction: "ltr",
     like: {
       threadItemPublicId: publicId,
       isLiked: false,

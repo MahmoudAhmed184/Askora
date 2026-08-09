@@ -8,9 +8,18 @@ import {
 } from "../../scripts/seed-beta.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
-const playwrightAppUrl = "http://127.0.0.1:5173";
+const playwrightAppUrl =
+  process.env.PLAYWRIGHT_APP_URL ??
+  (databaseUrl === undefined
+    ? "http://127.0.0.1:5173"
+    : "http://127.0.0.1:5183");
 const authSecret = process.env.BETTER_AUTH_SECRET;
 const noJavaScriptQuestionText = "No-JavaScript beta smoke question?";
+const generatedQuestionTexts = [
+  "What recent idea changed how you approach your work?",
+  "Which skill would you most like to strengthen this month?",
+  "What small experiment are you excited to try next?",
+] as const;
 
 test.describe("beta seeded smoke", () => {
   test.skip(
@@ -138,6 +147,133 @@ test.describe("beta seeded smoke", () => {
     await expect(
       page.getByText(betaFixture.questions.filtered.text),
     ).toBeVisible();
+  });
+
+  test("owner can configure, generate, draft, publish, and privately disclose provenance", async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium", "Desktop lifecycle smoke.");
+    test.setTimeout(90_000);
+    await signInAs(context, betaFixture.users.owner);
+
+    await page.goto("/settings/question-generation");
+    await page.getByLabel("Gemini API key").fill("e2e-only-gemini-key");
+    await page.getByRole("button", { name: "Connect Gemini" }).click();
+    await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Replace Gemini API key")).toHaveValue("");
+
+    await page.getByLabel("Active model").click();
+    await page
+      .getByRole("option", { name: "Gemini 3.5 Flash-Lite" })
+      .click();
+    await page.getByLabel("Question interests").fill("Software craft");
+    await page.getByLabel("Question interests").press("Enter");
+    await page.getByRole("button", { name: "Save preferences" }).click();
+    await expectToast(page, "Question-generation preferences saved.");
+    await page.reload();
+    await expect(page.getByLabel("Active model")).toContainText(
+      "Gemini 3.5 Flash-Lite",
+    );
+    await expect(page.getByText("Software craft")).toBeVisible();
+
+    await page.getByRole("checkbox").check();
+    await page
+      .getByRole("button", { name: "Acknowledge disclosure" })
+      .click();
+    await expect(
+      page.getByText("You acknowledged the current disclosure."),
+    ).toBeVisible();
+
+    await page.goto("/inbox");
+    await page.getByRole("button", { name: "Generate questions" }).click();
+    const dialog = page.getByRole("dialog", { name: "Generate questions" });
+
+    await dialog
+      .getByRole("textbox", {
+        name: "What would you like questions about today?",
+      })
+      .fill("Learning in public");
+    await dialog.getByLabel("Quantity").click();
+    await page.getByRole("option", { name: "3" }).click();
+    await dialog.getByRole("button", { name: "Generate questions" }).click();
+    await expectToast(page, "3 questions added to your inbox.");
+    await expect(dialog).not.toBeVisible();
+
+    for (const questionText of generatedQuestionTexts) {
+      const question = page
+        .getByRole("article")
+        .filter({ hasText: questionText });
+
+      await expect(question.getByText("Generated", { exact: true })).toBeVisible();
+    }
+
+    const draftQuestion = page
+      .getByRole("article")
+      .filter({ hasText: generatedQuestionTexts[0] });
+    await draftQuestion.getByRole("link", { name: "Answer question" }).click();
+    const draftEditor = page.getByRole("form", { name: "Answer editor" });
+
+    await expect(draftEditor.getByText("Generated", { exact: true })).toBeVisible();
+    await draftEditor.getByLabel("Answer", { exact: true }).fill("A private draft answer.");
+    await page.getByRole("button", { name: "Save draft" }).click();
+    await expectToast(page, "Draft saved.");
+    await page.goto("/drafts");
+    await expect(
+      page
+        .getByRole("article")
+        .filter({ hasText: generatedQuestionTexts[0] })
+        .getByText("Generated", { exact: true }),
+    ).toBeVisible();
+
+    await page.goto("/inbox");
+    const publishQuestion = page
+      .getByRole("article")
+      .filter({ hasText: generatedQuestionTexts[1] });
+    await publishQuestion.getByRole("link", { name: "Answer question" }).click();
+    const publishEditor = page.getByRole("form", { name: "Answer editor" });
+
+    await publishEditor.getByLabel("Answer", { exact: true }).fill(
+      "I am strengthening deliberate practice this month.",
+    );
+    await page.getByRole("button", { name: "Publish answer" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/${betaFixture.profiles.owner.username}#published-answers$`),
+    );
+    await expect(
+      page
+        .getByRole("article")
+        .filter({ hasText: generatedQuestionTexts[1] })
+        .getByText("Generated", { exact: true }),
+    ).toBeVisible();
+
+    await context.clearCookies();
+    await page.goto(`/${betaFixture.profiles.owner.username}`);
+    const publicHtml = await page.content();
+
+    await expect(page.getByText("Generated", { exact: true })).toHaveCount(0);
+    expect(publicHtml).not.toMatch(
+      /ai_generated|ownerProvenance|generationBatchId|gemini-3|tokenCount/i,
+    );
+
+    await signInAs(context, betaFixture.users.owner);
+    await page.goto("/inbox");
+    const remainingGeneratedQuestion = page
+      .getByRole("article")
+      .filter({ hasText: generatedQuestionTexts[2] });
+    await remainingGeneratedQuestion
+      .getByRole("button", { name: "Question actions" })
+      .click();
+    await page.getByRole("menuitem", { name: "Drop" }).click();
+    const deleteDialog = page.getByRole("alertdialog", {
+      name: "Delete this question?",
+    });
+    await deleteDialog.getByRole("button", { name: "Drop" }).click();
+    await expect(remainingGeneratedQuestion).not.toBeVisible();
+
+    await page.goto("/settings/question-generation");
+    await page.getByRole("button", { name: "Disconnect Gemini" }).click();
+    await expect(page.getByText("Not connected", { exact: true })).toBeVisible();
   });
 
   test("owner can ask themselves with and without attribution", async ({
@@ -343,7 +479,8 @@ test.describe("beta seeded smoke", () => {
       .first()
       .click();
     await page.getByRole("menuitem", { name: "Report" }).first().click();
-    await page.getByLabel("Reason").selectOption("other");
+    await page.getByRole("combobox", { name: "Reason" }).click();
+    await page.getByRole("option", { name: "Other", exact: true }).click();
     await page.getByLabel("Details").fill("Beta smoke report.");
     await page.getByRole("button", { name: "Submit report" }).click();
 
@@ -357,7 +494,12 @@ test.describe("beta seeded smoke", () => {
     await expect(
       page.getByRole("heading", { name: "Report review" }),
     ).toBeVisible();
-    await page.getByLabel("Action").selectOption("dismiss");
+    // Wait for the progressively enhanced trigger instead of racing the
+    // server-rendered native fallback during hydration.
+    await page.locator("button#actionType").click();
+    await page
+      .getByRole("option", { name: "Dismiss report", exact: true })
+      .click();
     await page.getByRole("button", { name: "Apply action" }).click();
 
     await expectToast(page, "Dismiss report applied.");

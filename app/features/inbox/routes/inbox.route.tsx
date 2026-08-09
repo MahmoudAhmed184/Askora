@@ -9,13 +9,21 @@ import {
 import { InboxList } from "~/features/inbox/components/inbox-list";
 import { InboxWorkflowShell } from "~/features/inbox/components/inbox-workflow-nav";
 import {
+  InboxQuestionGenerationDialog,
+} from "~/features/question-generation/components/inbox-question-generation-dialog";
+import { QUESTION_GENERATION_MODELS } from "~/features/question-generation/question-generation.constants";
+import { loadQuestionGenerationSettings } from "~/features/question-generation/question-generation-settings.service.server";
+import {
   handleInboxAction,
   type InboxActionResult,
 } from "~/features/inbox/services/inbox-actions.service.server";
 import { loadInboxFolder } from "~/features/inbox/queries/inbox.queries.server";
+import { handleInboxGenerationAction } from "~/features/inbox/services/inbox-generation-action.server";
+import { requireTrustedMutationOrigin } from "~/lib/request-origin.server";
 
 interface InboxRouteActionData {
   inbox: InboxActionResult;
+  generation?: never;
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
@@ -25,23 +33,42 @@ export async function loader({ context }: Route.LoaderArgs) {
     return session;
   }
 
+  const [folder, settings] = await Promise.all([
+    loadInboxFolder({ folder: "inbox", session }),
+    loadQuestionGenerationSettings({ session }),
+  ]);
+
   return {
-    folder: await loadInboxFolder({ folder: "inbox", session }),
+    folder,
+    generation: {
+      activeModelLabel: getActiveModelLabel(settings.modelPreference),
+      connected: settings.connected,
+      disclosureAcknowledged: settings.disclosureAcknowledged,
+    },
     isSuspended: isSessionSuspended(session),
   };
 }
 
 export async function action({ context, request }: Route.ActionArgs) {
+  const originResponse = requireTrustedMutationOrigin(request);
+
+  if (originResponse !== undefined) {
+    return originResponse;
+  }
+
   const session = requireCompletedProfileSessionFromContext(context);
 
   if (session instanceof Response) {
     return session;
   }
 
-  const result = await handleInboxAction({
-    formData: await request.formData(),
-    session,
-  });
+  const formData = await request.formData();
+
+  if (formData.get("intent") === "generate_questions") {
+    return handleInboxGenerationAction({ formData, session });
+  }
+
+  const result = await handleInboxAction({ formData, session });
 
   return data<InboxRouteActionData>(
     { inbox: result },
@@ -63,6 +90,7 @@ export default function InboxRoute({ loaderData }: Route.ComponentProps) {
       description="Private questions that need attention."
       disabled={loaderData.isSuspended}
       folder="inbox"
+      generation={loaderData.generation}
       questions={loaderData.folder.questions}
     />
   );
@@ -74,6 +102,7 @@ function InboxFolderPage({
   description,
   disabled,
   folder,
+  generation,
   questions,
 }: {
   actionResult: InboxActionResult | undefined;
@@ -81,6 +110,7 @@ function InboxFolderPage({
   description: string;
   disabled: boolean;
   folder: "inbox";
+  generation: Route.ComponentProps["loaderData"]["generation"];
   questions: Route.ComponentProps["loaderData"]["folder"]["questions"];
 }) {
   return (
@@ -94,6 +124,11 @@ function InboxFolderPage({
         message={getInboxErrorToastMessage(actionResult)}
         tone="error"
         trigger={actionResult}
+      />
+
+      <InboxQuestionGenerationDialog
+        availability={generation}
+        disabled={disabled}
       />
 
       <InboxList disabled={disabled} folder={folder} questions={questions} />
@@ -130,4 +165,10 @@ function getInboxActionResponseStatus(result: InboxActionResult) {
 
       return 403;
   }
+}
+
+function getActiveModelLabel(model: string) {
+  if (model === QUESTION_GENERATION_MODELS.auto) return "Auto";
+  if (model === QUESTION_GENERATION_MODELS.gemini36Flash) return "Gemini 3.6 Flash";
+  return "Gemini 3.5 Flash-Lite";
 }

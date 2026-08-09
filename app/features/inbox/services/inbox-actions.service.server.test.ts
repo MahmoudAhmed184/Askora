@@ -35,6 +35,25 @@ describe("handleInboxAction", () => {
     ]);
   });
 
+  it("deletes generated questions without creating public-submission safety data", async () => {
+    const inbox = createInboxActionStore({
+      question: createQuestion({
+        askerProfileId: "profile_1",
+        askerUserId: "user_1",
+        safetyFingerprintHash: null,
+        safetyMetadataRetainUntil: null,
+      }),
+    });
+
+    await expect(
+      submitInboxAction({
+        formData: createActionFormData({ intent: "delete" }),
+        store: inbox.store,
+      }),
+    ).resolves.toMatchObject({ status: "deleted" });
+    expect(inbox.retentionUpdates).toEqual([]);
+  });
+
   it("discards drafted questions without leaving a draft thread item", async () => {
     const inbox = createInboxActionStore({
       draftItemQuestionIds: ["question_1"],
@@ -328,6 +347,32 @@ describe("handleInboxAction", () => {
     });
     expect(inbox.blocks).toEqual([]);
   });
+
+  it("rejects report and block actions for generated questions", async () => {
+    for (const intent of ["report", "block"] as const) {
+      const inbox = createInboxActionStore({
+        question: createQuestion({
+          source: "ai_generated",
+          askerUserId: "user_1",
+          askerProfileId: "profile_1",
+          safetyFingerprintHash: null,
+          safetyMetadataRetainUntil: null,
+        }),
+      });
+
+      await expect(
+        submitInboxAction({
+          formData: createActionFormData({ intent }),
+          store: inbox.store,
+        }),
+      ).resolves.toMatchObject({
+        status: "denied",
+        reason: "generated_safety_action",
+      });
+      expect(inbox.reports).toEqual([]);
+      expect(inbox.blocks).toEqual([]);
+    }
+  });
 });
 
 async function submitInboxAction({
@@ -434,11 +479,13 @@ function createInboxActionStore({
         await store.createBlock(block);
       }
 
-      retentionUpdates.push({
-        questionId: report.targetId,
-        retainUntil,
-        updatedAt,
-      });
+      if (retainUntil !== null) {
+        retentionUpdates.push({
+          questionId: report.targetId,
+          retainUntil,
+          updatedAt,
+        });
+      }
     },
     createBlock(block) {
       const key =

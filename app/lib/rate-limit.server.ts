@@ -12,6 +12,7 @@ export interface RateLimitOptions {
   database?: RuntimeDatabase;
   now?: () => number;
   storage?: "database" | "memory";
+  algorithm?: "fixed" | "rolling";
 }
 
 export type RateLimitDecision =
@@ -29,6 +30,7 @@ interface MemoryCounter {
 }
 
 const memoryCounters = new Map<string, MemoryCounter>();
+const rollingMemoryCounters = new Map<string, number[]>();
 
 export async function checkRateLimit(
   options: RateLimitOptions,
@@ -50,6 +52,7 @@ export async function checkRateLimit(
 
 export function clearMemoryRateLimits() {
   memoryCounters.clear();
+  rollingMemoryCounters.clear();
 }
 
 function shouldUseDatabase(options: RateLimitOptions) {
@@ -68,6 +71,10 @@ async function checkDatabaseRateLimit(
   options: RateLimitOptions,
   now: number,
 ): Promise<RateLimitDecision> {
+  if (options.algorithm === "rolling") {
+    return checkDatabaseRollingRateLimit(options, now);
+  }
+
   const database = options.database ?? getRuntimeDatabase();
   const windowMilliseconds = options.windowSeconds * 1000;
   const resetBeforeMilliseconds = now - windowMilliseconds;
@@ -105,7 +112,75 @@ async function checkDatabaseRateLimit(
   });
 }
 
+async function checkDatabaseRollingRateLimit(
+  options: RateLimitOptions,
+  now: number,
+): Promise<RateLimitDecision> {
+  const database = options.database ?? getRuntimeDatabase();
+  const windowMilliseconds = options.windowSeconds * 1000;
+  const resetBeforeMilliseconds = now - windowMilliseconds;
+  const retainedTimestamps = sql<number[]>`ARRAY(
+    SELECT request_timestamp
+    FROM unnest(
+      COALESCE(${authRateLimits.requestTimestamps}, ARRAY[]::bigint[])
+    ) AS request_timestamp
+    WHERE request_timestamp > ${resetBeforeMilliseconds}
+    ORDER BY request_timestamp
+    LIMIT ${options.max}
+  )`;
+  const acceptedTimestamps = sql<number[]>`case
+    when cardinality(${retainedTimestamps}) < ${options.max}
+      then ${retainedTimestamps} || ARRAY[${now}::bigint]
+    else ${retainedTimestamps}
+  end`;
+  const rollingCount = sql<number>`case
+    when cardinality(${retainedTimestamps}) >= ${options.max}
+      then ${options.max + 1}
+    else cardinality(${acceptedTimestamps})
+  end`;
+
+  const [counter] = await database
+    .insert(authRateLimits)
+    .values({
+      id: createDatabaseId(),
+      key: options.key,
+      count: 1,
+      lastRequest: now,
+      requestTimestamps: [now],
+    })
+    .onConflictDoUpdate({
+      target: authRateLimits.key,
+      set: {
+        count: rollingCount,
+        lastRequest: now,
+        requestTimestamps: acceptedTimestamps,
+      },
+    })
+    .returning({
+      count: authRateLimits.count,
+      requestTimestamps: authRateLimits.requestTimestamps,
+    });
+
+  const requestTimestamps = counter?.requestTimestamps ?? [now];
+  if ((counter?.count ?? 1) <= options.max) {
+    return { allowed: true };
+  }
+
+  const oldest = requestTimestamps[0] ?? now;
+  return {
+    allowed: false,
+    retryAfterSeconds: Math.max(
+      1,
+      Math.ceil((oldest + windowMilliseconds - now) / 1000),
+    ),
+  };
+}
+
 function checkMemoryRateLimit(options: RateLimitOptions, now: number) {
+  if (options.algorithm === "rolling") {
+    return checkMemoryRollingRateLimit(options, now);
+  }
+
   const windowMilliseconds = options.windowSeconds * 1000;
   const existingCounter = memoryCounters.get(options.key);
   const nextCounter = getNextMemoryCounter({
@@ -123,6 +198,30 @@ function checkMemoryRateLimit(options: RateLimitOptions, now: number) {
     now,
     windowMilliseconds,
   });
+}
+
+function checkMemoryRollingRateLimit(options: RateLimitOptions, now: number) {
+  const windowMilliseconds = options.windowSeconds * 1000;
+  const resetBeforeMilliseconds = now - windowMilliseconds;
+  const timestamps = (rollingMemoryCounters.get(options.key) ?? []).filter(
+    (timestamp) => timestamp > resetBeforeMilliseconds,
+  );
+
+  if (timestamps.length >= options.max) {
+    rollingMemoryCounters.set(options.key, timestamps);
+    const oldest = timestamps[0] ?? now;
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(
+        1,
+        Math.ceil((oldest + windowMilliseconds - now) / 1000),
+      ),
+    } as const;
+  }
+
+  timestamps.push(now);
+  rollingMemoryCounters.set(options.key, timestamps);
+  return { allowed: true } as const;
 }
 
 function getNextMemoryCounter({

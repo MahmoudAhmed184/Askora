@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   bigint,
@@ -134,6 +134,10 @@ export const authRateLimits = pgTable("rate_limits", {
   key: text("key").notNull(),
   count: integer("count").notNull(),
   lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+  requestTimestamps: bigint("request_timestamps", { mode: "number" })
+    .array()
+    .notNull()
+    .default(sql`'{}'::bigint[]`),
 }, (table) => [
   uniqueIndex("rate_limits_key_unique").on(table.key),
 ]);

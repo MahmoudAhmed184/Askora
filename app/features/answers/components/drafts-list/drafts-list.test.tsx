@@ -19,6 +19,8 @@ describe("DraftsList", () => {
                   answerPreview: "A private draft",
                   updatedAt: "2026-05-31T12:00:00.000Z",
                   questionCreatedAt: "2026-05-30T12:00:00.000Z",
+                  ownerProvenance: null,
+                  direction: "ltr",
                   sender: {
                     username: "asker",
                     displayName: "Known Asker",
@@ -47,6 +49,41 @@ describe("DraftsList", () => {
     expect(screen.getByRole("link", { name: "Known Asker" })).toHaveAttribute(
       "href",
       "/asker",
+    );
+  });
+
+  it("shows generated provenance separately on generated drafts", () => {
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/drafts",
+          element: (
+            <DraftsList
+              drafts={[
+                {
+                  questionPublicId: "qst_generated",
+                  questionText: "ما الذي أتعلمه بعد ذلك؟",
+                  answerPreview: "A private draft",
+                  updatedAt: "2026-05-31T12:00:00.000Z",
+                  questionCreatedAt: "2026-05-30T12:00:00.000Z",
+                  ownerProvenance: "generated",
+                  direction: "rtl",
+                  sender: undefined,
+                },
+              ]}
+            />
+          ),
+        },
+      ],
+      { initialEntries: ["/drafts"] },
+    );
+
+    const { container } = render(<RouterProvider router={router} />);
+
+    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
+    expect(container.querySelector("[dir='rtl']")).toHaveTextContent(
+      "ما الذي أتعلمه بعد ذلك؟",
     );
   });
 });

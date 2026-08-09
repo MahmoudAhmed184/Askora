@@ -42,11 +42,12 @@ export interface InboxActionQuestion {
   askerUserId: string | null;
   askerProfileId: string | null;
   identityMode: InboxActionQuestionIdentity;
+  source?: "public_profile" | "ai_generated";
   status: InboxActionQuestionStatus;
   deletedAt: Date | null;
-  safetyFingerprintHash: string;
+  safetyFingerprintHash: string | null;
   ipHash: string | null;
-  safetyMetadataRetainUntil: Date;
+  safetyMetadataRetainUntil: Date | null;
 }
 
 export interface NewQuestionReport {
@@ -91,7 +92,7 @@ export interface InboxActionStore {
   createReportWithSafetyActions(params: {
     report: NewQuestionReport;
     block: NewSenderBlock | undefined;
-    retainUntil: Date;
+    retainUntil: Date | null;
     updatedAt: Date;
   }): Promise<void>;
   createBlock(block: NewSenderBlock): Promise<"created" | "existing">;
@@ -125,7 +126,8 @@ export type InboxActionDeniedReason =
   | "closed"
   | "not_filtered"
   | "self_block"
-  | "no_blockable_sender";
+  | "no_blockable_sender"
+  | "generated_safety_action";
 
 export type InboxActionResult =
   | {
@@ -213,6 +215,7 @@ export function createDrizzleInboxActionStore(
           askerUserId: questions.askerUserId,
           askerProfileId: questions.askerProfileId,
           identityMode: questions.identityMode,
+          source: questions.source,
           status: questions.status,
           deletedAt: questions.deletedAt,
           safetyFingerprintHash: questions.safetyFingerprintHash,
@@ -294,13 +297,15 @@ export function createDrizzleInboxActionStore(
           await createBlockWithTransaction({ block, transaction });
         }
 
-        await transaction
-          .update(questions)
-          .set({
-            safetyMetadataRetainUntil: retainUntil,
-            updatedAt,
-          })
-          .where(eq(questions.id, report.targetId));
+        if (retainUntil !== null) {
+          await transaction
+            .update(questions)
+            .set({
+              safetyMetadataRetainUntil: retainUntil,
+              updatedAt,
+            })
+            .where(eq(questions.id, report.targetId));
+        }
       });
     },
     async createBlock(block) {
@@ -492,6 +497,13 @@ async function findActionableQuestion({
     return { status: "denied", reason: "closed" };
   }
 
+  if (
+    question.source === "ai_generated" &&
+    (intent === "report" || intent === "block")
+  ) {
+    return { status: "denied", reason: "generated_safety_action" };
+  }
+
   return {
     status: "allowed",
     question,
@@ -572,7 +584,10 @@ function createSenderBlock({
     };
   }
 
-  if (question.safetyFingerprintHash.trim().length === 0) {
+  if (
+    question.safetyFingerprintHash === null ||
+    question.safetyFingerprintHash.trim().length === 0
+  ) {
     return {
       status: "denied",
       reason: "no_blockable_sender",
@@ -605,9 +620,15 @@ async function retainQuestionSafetyMetadata({
   question: InboxActionQuestion;
   store: InboxActionStore;
 }) {
+  const retainUntil = getQuestionSafetyRetentionDate({ now, question });
+
+  if (retainUntil === null) {
+    return;
+  }
+
   await store.extendQuestionSafetyMetadataRetention({
     questionId: question.id,
-    retainUntil: getQuestionSafetyRetentionDate({ now, question }),
+    retainUntil,
     updatedAt: now,
   });
 }
@@ -619,6 +640,10 @@ function getQuestionSafetyRetentionDate({
   now: Date;
   question: InboxActionQuestion;
 }) {
+  if (question.safetyMetadataRetainUntil === null) {
+    return null;
+  }
+
   return maxDate(
     question.safetyMetadataRetainUntil,
     addDays(now, QUESTION_REPORT_RETENTION_DAYS),
@@ -702,6 +727,8 @@ function getDeniedMessage(reason: InboxActionDeniedReason) {
       return "You cannot block your own sender identity.";
     case "no_blockable_sender":
       return "This sender cannot be blocked from this question.";
+    case "generated_safety_action":
+      return "Generated questions do not support sender safety actions.";
   }
 }
 

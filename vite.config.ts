@@ -5,6 +5,7 @@ import { defineConfig } from "vite";
 const serverOnlyDependencies = [
   "@better-auth/drizzle-adapter",
   "@better-auth/kysely-adapter",
+  "@google/genai",
   "better-auth",
   "drizzle-orm",
   "kysely",

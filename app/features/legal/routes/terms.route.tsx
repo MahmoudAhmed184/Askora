@@ -52,6 +52,40 @@ export default function TermsRoute() {
             </section>
             <section className="flex flex-col gap-3 p-6 sm:p-7">
               <h2 className="text-base font-semibold text-foreground">
+                Gemini connection
+              </h2>
+              <p className="text-muted-foreground">
+                The optional question-generation feature requires the profile
+                owner to supply a Gemini API key they are authorized to use. By
+                connecting it and acknowledging the disclosure, the owner asks
+                Askora to submit the disclosed profile, preference, topic, and
+                published-answer context to Google's Gemini API through that
+                owner's project. Google's terms, data-use rules, pricing,
+                quotas, and account restrictions apply to that provider use.
+              </p>
+              <p className="text-muted-foreground">
+                Owners must not share a key they do not control or use the
+                feature to evade Google or Askora limits. They can disconnect
+                Gemini at any time, which removes the stored encrypted
+                credential from the active database record.
+              </p>
+            </section>
+            <section className="flex flex-col gap-3 p-6 sm:p-7">
+              <h2 className="text-base font-semibold text-foreground">
+                Generated content
+              </h2>
+              <p className="text-muted-foreground">
+                Generated questions enter the owner's private inbox for review;
+                they are not published automatically. Provider and Askora
+                safety checks reduce risk but do not guarantee accuracy,
+                suitability, or originality. The owner remains responsible for
+                deciding whether to answer, edit public wording, publish, or
+                delete a generated question and must follow the same content
+                boundaries that apply to all Askora content.
+              </p>
+            </section>
+            <section className="flex flex-col gap-3 p-6 sm:p-7">
+              <h2 className="text-base font-semibold text-foreground">
                 Account lifecycle
               </h2>
               <p className="text-muted-foreground">

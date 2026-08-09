@@ -7,6 +7,7 @@ import {
   follows,
   pinnedAnswers,
   profiles,
+  questionGenerationBatches,
   questions,
   threadItems,
   threads,
@@ -31,6 +32,10 @@ import {
 } from "~/features/threads/services/thread-permissions.service.server";
 import { isPublicThreadItemVisible } from "~/features/threads/thread-visibility";
 import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
+import {
+  getQuestionGenerationDirection,
+  type QuestionDisplayDirection,
+} from "~/features/question-generation/question-generation-direction";
 
 type ThreadStatus = "draft" | "published" | "unpublished" | "deleted";
 type ThreadItemStatus = "draft" | "published" | "unpublished" | "deleted";
@@ -73,6 +78,8 @@ export interface PublicThreadItemRow {
   questionTextMode: QuestionTextMode;
   displayQuestionText: string | null;
   identityMode: AnswerQuestionIdentity;
+  source: "public_profile" | "ai_generated";
+  generationLanguage?: "egyptian_arabic" | "modern_standard_arabic" | "english" | null;
   askerDisplayName: string | null;
   askerUsername: string | null;
   askerAvatarUrl?: string | null;
@@ -163,6 +170,8 @@ export interface PublicThreadAnswerItem {
     username: string;
     avatarUrl: string | null;
   };
+  ownerProvenance?: "generated";
+  direction: QuestionDisplayDirection;
 }
 
 export interface PublicThreadRemovedItem {
@@ -364,6 +373,8 @@ export function createDrizzlePublicThreadStore(
           questionTextMode: threadItems.questionTextMode,
           displayQuestionText: threadItems.displayQuestionText,
           identityMode: questions.identityMode,
+          source: questions.source,
+          generationLanguage: questionGenerationBatches.language,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
           askerAvatarUrl: askerProfiles.avatarUrl,
@@ -371,6 +382,10 @@ export function createDrizzlePublicThreadStore(
         .from(threadItems)
         .innerJoin(threads, eq(threads.id, threadItems.threadId))
         .innerJoin(questions, eq(questions.id, threadItems.questionId))
+        .leftJoin(
+          questionGenerationBatches,
+          eq(questionGenerationBatches.id, questions.generationBatchId),
+        )
         .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
         .leftJoin(
           pinnedAnswers,
@@ -508,8 +523,27 @@ function toPublicThreadAnswerItem({
       },
     }),
     ...(questionText === undefined ? {} : { questionText }),
+    direction: getQuestionGenerationDirection(
+      row.generationLanguage,
+      row.displayQuestionText ?? "",
+    ),
     ...getPublicAsker(row, questionText),
+    ...(isThreadOwnerSession(owner, session) && row.source === "ai_generated"
+      ? { ownerProvenance: "generated" as const }
+      : {}),
   };
+}
+
+function isThreadOwnerSession(
+  owner: Pick<PublicThreadItemOwner, "profileId" | "userId">,
+  session: CurrentSessionSummary,
+) {
+  return (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.profile.id === owner.profileId &&
+    session.user.id === owner.userId
+  );
 }
 
 function getPublicAsker(

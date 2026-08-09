@@ -24,6 +24,10 @@ Required runtime values on Vercel:
 - `AUTH_EMAIL_FROM`
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `QUESTION_GENERATION_ENCRYPTION_KEYS`, a JSON object that maps positive
+  numeric versions to base64-encoded 32-byte keys
+- `QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION`, a version present in
+  that keyring
 
 `PUBLIC_BETA_NOINDEX=true` keeps beta pages out of search results through
 headers and meta tags. Do not add a sitemap route during beta.
@@ -60,6 +64,61 @@ database-backed Vercel previews so preview migrations cannot alter production.
 Migration 0016 retires the standalone starter-prompt source. It removes any
 obsolete starter-prompt questions and narrows `question_source` to
 `public_profile`.
+
+Migration 0018 adds owner question-generation settings and batch tables,
+extends `question_source` with `ai_generated`, and adds the source-specific
+question privacy constraints. Apply it through `DIRECT_DATABASE_URL` before
+deploying application code that can generate questions. The migration is
+additive and preserves existing questions.
+
+For a production rollout:
+
+1. take the normal managed-database backup and confirm restore access;
+2. configure and validate the encryption keyring environment values without
+   placing them in source control or command history;
+3. run `npm run db:migrate` through the session pooler;
+4. deploy the application; and
+5. connect a dedicated staging Gemini key and complete the smoke matrix below
+   before enabling owner testing.
+
+Do not roll application code back to a pre-0018 build after generated rows have
+been created: older code does not understand the new enum value or privacy
+constraints. If a post-use rollback is required, restore application and
+database state together from the approved backup. Do not add a compatibility
+source alias or dual-write path.
+
+## Question Generation Encryption Keys
+
+Generate each key from a trusted administrative shell:
+
+```bash
+openssl rand -base64 32
+```
+
+Store the result only in the deployment secret manager. A one-key initial
+configuration has this shape:
+
+```text
+QUESTION_GENERATION_ENCRYPTION_KEYS={"1":"<base64-encoded-32-byte-key>"}
+QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION=1
+```
+
+To rotate keys, add a new version while retaining every old version, change the
+active version, and deploy. Credentials are lazily re-encrypted after a
+successful decrypt during normal use. Before removing an old key in a later
+deployment, verify that no stored credential references it:
+
+```sql
+select gemini_key_version, count(*)
+from question_generation_settings
+where gemini_key_version is not null
+group by gemini_key_version
+order by gemini_key_version;
+```
+
+If a referenced version is missing or authentication fails, the credential is
+unusable and the owner must reconnect; never guess, downgrade, or attempt lossy
+recovery.
 
 ## Seed
 
@@ -111,6 +170,30 @@ External smoke still needs real service credentials:
 - Resend magic-link delivery
 - Vercel preview and production routing
 - Supabase branch migration on the target deployment
+- A dedicated non-production Gemini project and API key
+
+Question-generation staging verification must use a dedicated key injected
+through the normal Settings form, never a fixture, shell argument, recording,
+or CI variable. For each selectable preference (Auto and both explicit models),
+generate one three-question batch in English, Modern Standard Arabic, and
+Egyptian Arabic. Verify structured
+output, natural directionality, explicit safety behavior, latency, token usage
+metadata, and direct inbox insertion. Verify Auto fallback with the injected
+fake-provider test; do not wait for or simulate a real provider outage with the
+staging key.
+
+After the smoke run:
+
+- inspect application, platform, analytics, and error-tracking output for key
+  fragments, topics, interests, bios, prompts, context, generated content, and
+  raw provider errors; all must be absent;
+- confirm only safe event categories and numeric usage metadata were recorded;
+- disconnect Gemini and verify all encrypted credential columns are `NULL`;
+- run account deletion cleanup for a disposable owner and verify its settings,
+  generated questions, batches, and credentials are removed while unrelated
+  accounts remain intact; and
+- rotate or revoke the disposable staging key according to the Gemini project
+  policy.
 
 ## Visual QA
 

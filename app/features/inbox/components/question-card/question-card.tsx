@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Link, useFetcher, useLocation } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
+import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import {
   AnonymousAvatar,
   ProfileIdentityLink,
@@ -83,6 +84,7 @@ function QuestionCardFrame({
       <header className="flex items-start justify-between gap-3">
         <QuestionSenderIdentity question={question} />
         <QuestionModerationControls
+          allowSafetyActions={!question.generated}
           canDelete={!restoreAction}
           deleteLabel="Drop"
           disabled={disabled || isPending}
@@ -90,7 +92,7 @@ function QuestionCardFrame({
         />
       </header>
 
-      <p className="whitespace-pre-wrap break-words font-serif text-2xl font-bold italic leading-snug text-foreground">
+      <p className="whitespace-pre-wrap break-words font-serif text-2xl font-bold italic leading-snug text-foreground" dir={question.direction}>
         {question.text}
       </p>
 
@@ -154,6 +156,7 @@ function QuestionSenderIdentity({ question }: { question: InboxQuestionView }) {
       <time dateTime={question.createdAt}>
         {formatQuestionCreatedAt(question.createdAt)}
       </time>
+      {question.generated ? <GeneratedQuestionBadge className="ml-1" /> : null}
     </>
   );
 

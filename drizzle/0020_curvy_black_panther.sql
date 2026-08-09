@@ -1,0 +1,1 @@
+ALTER TABLE "rate_limits" ADD COLUMN "request_timestamps" bigint[] DEFAULT '{}'::bigint[] NOT NULL;

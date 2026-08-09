@@ -140,6 +140,7 @@ MVP includes:
 - Logged-in anonymous questions.
 - Logged-in attributed questions.
 - Private inbox.
+- Owner-generated self-question batches using the owner's Gemini API key.
 - Answer drafts.
 - Published answer threads.
 - Follow-up question threads.
@@ -162,7 +163,6 @@ MVP excludes:
 - Public discovery.
 - Comments.
 - Full analytics workspace.
-- AI-generated questions.
 - Private profiles.
 - Full-text search.
 - Email notifications beyond auth magic links.
@@ -320,6 +320,7 @@ Question sources:
 - Guest anonymous.
 - Logged-in anonymous.
 - Logged-in attributed.
+- Owner-private Gemini-generated self-questions.
 
 Anonymous asking:
 
@@ -369,6 +370,18 @@ Self-questions:
 - Suspension and inactive-profile restrictions still apply to self-questions.
 - Self-questions are processed through the normal inbox, draft, and publish workflow. They are ordinary questions once created.
 - Do not notify the owner about their own answer or their own follow-up. Suppress any notification where the asker and the acting owner are the same account.
+
+Owner question generation:
+
+- A completed, non-suspended profile owner may connect their own Gemini API key in Settings and generate exactly 3, 5, or 10 self-questions from the inbox.
+- Askora calls Gemini directly through the official SDK. There is no provider registry, multi-provider wrapper, queue, streaming path, repair call, output cache, or shared Askora AI quota.
+- The owner chooses English, Modern Standard Arabic, or Egyptian Arabic and one of the approved generation styles. An optional topic and private saved interests may personalize the batch.
+- Before first use, the owner must acknowledge the data disclosure. The provider context is limited to public profile fields, private interests, the current generation controls, and a bounded set of the owner's published question/answer pairs. Inbox, draft, deleted, reported, blocked, safety, and moderation data are excluded.
+- One validated provider response is accepted or rejected as a complete batch. Strict schema, length, language, safety, muted-phrase, exact-normalized-duplicate, and existing-question checks run before one atomic database transaction inserts the batch and all questions.
+- Successful items enter the normal inbox immediately as self-questions. They follow the same draft, publish, edit, hide, unpublish, and delete lifecycle as other questions.
+- AI provenance is permanent but owner-private. The owner sees a `Generated` badge in private workflow surfaces and on their own published views. Guest, non-owner, crawler, public loader, metadata, and analytics payloads omit provenance, batch IDs, model IDs, and token counts.
+- The stored API key is encrypted per owner with versioned AES-256-GCM key material. Disconnect immediately clears encrypted credential fields; account deletion removes generation settings, generated questions, and batch records through the account cleanup workflow.
+- Askora stores validated final questions and minimal batch metadata. It does not store raw Gemini output, prompts, serialized personalization context, or raw provider errors.
 
 Followers-only behavior:
 
@@ -721,6 +734,7 @@ Initial MVP limits:
 - Follows: 50 follows per account per day, with stricter limits for new accounts.
 - Reports: 10 reports per account per day.
 - Magic links: 5 requests per email per hour and 10 per day.
+- Question generation: 5 attempts per owner per 10 minutes and 25 per owner per 24 hours; failed provider attempts count.
 
 Abuse friction:
 
@@ -838,6 +852,7 @@ Privacy:
 - For anonymous visitors, use short-lived anonymous event IDs if needed.
 - Do not create long-term anonymous tracking profiles.
 - Keep analytics internal until the platform is working.
+- Question-generation events must never contain credentials, topics, interests, profile bios, question or answer content, prompts, serialized context, raw provider responses, or raw provider errors.
 
 ## Suggested Data Model
 
@@ -1265,7 +1280,7 @@ Observability:
 Feature flags:
 
 - Use simple environment-based feature flags.
-- Flags are enough for prompts, follow-ups if needed, admin tools, and future AI.
+- Flags are enough for optional product surfaces, follow-ups if needed, and admin tools.
 
 ## Monetization And Future Direction
 
@@ -1288,9 +1303,8 @@ Likely later monetization:
 
 AI monetization:
 
-- AI prompts may become paid later, but not initially.
-- First prove that people want to answer and receive real questions.
-- AI remains secondary.
+- Owner self-generation remains free during beta and secondary to real questions.
+- Any future paid limits require a separate product decision; the current feature uses the owner's Gemini project and quota.
 
 ## Success Criteria
 
@@ -1322,7 +1336,6 @@ First-week beta review:
 
 Postponed until after the platform is working:
 
-- AI-generated question prompts.
 - Creator analytics workspace.
 - Email notifications beyond auth magic links.
 - Comments under answers.
@@ -1351,14 +1364,12 @@ Postponed until after the platform is working:
 - Full Arabic/RTL translated UI.
 - Sitemap and search indexing after noindex beta, if intentionally enabled.
 
-AI feature direction when added:
+Question-generation direction:
 
-- Keep AI behind a provider-agnostic service wrapper.
-- Start with curated categories first, AI personalization second.
-- Cache outputs.
-- Rate-limit per user.
-- Make the feature disappear gracefully if quota is exhausted.
-- Do not make AI the public product identity.
+- Keep the implementation Gemini-specific while Gemini is the only approved provider.
+- Keep generation owner-initiated, rate-limited, synchronous, and all-or-nothing.
+- Do not cache raw outputs or retain prompts and personalization payloads.
+- Keep generated provenance private to the owner and never make AI the public product identity.
 
 ## Remaining Draft Assets
 

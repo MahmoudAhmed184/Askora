@@ -51,6 +51,16 @@ describe("PublicThread", () => {
     expect(container.querySelector("script")).toBeNull();
   });
 
+  it("renders no provenance marker or inference attributes for public thread data", () => {
+    const { container } = renderPublicThread(createAvailablePage());
+    const html = container.innerHTML;
+
+    expect(screen.queryByText("Generated")).not.toBeInTheDocument();
+    expect(html).not.toMatch(
+      /ai_generated|ownerProvenance|source=|generationBatch|gemini|modelId|tokenCount/i,
+    );
+  });
+
   it("renders stable anchors for answer items", () => {
     const { container } = renderPublicThread(
       createAvailablePage({
@@ -120,6 +130,7 @@ describe("PublicThread", () => {
             publishedAt: "2026-05-31T12:00:00.000Z",
             pinPosition: null,
             questionTextMode: "hidden",
+            direction: "ltr",
             like: createLikeState("titem_hidden"),
           },
         ],
@@ -251,6 +262,25 @@ describe("PublicThread", () => {
     expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
   });
 
+  it("renders the owner-only generated badge independently from edited wording", () => {
+    const { container } = renderPublicThread(
+      createAvailablePage({
+        items: [
+          createAnswerItem({
+            ownerProvenance: "generated",
+            questionTextMode: "edited",
+          }),
+        ],
+      }),
+    );
+
+    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.getByText("Edited question")).toBeInTheDocument();
+    expect(container.querySelector("[dir='ltr']")).toHaveTextContent(
+      "What should I read next?",
+    );
+  });
+
   it("counts answers semantically", () => {
     const single = renderPublicThread(createAvailablePage());
 
@@ -379,6 +409,7 @@ function createAnswerItem(
     like: createLikeState(overrides.publicId ?? "titem_1"),
     questionText: "What should I read next?",
     questionTextMode: "original",
+    direction: "ltr",
     ...overrides,
   };
 }

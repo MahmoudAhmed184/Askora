@@ -265,8 +265,8 @@ function SelectField({
         aria-invalid={error !== undefined}
         id={id}
         name={name}
-        onChange={(event) => {
-          onChange(event.currentTarget.value);
+        onValueChange={(value) => {
+          onChange(value);
         }}
         value={value}
       >

@@ -423,6 +423,7 @@ function createItem(
     questionTextMode: "original",
     displayQuestionText: "What should I read next?",
     identityMode: "guest_anonymous",
+    source: "public_profile",
     askerDisplayName: null,
     askerUsername: null,
     ...overrides,

@@ -78,4 +78,46 @@ describe("checkRateLimit", () => {
 
     await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
   });
+
+  it("keeps the 24-hour rolling window across a fixed-window boundary", async () => {
+    let now = 0;
+    const options = {
+      algorithm: "rolling" as const,
+      key: "test:rolling-day",
+      max: 2,
+      storage: "memory" as const,
+      windowSeconds: 60,
+      now: () => now,
+    };
+
+    await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
+    now = 59_000;
+    await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
+    now = 59_999;
+    await expect(checkRateLimit(options)).resolves.toMatchObject({
+      allowed: false,
+    });
+
+    now = 60_001;
+    await expect(checkRateLimit(options)).resolves.toEqual({ allowed: true });
+  });
+
+  it("reports the oldest retained request as the rolling retry time", async () => {
+    let now = 1_000;
+    const options = {
+      algorithm: "rolling" as const,
+      key: "test:rolling-retry",
+      max: 1,
+      storage: "memory" as const,
+      windowSeconds: 60,
+      now: () => now,
+    };
+
+    await checkRateLimit(options);
+    now = 31_000;
+    await expect(checkRateLimit(options)).resolves.toEqual({
+      allowed: false,
+      retryAfterSeconds: 30,
+    });
+  });
 });

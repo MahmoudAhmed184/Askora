@@ -2,7 +2,11 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
-import { profiles, questions } from "~/db/schema";
+import { profiles, questionGenerationBatches, questions } from "~/db/schema";
+import {
+  getQuestionGenerationDirection,
+  type QuestionDisplayDirection,
+} from "~/features/question-generation/question-generation-direction";
 import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 
 export const inboxFolderValues = ["inbox", "filtered"] as const;
@@ -20,6 +24,8 @@ export interface StoredInboxQuestion {
   recipientProfileId: string;
   recipientUserId: string;
   identityMode: InboxQuestionIdentity;
+  source: "public_profile" | "ai_generated";
+  generationLanguage?: "egyptian_arabic" | "modern_standard_arabic" | "english" | null;
   status: InboxQuestionStatus;
   originalText: string;
   deletedAt: Date | null;
@@ -40,6 +46,8 @@ export interface InboxQuestionView {
   text: string;
   identity: "anonymous" | "attributed";
   createdAt: string;
+  generated?: true;
+  direction: QuestionDisplayDirection;
   sender?: InboxQuestionSenderView;
 }
 
@@ -95,6 +103,8 @@ export function createDrizzleInboxLoaderStore(
           recipientProfileId: questions.recipientProfileId,
           recipientUserId: questions.recipientUserId,
           identityMode: questions.identityMode,
+          source: questions.source,
+          generationLanguage: questionGenerationBatches.language,
           status: questions.status,
           originalText: questions.originalText,
           deletedAt: questions.deletedAt,
@@ -104,6 +114,10 @@ export function createDrizzleInboxLoaderStore(
           askerAvatarUrl: askerProfiles.avatarUrl,
         })
         .from(questions)
+        .leftJoin(
+          questionGenerationBatches,
+          eq(questionGenerationBatches.id, questions.generationBatchId),
+        )
         .leftJoin(
           askerProfiles,
           and(
@@ -159,6 +173,11 @@ function toInboxQuestionView(question: StoredInboxQuestion): InboxQuestionView {
     text: question.originalText,
     identity: isAttributed ? "attributed" : "anonymous",
     createdAt: question.createdAt.toISOString(),
+    ...(question.source === "ai_generated" ? { generated: true as const } : {}),
+    direction: getQuestionGenerationDirection(
+      question.generationLanguage,
+      question.originalText,
+    ),
     ...getInboxQuestionSender(question),
   };
 }

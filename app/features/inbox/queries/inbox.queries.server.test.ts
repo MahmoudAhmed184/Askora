@@ -63,12 +63,14 @@ describe("loadInboxFolder", () => {
         text: "Latest question",
         identity: "attributed",
         createdAt: "2026-05-31T12:00:00.000Z",
+        direction: "ltr",
       },
       {
         publicId: "qst_old",
         text: "What should I read next?",
         identity: "anonymous",
         createdAt: "2026-05-30T12:00:00.000Z",
+        direction: "ltr",
       },
     ]);
   });
@@ -131,6 +133,28 @@ describe("loadInboxFolder", () => {
       expect(JSON.stringify(question)).not.toContain("asker");
     }
   });
+
+  it("derives a generated marker without exposing raw provenance", async () => {
+    const inbox = createInboxLoaderStore({
+      questions: [
+        createQuestion({
+          publicId: "qst_generated",
+          source: "ai_generated",
+        }),
+      ],
+    });
+
+    const folder = await loadInboxFolder({
+      folder: "inbox",
+      session: completedSession,
+      store: inbox.store,
+    });
+
+    expect(folder.questions[0]).toMatchObject({ generated: true });
+    expect(folder.questions[0]?.direction).toBe("ltr");
+    expect(JSON.stringify(folder.questions[0])).not.toContain("ai_generated");
+    expect(JSON.stringify(folder.questions[0])).not.toMatch(/source|batch|model|token/iu);
+  });
 });
 
 function createInboxLoaderStore({
@@ -165,6 +189,7 @@ function createQuestion(
     recipientProfileId: "profile_1",
     recipientUserId: "user_1",
     identityMode: "guest_anonymous",
+    source: "public_profile",
     status: "inbox",
     originalText: "What should I read next?",
     deletedAt: null,

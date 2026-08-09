@@ -28,8 +28,7 @@ describe("admin report loaders", () => {
         contentPreview: "What should I read next?",
         metadata: [
           "account-backed sender",
-          "IP signal retained",
-          "safety fingerprint retained",
+          "safety signals handled by moderation",
         ],
       }),
     ]);
@@ -100,6 +99,34 @@ describe("admin report loaders", () => {
     expect(serialized).not.toContain("asker_profile_sensitive");
     expect(serialized).not.toContain("raw_ip_hash_sensitive");
     expect(serialized).not.toContain("raw_fingerprint_sensitive");
+  });
+
+  it("does not serialize generated provenance or fingerprint-presence hints", async () => {
+    const baseTarget = createStoredReport().target;
+
+    if (baseTarget?.type !== "question") {
+      throw new Error("expected a question target fixture");
+    }
+
+    const report = createStoredReport({
+      target: {
+        ...baseTarget,
+        source: "ai_generated",
+        safetyFingerprintHash: null,
+        ipHash: null,
+      },
+    });
+    const store = createAdminLoaderStore({ reports: [report] });
+
+    const detail = await loadAdminReportDetail({
+      reportId: "report_1",
+      store: store.store,
+    });
+
+    const serialized = JSON.stringify(detail);
+    expect(serialized).not.toContain("ai_generated");
+    expect(serialized).not.toContain("no safety fingerprint");
+    expect(serialized).not.toContain("no IP signal");
   });
 });
 
