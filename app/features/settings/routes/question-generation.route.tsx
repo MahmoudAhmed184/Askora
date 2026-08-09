@@ -47,7 +47,7 @@ export async function action(
 }
 
 export function meta() {
-  return [{ title: "Question generation settings | Askora" }];
+  return [{ title: "Question Preferences | Askora" }];
 }
 
 export default function QuestionGenerationSettingsRoute() {

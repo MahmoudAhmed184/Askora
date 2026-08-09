@@ -46,9 +46,15 @@ describe("Select", () => {
     expect(trigger).toHaveClass(
       "motion-reduce:transition-none",
       "motion-reduce:duration-0",
+      "pointer-events-auto",
     );
     fireEvent.click(trigger);
     expect(screen.getByRole("listbox")).toHaveClass("z-[80]");
+    expect(screen.getByRole("option", { name: "Balanced" })).toHaveClass(
+      "cursor-pointer",
+      "hover:bg-primary/10",
+      "data-[highlighted]:bg-primary/10",
+    );
     expect(
       screen.getByRole("listbox").closest('[data-slot="select-content"]'),
     ).toHaveClass("motion-reduce:animate-none", "motion-reduce:duration-0");
@@ -60,6 +66,35 @@ describe("Select", () => {
     expect(screen.getByRole("form", { name: "Preferences" })).toHaveFormValues({
       style: "reflective",
     });
+  });
+
+  it("closes the previous menu when another select opens", () => {
+    render(
+      <form aria-label="Question Preferences">
+        <label htmlFor="language">Language</label>
+        <Select id="language" name="language" value="english">
+          <option value="english">English</option>
+          <option value="arabic">Arabic</option>
+        </Select>
+        <label htmlFor="style">Style</label>
+        <Select id="style" name="style" value="balanced">
+          <option value="balanced">Balanced</option>
+          <option value="personal">Personal</option>
+        </Select>
+      </form>,
+    );
+
+    const language = screen.getByRole("combobox", { name: "Language" });
+    const style = screen.getByRole("combobox", { name: "Style" });
+
+    fireEvent.click(language);
+    expect(language).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(style);
+    expect(language).toHaveAttribute("aria-expanded", "false");
+    expect(style).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("listbox")).toHaveLength(1);
+    expect(screen.getByRole("option", { name: "Personal" })).toBeVisible();
   });
 
   it("uses an empty disabled option as its placeholder", () => {

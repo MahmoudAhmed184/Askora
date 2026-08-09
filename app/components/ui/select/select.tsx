@@ -29,6 +29,7 @@ interface ParsedOption {
 }
 
 const EMPTY_VALUE_SENTINEL = "__askora_select_empty__";
+const SELECT_OPEN_EVENT = "askora:select-open";
 
 /**
  * App-styled select that keeps keyboard navigation, focus management, and
@@ -52,12 +53,34 @@ function Select({
   const emptyValue = getEmptyValueSentinel(options);
   const initialValue = value === undefined ? String(defaultValue ?? "") : String(value);
   const [uncontrolledValue, setUncontrolledValue] = React.useState(initialValue);
+  const [open, setOpen] = React.useState(false);
+  const instanceId = React.useId();
   const hydrated = React.useSyncExternalStore(
     () => () => undefined,
     () => true,
     () => false,
   );
   const selectedValue = value === undefined ? uncontrolledValue : String(value);
+
+  React.useEffect(() => {
+    function closeWhenAnotherSelectOpens(event: Event) {
+      if (
+        event instanceof CustomEvent &&
+        event.detail !== instanceId
+      ) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener(SELECT_OPEN_EVENT, closeWhenAnotherSelectOpens);
+
+    return () => {
+      document.removeEventListener(
+        SELECT_OPEN_EVENT,
+        closeWhenAnotherSelectOpens,
+      );
+    };
+  }, [instanceId]);
 
   function handleValueChange(nextValue: string) {
     if (value === undefined) {
@@ -112,16 +135,26 @@ function Select({
           ? {}
           : { defaultValue: toRadixValue(initialValue, emptyValue) })}
         {...(disabled === undefined ? {} : { disabled })}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+
+          if (nextOpen) {
+            document.dispatchEvent(
+              new CustomEvent(SELECT_OPEN_EVENT, { detail: instanceId }),
+            );
+          }
+        }}
         onValueChange={(nextValue: string) => {
           handleValueChange(fromRadixValue(nextValue, emptyValue));
         }}
+        open={open}
         {...(value === undefined
           ? {}
           : { value: toRadixValue(selectedValue, emptyValue) })}
       >
         <SelectPrimitive.Trigger
           className={cn(
-            "group flex h-10 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-input bg-card px-3 py-2 text-left text-sm outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground aria-invalid:border-destructive aria-invalid:ring-destructive/20 motion-reduce:transition-none motion-reduce:duration-0",
+            "group pointer-events-auto flex h-10 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-input bg-card px-3 py-2 text-left text-sm outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground aria-invalid:border-destructive aria-invalid:ring-destructive/20 motion-reduce:transition-none motion-reduce:duration-0",
             className,
           )}
           data-slot="select-trigger"
@@ -147,7 +180,7 @@ function Select({
             <SelectPrimitive.Viewport className="p-1.5">
               {options.map((option) => (
                 <SelectPrimitive.Item
-                  className="relative flex w-full cursor-default select-none items-center rounded-lg py-2 pl-3 pr-9 text-sm outline-none transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground motion-reduce:transition-none"
+                  className="relative flex w-full cursor-pointer select-none items-center rounded-lg py-2 pl-3 pr-9 text-sm outline-none transition-colors hover:bg-primary/10 hover:text-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary motion-reduce:transition-none"
                   disabled={option.disabled}
                   key={option.key}
                   value={toRadixValue(option.value, emptyValue)}

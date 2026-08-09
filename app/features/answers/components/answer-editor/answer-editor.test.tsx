@@ -86,13 +86,13 @@ describe("AnswerEditor", () => {
       },
     });
 
-    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
     expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
 
     generated.unmount();
     renderAnswerEditor();
 
-    expect(screen.queryByText("Generated")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("AI-generated question")).not.toBeInTheDocument();
   });
 });
 

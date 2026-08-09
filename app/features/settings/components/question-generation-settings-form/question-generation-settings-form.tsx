@@ -1,4 +1,11 @@
-import { KeyRound, Plus, Save, Sparkles, Trash2 } from "lucide-react";
+import {
+  FileCheck2,
+  KeyRound,
+  Plus,
+  Save,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -192,10 +199,10 @@ export function QuestionGenerationSettingsForm({
         className="grid gap-4 border-t pt-8"
       >
         <SectionHeading
-          description="Choose the model and private interests Askora can use when you ask it to generate questions."
-          icon={<Sparkles aria-hidden="true" className="mt-1 size-4 shrink-0" />}
+          description="Choose how Askora creates private questions for your inbox."
+          icon={<SlidersHorizontal aria-hidden="true" className="mt-1 size-4 shrink-0" />}
           id="generation-preferences-heading"
-          title="Question preferences"
+          title="Question Preferences"
         />
         <Form aria-label="Question generation preferences" method="post">
           <input name="intent" type="hidden" value="save_preferences" />
@@ -302,8 +309,8 @@ export function QuestionGenerationSettingsForm({
 
       <section aria-labelledby="data-use-heading" className="grid gap-4 border-t pt-8">
         <SectionHeading
-          description="This acknowledgement is required before you generate questions."
-          icon={<Sparkles aria-hidden="true" className="mt-1 size-4 shrink-0" />}
+          description="Review this once before Askora can suggest questions."
+          icon={<FileCheck2 aria-hidden="true" className="mt-1 size-4 shrink-0" />}
           id="data-use-heading"
           title="Data use"
         />

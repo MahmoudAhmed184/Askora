@@ -75,7 +75,7 @@ describe("InboxList", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows Generated only for owner-generated inbox questions and supports automatic text direction", () => {
+  it("shows an icon-only AI marker for owner-generated inbox questions", () => {
     renderInboxList({
       questions: [
         {
@@ -87,17 +87,19 @@ describe("InboxList", () => {
       ],
     });
 
-    const generatedMarker = screen.getByLabelText("Generated question");
+    const generatedMarker = screen.getByLabelText("AI-generated question");
 
-    expect(generatedMarker).toHaveTextContent("Generated");
+    expect(generatedMarker).toHaveTextContent("");
+    expect(generatedMarker).toHaveAttribute("title", "AI-generated question");
+    expect(generatedMarker.querySelector("svg")).not.toBeNull();
     expect(generatedMarker.closest("header")).not.toBeNull();
     expect(screen.getByText("ما الذي يهمك اليوم؟")).toHaveAttribute("dir", "rtl");
   });
 
-  it("does not show Generated for manually submitted questions", () => {
+  it("does not show an AI marker for manually submitted questions", () => {
     renderInboxList();
 
-    expect(screen.queryByLabelText("Generated question")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("AI-generated question")).not.toBeInTheDocument();
   });
 
   it("shows filtered restore and report-plus-block default", async () => {

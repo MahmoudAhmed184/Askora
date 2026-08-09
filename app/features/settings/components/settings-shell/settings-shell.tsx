@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import {
   LockKeyhole,
-  Sparkles,
+  MessageCircleQuestion,
   Settings2,
   ShieldCheck,
   SunMoon,
@@ -42,10 +42,9 @@ const settingsLinks = [
   },
   {
     to: "/settings/question-generation",
-    label: "AI questions",
-    icon: Sparkles,
-    description:
-      "Connect Gemini, choose a model, and manage private question interests.",
+    label: "Question Preferences",
+    icon: MessageCircleQuestion,
+    description: "Connect Gemini and choose what Askora should ask you about.",
   },
   {
     to: "/settings/appearance",

@@ -728,7 +728,7 @@ function getDeniedMessage(reason: InboxActionDeniedReason) {
     case "no_blockable_sender":
       return "This sender cannot be blocked from this question.";
     case "generated_safety_action":
-      return "Generated questions do not support sender safety actions.";
+      return "These private questions do not support sender safety actions.";
   }
 }
 
