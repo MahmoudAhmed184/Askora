@@ -519,7 +519,7 @@ function safeError(
     provider_unavailable:
       "Gemini could not validate this connection right now. Try again later.",
     rate_limited: "Too many key checks. Try again later.",
-    suspended: "Question Preferences are unavailable while this account is suspended.",
+    suspended: "Questions are unavailable while this account is suspended.",
   } as const;
 
   return retryAfterSeconds === undefined

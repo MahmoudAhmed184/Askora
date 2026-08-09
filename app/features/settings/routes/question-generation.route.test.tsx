@@ -4,6 +4,6 @@ import { meta } from "~/features/settings/routes/question-generation.route";
 
 describe("question generation settings route", () => {
   it("sets a specific settings title", () => {
-    expect(meta()).toEqual([{ title: "Question Preferences | Askora" }]);
+    expect(meta()).toEqual([{ title: "Questions | Askora" }]);
   });
 });

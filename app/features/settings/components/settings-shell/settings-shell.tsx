@@ -42,7 +42,7 @@ const settingsLinks = [
   },
   {
     to: "/settings/question-generation",
-    label: "Question Preferences",
+    label: "Questions",
     icon: MessageCircleQuestion,
     description: "Connect Gemini and choose what Askora should ask you about.",
   },

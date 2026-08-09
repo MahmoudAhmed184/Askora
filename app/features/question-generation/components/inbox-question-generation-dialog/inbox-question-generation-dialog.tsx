@@ -148,7 +148,7 @@ export function InboxQuestionGenerationDialog({
                   ? "Connect Gemini to get questions."
                   : "Review the data-use note to get questions."}{" "}
                 <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/settings/question-generation">
-                  Open Question Preferences
+                  Open Questions
                 </Link>
               </div>
               <DialogFooter>

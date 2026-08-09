@@ -70,7 +70,7 @@ describe("Select", () => {
 
   it("closes the previous menu when another select opens", () => {
     render(
-      <form aria-label="Question Preferences">
+      <form aria-label="Questions">
         <label htmlFor="language">Language</label>
         <Select id="language" name="language" value="english">
           <option value="english">English</option>

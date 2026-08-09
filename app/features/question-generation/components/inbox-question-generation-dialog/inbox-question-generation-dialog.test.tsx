@@ -26,7 +26,7 @@ describe("InboxQuestionGenerationDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Get Questions" }));
 
-    expect(screen.getByRole("link", { name: "Open Question Preferences" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open Questions" })).toHaveAttribute(
       "href",
       "/settings/question-generation",
     );

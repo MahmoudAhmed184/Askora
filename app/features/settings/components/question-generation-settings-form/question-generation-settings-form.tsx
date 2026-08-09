@@ -202,7 +202,7 @@ export function QuestionGenerationSettingsForm({
           description="Choose how Askora creates private questions for your inbox."
           icon={<SlidersHorizontal aria-hidden="true" className="mt-1 size-4 shrink-0" />}
           id="generation-preferences-heading"
-          title="Question Preferences"
+          title="Questions"
         />
         <Form aria-label="Question generation preferences" method="post">
           <input name="intent" type="hidden" value="save_preferences" />
