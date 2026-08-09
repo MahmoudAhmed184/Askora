@@ -1,4 +1,4 @@
-import { LoaderCircle, Sparkles } from "lucide-react";
+import { ListPlus, LoaderCircle, MessageCircleQuestion } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useFetcher } from "react-router";
 
@@ -113,8 +113,8 @@ export function InboxQuestionGenerationDialog({
         size="lg"
         type="button"
       >
-        <Sparkles data-icon="inline-start" />
-        Generate questions
+        <MessageCircleQuestion data-icon="inline-start" />
+        Get Questions
       </Button>
 
       <Dialog
@@ -135,9 +135,9 @@ export function InboxQuestionGenerationDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>Generate questions</DialogTitle>
+            <DialogTitle>Get Questions</DialogTitle>
             <DialogDescription>
-              New questions go directly to your private inbox. You can answer or remove them there.
+              Choose what you want to talk about. Askora will add private questions to your inbox.
             </DialogDescription>
           </DialogHeader>
 
@@ -145,10 +145,10 @@ export function InboxQuestionGenerationDialog({
             <>
               <div className="rounded-xl border border-dashed p-4 text-sm leading-6 text-muted-foreground">
                 {!availability.connected
-                  ? "Connect Gemini before generating questions."
-                  : "Acknowledge the data-use disclosure before generating questions."}{" "}
+                  ? "Connect Gemini to get questions."
+                  : "Review the data-use note to get questions."}{" "}
                 <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/settings/question-generation">
-                  Open Question generation settings
+                  Open Question Preferences
                 </Link>
               </div>
               <DialogFooter>
@@ -164,10 +164,10 @@ export function InboxQuestionGenerationDialog({
               </DialogFooter>
             </>
           ) : (
-            <fetcher.Form aria-label="Generate questions" className="flex flex-col gap-4" method="post">
+            <fetcher.Form aria-label="Get Questions" className="flex flex-col gap-4" method="post">
               <input name="intent" type="hidden" value="generate_questions" />
               <Field>
-                <FieldLabel htmlFor={topicId}>What would you like questions about today?</FieldLabel>
+                <FieldLabel htmlFor={topicId}>What do you want to talk about?</FieldLabel>
                 <Input
                   aria-describedby={errorId}
                   dir="auto"
@@ -204,7 +204,7 @@ export function InboxQuestionGenerationDialog({
                   {questionGenerationRequestedCountValues.map((value) => <option key={value} value={value}>{value}</option>)}
                 </Select>
               </Field>
-              <p className="text-sm text-muted-foreground">Active model: {availability.activeModelLabel}</p>
+              <p className="text-sm text-muted-foreground">Model: {availability.activeModelLabel}</p>
               <FieldError
                 id={errorId}
                 message={
@@ -217,9 +217,9 @@ export function InboxQuestionGenerationDialog({
               />
               <p aria-live="polite" className="sr-only">
                 {isPending
-                  ? "Generating questions. Please wait."
+                  ? "Creating questions. Please wait."
                   : result?.status === "generated"
-                    ? `${String(result.questions.length)} questions added to your inbox.`
+                    ? formatGeneratedMessage(result.questions.length)
                     : result === undefined
                       ? undefined
                       : appendRetryAfter(result.formError, result.retryAfterSeconds)}
@@ -229,8 +229,8 @@ export function InboxQuestionGenerationDialog({
                   setOpen(false);
                 }} type="button" variant="outline">Cancel</Button>
                 <Button disabled={isPending} type="submit">
-                  {isPending ? <LoaderCircle className="animate-spin motion-reduce:animate-none" data-icon="inline-start" /> : <Sparkles data-icon="inline-start" />}
-                  {isPending ? "Generating questions" : "Generate questions"}
+                  {isPending ? <LoaderCircle className="animate-spin motion-reduce:animate-none" data-icon="inline-start" /> : <ListPlus data-icon="inline-start" />}
+                  {isPending ? "Getting questions" : "Get Questions"}
                 </Button>
               </DialogFooter>
             </fetcher.Form>
@@ -241,7 +241,7 @@ export function InboxQuestionGenerationDialog({
       <ActionToast
         message={
           result?.status === "generated"
-            ? `${String(result.questions.length)} questions added to your inbox.`
+            ? formatGeneratedMessage(result.questions.length)
             : result === undefined
               ? undefined
               : appendRetryAfter(result.formError, result.retryAfterSeconds)
@@ -259,6 +259,12 @@ function appendRetryAfter(message: string, retryAfterSeconds: number | undefined
   }
 
   return `${message} Try again in ${formatRetryAfter(retryAfterSeconds)}.`;
+}
+
+function formatGeneratedMessage(questionCount: number) {
+  return questionCount === 1
+    ? "1 new question is in your inbox."
+    : `${String(questionCount)} new questions are in your inbox.`;
 }
 
 function formatRetryAfter(seconds: number) {

@@ -29,13 +29,13 @@ export class QuestionGenerationError extends Error {
 
 function getQuestionGenerationErrorMessage(code: QuestionGenerationErrorCode) {
   const messages = {
-    unauthorized: "Sign in to generate questions.",
-    profile_unavailable: "Question generation is unavailable for this profile.",
+    unauthorized: "Sign in to get questions.",
+    profile_unavailable: "Questions are unavailable for this profile.",
     rate_limited: "Too many generation attempts. Try again later.",
     disclosure_required: "Acknowledge the data-use disclosure before generating questions.",
-    credential_required: "Connect Gemini in Question generation settings first.",
-    credential_unavailable: "Reconnect Gemini in Question generation settings.",
-    provider_invalid_credential: "Reconnect Gemini in Question generation settings.",
+    credential_required: "Connect Gemini under Question Preferences first.",
+    credential_unavailable: "Reconnect Gemini under Question Preferences.",
+    provider_invalid_credential: "Reconnect Gemini under Question Preferences.",
     provider_permission: "Check the Gemini project permissions and billing.",
     provider_quota: "Your Gemini quota was reached. Try again later.",
     provider_model_unavailable: "The selected Gemini model is unavailable. Choose another model.",

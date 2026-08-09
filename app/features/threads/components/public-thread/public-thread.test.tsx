@@ -55,7 +55,7 @@ describe("PublicThread", () => {
     const { container } = renderPublicThread(createAvailablePage());
     const html = container.innerHTML;
 
-    expect(screen.queryByText("Generated")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("AI-generated question")).not.toBeInTheDocument();
     expect(html).not.toMatch(
       /ai_generated|ownerProvenance|source=|generationBatch|gemini|modelId|tokenCount/i,
     );
@@ -274,7 +274,7 @@ describe("PublicThread", () => {
       }),
     );
 
-    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
     expect(screen.getByText("Edited question")).toBeInTheDocument();
     expect(container.querySelector("[dir='ltr']")).toHaveTextContent(
       "What should I read next?",

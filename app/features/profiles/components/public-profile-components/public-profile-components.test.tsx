@@ -352,7 +352,7 @@ describe("public profile components", () => {
 
     expect(screen.queryByText("Ask State")).not.toBeInTheDocument();
     expect(screen.getByText("Pinned Threads")).toBeInTheDocument();
-    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /what changed your mind recently/i }),
     ).toHaveAttribute("href", "/person/a/thr_1");
@@ -367,7 +367,7 @@ describe("public profile components", () => {
     );
     const html = container.innerHTML;
 
-    expect(screen.queryByText("Generated")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("AI-generated question")).not.toBeInTheDocument();
     expect(html).not.toMatch(
       /ai_generated|ownerProvenance|source=|generationBatch|gemini|modelId|tokenCount/i,
     );
@@ -446,7 +446,7 @@ describe("public profile components", () => {
       />,
     );
 
-    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
     expect(screen.getByText("Edited question")).toBeInTheDocument();
     expect(container.querySelector("[dir='ltr']")).toHaveTextContent(
       "What should I read next?",

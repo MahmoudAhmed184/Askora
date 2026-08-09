@@ -186,18 +186,37 @@ test.describe("beta seeded smoke", () => {
     ).toBeVisible();
 
     await page.goto("/inbox");
-    await page.getByRole("button", { name: "Generate questions" }).click();
-    const dialog = page.getByRole("dialog", { name: "Generate questions" });
+    await page.getByRole("button", { name: "Get Questions" }).click();
+    const dialog = page.getByRole("dialog", { name: "Get Questions" });
 
     await dialog
       .getByRole("textbox", {
-        name: "What would you like questions about today?",
+        name: "What do you want to talk about?",
       })
       .fill("Learning in public");
+
+    await dialog.getByLabel("Quantity").click();
+    const quantityOption = page.getByRole("option", { name: "3" });
+    const idleOptionBackground = await quantityOption.evaluate(
+      (option) => window.getComputedStyle(option).backgroundColor,
+    );
+    await quantityOption.hover();
+    const highlightedOptionBackground = await quantityOption.evaluate(
+      (option) => window.getComputedStyle(option).backgroundColor,
+    );
+    expect(highlightedOptionBackground).not.toBe(idleOptionBackground);
+
+    await dialog.getByLabel("Language").click();
+    await expect(quantityOption).not.toBeVisible();
+    await expect(
+      page.getByRole("option", { name: "Egyptian Arabic" }),
+    ).toBeVisible();
+    await page.getByRole("option", { name: "English" }).click();
+
     await dialog.getByLabel("Quantity").click();
     await page.getByRole("option", { name: "3" }).click();
-    await dialog.getByRole("button", { name: "Generate questions" }).click();
-    await expectToast(page, "3 questions added to your inbox.");
+    await dialog.getByRole("button", { name: "Get Questions" }).click();
+    await expectToast(page, "3 new questions are in your inbox.");
     await expect(dialog).not.toBeVisible();
 
     for (const questionText of generatedQuestionTexts) {
@@ -205,7 +224,9 @@ test.describe("beta seeded smoke", () => {
         .getByRole("article")
         .filter({ hasText: questionText });
 
-      await expect(question.getByText("Generated", { exact: true })).toBeVisible();
+      await expect(
+        question.getByLabel("AI-generated question"),
+      ).toBeVisible();
     }
 
     const draftQuestion = page
@@ -214,7 +235,9 @@ test.describe("beta seeded smoke", () => {
     await draftQuestion.getByRole("link", { name: "Answer question" }).click();
     const draftEditor = page.getByRole("form", { name: "Answer editor" });
 
-    await expect(draftEditor.getByText("Generated", { exact: true })).toBeVisible();
+    await expect(
+      draftEditor.getByLabel("AI-generated question"),
+    ).toBeVisible();
     await draftEditor.getByLabel("Answer", { exact: true }).fill("A private draft answer.");
     await page.getByRole("button", { name: "Save draft" }).click();
     await expectToast(page, "Draft saved.");
@@ -223,7 +246,7 @@ test.describe("beta seeded smoke", () => {
       page
         .getByRole("article")
         .filter({ hasText: generatedQuestionTexts[0] })
-        .getByText("Generated", { exact: true }),
+        .getByLabel("AI-generated question"),
     ).toBeVisible();
 
     await page.goto("/inbox");
@@ -244,14 +267,14 @@ test.describe("beta seeded smoke", () => {
       page
         .getByRole("article")
         .filter({ hasText: generatedQuestionTexts[1] })
-        .getByText("Generated", { exact: true }),
+        .getByLabel("AI-generated question"),
     ).toBeVisible();
 
     await context.clearCookies();
     await page.goto(`/${betaFixture.profiles.owner.username}`);
     const publicHtml = await page.content();
 
-    await expect(page.getByText("Generated", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("AI-generated question")).toHaveCount(0);
     expect(publicHtml).not.toMatch(
       /ai_generated|ownerProvenance|generationBatchId|gemini-3|tokenCount/i,
     );

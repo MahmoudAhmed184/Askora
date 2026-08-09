@@ -10,15 +10,15 @@ export function GeneratedQuestionBadge({
 }) {
   return (
     <Badge
-      aria-label="Generated question"
+      aria-label="AI-generated question"
       className={cn(
-        "w-fit shrink-0 self-start gap-1.5 border-primary/20 bg-primary/[0.06] px-2 py-1 font-mono text-[0.65rem] font-semibold tracking-[0.04em] text-primary/80",
+        "size-7 shrink-0 self-start justify-center rounded-full border-primary/20 bg-primary/[0.06] p-0 text-primary/80",
         className,
       )}
+      title="AI-generated question"
       variant="outline"
     >
-      <Sparkles aria-hidden="true" className="size-3.5" data-icon="inline-start" />
-      Generated
+      <Sparkles aria-hidden="true" className="size-3.5" />
     </Badge>
   );
 }

@@ -80,7 +80,7 @@ describe("DraftsList", () => {
 
     const { container } = render(<RouterProvider router={router} />);
 
-    expect(screen.getByText("Generated")).toBeInTheDocument();
+    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
     expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
     expect(container.querySelector("[dir='rtl']")).toHaveTextContent(
       "ما الذي أتعلمه بعد ذلك؟",
