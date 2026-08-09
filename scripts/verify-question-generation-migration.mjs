@@ -162,4 +162,16 @@ async function resetSchema(client) {
   await client.query("drop schema if exists public cascade");
   await client.query("drop schema if exists drizzle cascade");
   await client.query("create schema public");
+  await client.query(`
+    do $$
+    begin
+      if not exists (select 1 from pg_roles where rolname = 'anon') then
+        create role anon nologin;
+      end if;
+      if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+        create role authenticated nologin;
+      end if;
+    end
+    $$
+  `);
 }
