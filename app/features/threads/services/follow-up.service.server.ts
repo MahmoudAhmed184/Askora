@@ -527,6 +527,7 @@ export function createDrizzleFollowUpStore(
           questionDeletedAt: questions.deletedAt,
           questionTextMode: threadItems.questionTextMode,
           displayQuestionText: threadItems.displayQuestionText,
+          originalQuestionText: questions.originalText,
           identityMode: questions.identityMode,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,

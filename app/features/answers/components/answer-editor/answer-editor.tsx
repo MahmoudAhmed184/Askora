@@ -1,5 +1,13 @@
-import { Eye, EyeOff, PencilLine, Send, Save } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { PencilLine, Send, X } from "lucide-react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { Form, useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
@@ -9,6 +17,7 @@ import {
   ProfileIdentityLink,
 } from "~/components/shared/profile-identity/profile-identity";
 
+import { Button } from "~/components/ui/button/button";
 import {
   Field,
   FieldDescription,
@@ -16,16 +25,16 @@ import {
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field/field";
-import { Select } from "~/components/ui/select/select";
 import { Textarea } from "~/components/ui/textarea/textarea";
+import { FollowUpPermissionControl } from "~/features/answers/components/answer-editor/follow-up-permission-control";
+import { QuestionWordingControl } from "~/features/answers/components/answer-editor/question-wording-control";
 import type {
   AnswerActionResult,
   AnswerEditorViewData,
   AnswerFieldErrors,
   AnswerFormValues,
 } from "~/features/answers/types/answers.types";
-import { QuestionModerationControls } from "~/features/inbox/components/question-moderation-controls";
-import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
+import type { QuestionTextMode } from "~/features/answers/validations/answer.validations";
 import { formatMediumDateTime } from "~/lib/date-format";
 import { cn } from "~/lib/utils";
 
@@ -34,346 +43,300 @@ interface AnswerEditorProps {
   actionResult?: AnswerActionResult | undefined;
   disabled: boolean;
   editor: AnswerEditorViewData;
-  onDirtyChange?: (dirty: boolean) => void;
+  onDraftSavedBeforeClose?: (() => void) | undefined;
 }
 
-const questionTextModeOptions = [
-  {
-    value: "original",
-    label: "Original",
-    description: "Show the question exactly as received.",
-    icon: Eye,
-  },
-  {
-    value: "edited",
-    label: "Edited",
-    description: "Publish a cleaned-up version of the question.",
-    icon: PencilLine,
-  },
-  {
-    value: "hidden",
-    label: "Hidden",
-    description: "Publish the answer without public question text.",
-    icon: EyeOff,
-  },
-] as const;
+export interface AnswerEditorHandle {
+  saveDraftBeforeClose: () => boolean;
+}
 
-const followUpPermissionOptions = [
-  { value: "anyone", label: "Anyone in the thread" },
-  { value: "logged_in", label: "Logged-in users" },
-  { value: "original_asker", label: "Original asker only" },
-  { value: "off", label: "No follow-ups" },
-] as const satisfies readonly { value: FollowUpPermission; label: string }[];
+interface QuestionEditSnapshot {
+  editedQuestionText: string;
+  questionTextMode: AnswerFormValues["questionTextMode"];
+}
 
 const answerCharacterLimit = 3_000;
 
-export function AnswerEditor({
-  action,
-  actionResult,
-  disabled,
-  editor,
-  onDirtyChange,
-}: AnswerEditorProps) {
-  const formId = useId();
-  const fetcher = useFetcher<{ answer: AnswerActionResult }>();
-  const contextualActionResult =
-    action === undefined ? undefined : fetcher.data?.answer;
-  const effectiveActionResult = contextualActionResult ?? actionResult;
-  const initialValues = getInitialValues(actionResult, editor.values);
-  const [values, setValues] = useState(initialValues);
-  const [cleanValues, setCleanValues] = useState(initialValues);
-  const previousActionResultRef = useRef<AnswerActionResult | undefined>(
-    effectiveActionResult,
-  );
+export const AnswerEditor = forwardRef<AnswerEditorHandle, AnswerEditorProps>(
+  function AnswerEditor(
+    { action, actionResult, disabled, editor, onDraftSavedBeforeClose },
+    ref,
+  ) {
+    const formId = useId();
+    const fetcher = useFetcher<{ answer: AnswerActionResult }>();
+    const draftActionResult = fetcher.data?.answer;
+    const effectiveActionResult = actionResult ?? draftActionResult;
+    const initialValues = getInitialValues(actionResult, editor.values);
+    const [values, setValues] = useState(initialValues);
+    const [cleanValues, setCleanValues] = useState(initialValues);
+    const [questionEditSnapshot, setQuestionEditSnapshot] =
+      useState<QuestionEditSnapshot>();
+    const closeAfterDraftSaveRef = useRef(false);
+    const submittedDraftRef = useRef<AnswerFormValues | undefined>(undefined);
+    const previousDraftActionResultRef = useRef<AnswerActionResult | undefined>(
+      draftActionResult,
+    );
 
-  useEffect(() => {
-    if (
-      effectiveActionResult?.status === "invalid" ||
-      effectiveActionResult?.status === "denied"
-    ) {
-      // Server validation is the external source of truth for these fields.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setValues(effectiveActionResult.values);
-    }
-  }, [effectiveActionResult]);
+    useEffect(() => {
+      if (
+        effectiveActionResult?.status === "invalid" ||
+        effectiveActionResult?.status === "denied"
+      ) {
+        // Server validation is the external source of truth for these fields.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setValues(effectiveActionResult.values);
+      }
+    }, [effectiveActionResult]);
 
-  useEffect(() => {
-    if (
-      effectiveActionResult?.status === "draft_saved" &&
-      previousActionResultRef.current !== effectiveActionResult
-    ) {
-      setCleanValues(values);
-    }
-
-    previousActionResultRef.current = effectiveActionResult;
-  }, [effectiveActionResult, values]);
-
-  useEffect(() => {
-    onDirtyChange?.(!areAnswerValuesEqual(values, cleanValues));
-  }, [cleanValues, onDirtyChange, values]);
-
-  const fieldErrors = getFieldErrors(effectiveActionResult);
-  const formError = getFormError(effectiveActionResult);
-  const answerCharactersRemaining =
-    answerCharacterLimit - values.answerText.length;
-  const isSubmitting = action !== undefined && fetcher.state !== "idle";
-  const FormComponent = action === undefined ? Form : fetcher.Form;
-
-  return (
-    <section
-      aria-labelledby="answer-editor-title"
-      className="flex max-h-full w-full max-w-[44rem] flex-col overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]"
-    >
-      <ActionToast
-        message={getAnswerActionToastMessage(effectiveActionResult, formError)}
-        tone={
-          effectiveActionResult?.status === "draft_saved" ? "success" : "error"
+    const fieldErrors = getFieldErrors(effectiveActionResult);
+    const formError = getFormError(effectiveActionResult);
+    const answerCharactersRemaining =
+      answerCharacterLimit - values.answerText.length;
+    const isSubmitting = fetcher.state !== "idle";
+    const FormComponent = action === undefined ? Form : fetcher.Form;
+    const submitDraftValues = useCallback(
+      (draftValues: AnswerFormValues) => {
+        submittedDraftRef.current = draftValues;
+        void fetcher.submit(createDraftFormData(draftValues), {
+          ...(action === undefined ? {} : { action }),
+          method: "post",
+        });
+      },
+      [action, fetcher],
+    );
+    const saveDraftIfNeeded = useCallback(
+      (closeAfterSave: boolean) => {
+        if (
+          values.answerText.trim().length === 0 ||
+          areAnswerValuesEqual(values, cleanValues)
+        ) {
+          return false;
         }
-        trigger={effectiveActionResult}
-      />
-      <h1 className="sr-only" id="answer-editor-title">
-        Answer question
-      </h1>
-      <FormComponent
-        {...(action === undefined ? {} : { action })}
-        aria-label="Answer editor"
-        className="min-h-0 flex-1 overflow-y-auto"
-        id={formId}
-        method="post"
+
+        if (
+          fetcher.state !== "idle" &&
+          fetcher.formData?.get("intent") === "publish"
+        ) {
+          return true;
+        }
+
+        closeAfterDraftSaveRef.current = closeAfterSave;
+
+        if (
+          fetcher.state !== "idle" &&
+          submittedDraftRef.current !== undefined &&
+          areAnswerValuesEqual(values, submittedDraftRef.current)
+        ) {
+          return true;
+        }
+
+        submitDraftValues(values);
+        return true;
+      },
+      [cleanValues, fetcher.formData, fetcher.state, submitDraftValues, values],
+    );
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        saveDraftBeforeClose: () => saveDraftIfNeeded(true),
+      }),
+      [saveDraftIfNeeded],
+    );
+
+    useEffect(() => {
+      const isNewResult =
+        previousDraftActionResultRef.current !== draftActionResult;
+
+      if (draftActionResult?.status === "draft_saved" && isNewResult) {
+        const savedValues = submittedDraftRef.current;
+
+        if (savedValues !== undefined) {
+          setCleanValues(savedValues);
+        }
+
+        if (closeAfterDraftSaveRef.current) {
+          if (
+            savedValues !== undefined &&
+            values.answerText.trim().length > 0 &&
+            !areAnswerValuesEqual(values, savedValues)
+          ) {
+            submitDraftValues(values);
+          } else {
+            closeAfterDraftSaveRef.current = false;
+            onDraftSavedBeforeClose?.();
+          }
+        }
+      } else if (
+        isNewResult &&
+        (draftActionResult?.status === "invalid" ||
+          draftActionResult?.status === "denied")
+      ) {
+        closeAfterDraftSaveRef.current = false;
+      }
+
+      previousDraftActionResultRef.current = draftActionResult;
+    }, [draftActionResult, onDraftSavedBeforeClose, submitDraftValues, values]);
+
+    const changeQuestionTextMode = (questionTextMode: QuestionTextMode) => {
+      setQuestionEditSnapshot(undefined);
+      setValues((current) => ({
+        ...current,
+        questionTextMode,
+      }));
+    };
+    const startQuestionEditing = () => {
+      setQuestionEditSnapshot({
+        editedQuestionText: values.editedQuestionText,
+        questionTextMode: values.questionTextMode,
+      });
+      setValues((current) => ({
+        ...current,
+        questionTextMode: "edited",
+        editedQuestionText:
+          current.editedQuestionText.length === 0
+            ? editor.question.text
+            : current.editedQuestionText,
+      }));
+    };
+    const cancelQuestionEditing = () => {
+      if (questionEditSnapshot === undefined) {
+        return;
+      }
+
+      setValues((current) => ({
+        ...current,
+        ...questionEditSnapshot,
+      }));
+      setQuestionEditSnapshot(undefined);
+    };
+
+    return (
+      <section
+        aria-labelledby="answer-editor-title"
+        className="flex max-h-full w-full max-w-[44rem] flex-col overflow-hidden rounded-3xl border bg-card text-card-foreground shadow-[var(--shadow-card)]"
       >
-        <FieldGroup className="gap-5 p-5 sm:p-6">
-          <fieldset className="contents" disabled={disabled}>
-            <QuestionContext question={editor.question} />
-
-            <Field
-              data-invalid={
-                fieldErrors.questionTextMode !== undefined ? true : undefined
-              }
-            >
-              <FieldLabel id="public-question-wording-label">
-                Public question wording
-              </FieldLabel>
-              <div
-                aria-labelledby="public-question-wording-label"
-                className="flex flex-wrap gap-2"
-                role="radiogroup"
-              >
-                {questionTextModeOptions.map((option) => {
-                  const Icon = option.icon;
-                  return (
-                    <label
-                      className={cn(
-                        "inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-bold transition-[background-color,border-color,color,box-shadow]",
-                        values.questionTextMode === option.value
-                          ? "border-primary bg-primary text-primary-foreground shadow-[0_4px_12px_var(--accent-glow)]"
-                          : "bg-card text-foreground hover:border-primary/40",
-                      )}
-                      key={option.value}
-                    >
-                      <input
-                        checked={values.questionTextMode === option.value}
-                        className="sr-only"
-                        name="questionTextMode"
-                        onChange={() => {
-                          setValues((current) => ({
-                            ...current,
-                            questionTextMode: option.value,
-                          }));
-                        }}
-                        type="radio"
-                        value={option.value}
-                      />
-                      <Icon aria-hidden="true" className="size-4" />
-                      {option.label}
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {
-                  questionTextModeOptions.find(
-                    (option) => option.value === values.questionTextMode,
-                  )?.description
-                }
-              </p>
-              <FieldError
-                id="questionTextMode-message"
-                message={fieldErrors.questionTextMode}
+        <ActionToast
+          message={getAnswerActionToastMessage(
+            effectiveActionResult,
+            formError,
+          )}
+          tone={
+            effectiveActionResult?.status === "draft_saved"
+              ? "success"
+              : "error"
+          }
+          trigger={effectiveActionResult}
+        />
+        <h1 className="sr-only" id="answer-editor-title">
+          Answer question
+        </h1>
+        <FormComponent
+          {...(action === undefined ? {} : { action })}
+          aria-label="Answer editor"
+          className="min-h-0 flex-1 overflow-y-auto"
+          id={formId}
+          method="post"
+        >
+          <FieldGroup className="gap-5 p-5 sm:p-6">
+            <fieldset className="contents" disabled={disabled}>
+              <QuestionContext
+                editedQuestionError={fieldErrors.editedQuestionText}
+                editedQuestionText={values.editedQuestionText}
+                isEditingQuestion={questionEditSnapshot !== undefined}
+                onCancelQuestionEditing={cancelQuestionEditing}
+                onEditQuestion={startQuestionEditing}
+                onEditedQuestionChange={(editedQuestionText) => {
+                  setValues((current) => ({
+                    ...current,
+                    editedQuestionText,
+                  }));
+                }}
+                question={editor.question}
               />
-            </Field>
 
-            {values.questionTextMode === "edited" ? (
+              <QuestionWordingControl
+                error={fieldErrors.questionTextMode}
+                onChange={changeQuestionTextMode}
+                value={values.questionTextMode}
+              />
+
               <Field
                 data-invalid={
-                  fieldErrors.editedQuestionText !== undefined
-                    ? true
-                    : undefined
+                  fieldErrors.answerText !== undefined ? true : undefined
                 }
               >
-                <FieldLabel htmlFor="editedQuestionText">
-                  Edited question
-                </FieldLabel>
+                <div className="flex items-center justify-between gap-4">
+                  <FieldLabel htmlFor="answerText">Answer</FieldLabel>
+                  <span
+                    aria-live="polite"
+                    className={cn(
+                      "font-mono text-xs",
+                      answerCharactersRemaining < 0
+                        ? "text-destructive"
+                        : "text-muted-foreground",
+                    )}
+                    id="answerText-counter"
+                  >
+                    {formatCharacterCount(
+                      Math.max(answerCharactersRemaining, 0),
+                    )}{" "}
+                    left
+                  </span>
+                </div>
                 <Textarea
-                  aria-describedby="editedQuestionText-description editedQuestionText-message"
-                  aria-invalid={fieldErrors.editedQuestionText !== undefined}
-                  id="editedQuestionText"
-                  maxLength={500}
-                  name="editedQuestionText"
+                  aria-describedby="answerText-description answerText-counter answerText-message"
+                  aria-invalid={fieldErrors.answerText !== undefined}
+                  className="scroll-mb-32"
+                  id="answerText"
+                  maxLength={answerCharacterLimit}
+                  name="answerText"
                   onChange={(event) => {
                     setValues((current) => ({
                       ...current,
-                      editedQuestionText: event.target.value,
+                      answerText: event.target.value,
                     }));
                   }}
+                  onBlur={(event) => {
+                    if (
+                      event.relatedTarget instanceof HTMLButtonElement &&
+                      event.relatedTarget.type === "submit"
+                    ) {
+                      return;
+                    }
+
+                    saveDraftIfNeeded(false);
+                  }}
+                  placeholder="Write the answer you will publish..."
                   rows={4}
-                  value={values.editedQuestionText}
+                  value={values.answerText}
                 />
-                <FieldDescription id="editedQuestionText-description">
-                  Published in place of the original wording. 500 characters
-                  max; the original remains private for context.
+                <FieldDescription id="answerText-description">
+                  3,000 characters max. Line breaks are preserved when
+                  published.
                 </FieldDescription>
                 <FieldError
-                  id="editedQuestionText-message"
-                  message={fieldErrors.editedQuestionText}
+                  id="answerText-message"
+                  message={fieldErrors.answerText}
                 />
               </Field>
-            ) : (
-              // Keeps the typed draft in the submission while the field is
-              // hidden, so switching modes back restores the same text.
-              <input
-                name="editedQuestionText"
-                type="hidden"
-                value={values.editedQuestionText}
-              />
-            )}
 
-            <Field
-              data-invalid={
-                fieldErrors.answerText !== undefined ? true : undefined
-              }
-            >
-              <div className="flex items-center justify-between gap-4">
-                <FieldLabel htmlFor="answerText">Answer</FieldLabel>
-                <span
-                  aria-live="polite"
-                  className={cn(
-                    "font-mono text-xs",
-                    answerCharactersRemaining < 0
-                      ? "text-destructive"
-                      : "text-muted-foreground",
-                  )}
-                  id="answerText-counter"
-                >
-                  {formatCharacterCount(Math.max(answerCharactersRemaining, 0))}{" "}
-                  left
-                </span>
-              </div>
-              <Textarea
-                aria-describedby="answerText-description answerText-counter answerText-message"
-                aria-invalid={fieldErrors.answerText !== undefined}
-                className="scroll-mb-32"
-                id="answerText"
-                maxLength={answerCharacterLimit}
-                name="answerText"
-                onChange={(event) => {
+              <FollowUpPermissionControl
+                defaultPermission={editor.followUpPermissionDefault}
+                error={fieldErrors.followUpPermissionOverride}
+                onChange={(followUpPermissionOverride) => {
                   setValues((current) => ({
                     ...current,
-                    answerText: event.target.value,
+                    followUpPermissionOverride,
                   }));
                 }}
-                placeholder="Write the answer you will publish..."
-                rows={4}
-                value={values.answerText}
+                value={values.followUpPermissionOverride}
               />
-              <FieldDescription id="answerText-description">
-                3,000 characters max. Line breaks are preserved when published.
-              </FieldDescription>
-              <FieldError
-                id="answerText-message"
-                message={fieldErrors.answerText}
-              />
-            </Field>
-
-            <Field
-              data-invalid={
-                fieldErrors.followUpPermissionOverride !== undefined
-                  ? true
-                  : undefined
-              }
-            >
-              <FieldLabel htmlFor="followUpPermissionOverride">
-                Follow-up override
-              </FieldLabel>
-              <Select
-                aria-describedby="followUpPermissionOverride-description followUpPermissionOverride-message"
-                aria-invalid={
-                  fieldErrors.followUpPermissionOverride !== undefined
-                }
-                id="followUpPermissionOverride"
-                name="followUpPermissionOverride"
-                onValueChange={(value) => {
-                  setValues((current) => ({
-                    ...current,
-                    followUpPermissionOverride:
-                      value === ""
-                        ? null
-                        : (value as AnswerFormValues["followUpPermissionOverride"]),
-                  }));
-                }}
-                value={normalizeFollowUpPermissionOverride(
-                  values.followUpPermissionOverride,
-                )}
-              >
-                <option value="">
-                  Profile default:{" "}
-                  {getFollowUpPermissionShortLabel(
-                    editor.followUpPermissionDefault,
-                  )}
-                </option>
-                {followUpPermissionOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-              <FieldDescription id="followUpPermissionOverride-description">
-                Applies once this answer is published.
-              </FieldDescription>
-              <FieldError
-                id="followUpPermissionOverride-message"
-                message={fieldErrors.followUpPermissionOverride}
-              />
-            </Field>
-          </fieldset>
-        </FieldGroup>
-      </FormComponent>
-      <footer className="shrink-0 border-t border-border/60 bg-secondary p-4 sm:p-5">
-        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-          <div className="flex flex-wrap gap-2">
-            <QuestionModerationControls
-              action="/inbox"
-              disabled={disabled || isSubmitting}
-              questionPublicId={editor.question.publicId}
-              variant="inline"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <PendingButton
-              disabled={disabled || isSubmitting}
-              form={formId}
-              name="intent"
-              pending={
-                isSubmitting && fetcher.formData?.get("intent") === "save_draft"
-              }
-              pendingText="Saving draft"
-              size="sm"
-              type="submit"
-              value="save_draft"
-              variant="outline"
-            >
-              <Save data-icon="inline-start" />
-              Save draft
-            </PendingButton>
+            </fieldset>
+          </FieldGroup>
+        </FormComponent>
+        <footer className="shrink-0 border-t border-border/60 bg-secondary p-4 sm:p-5">
+          <div className="flex justify-end">
             <PendingButton
               disabled={disabled || isSubmitting}
               form={formId}
@@ -390,11 +353,11 @@ export function AnswerEditor({
               Publish answer
             </PendingButton>
           </div>
-        </div>
-      </footer>
-    </section>
-  );
-}
+        </footer>
+      </section>
+    );
+  },
+);
 
 function getInitialValues(
   actionResult: AnswerActionResult | undefined,
@@ -426,23 +389,61 @@ function getAnswerActionToastMessage(
 }
 
 function QuestionContext({
+  editedQuestionError,
+  editedQuestionText,
+  isEditingQuestion,
+  onCancelQuestionEditing,
+  onEditQuestion,
+  onEditedQuestionChange,
   question,
 }: {
+  editedQuestionError?: string | undefined;
+  editedQuestionText: string;
+  isEditingQuestion: boolean;
+  onCancelQuestionEditing: () => void;
+  onEditQuestion: () => void;
+  onEditedQuestionChange: (value: string) => void;
   question: AnswerEditorViewData["question"];
 }) {
   const timestamp = (
     <>
       <span aria-hidden="true">·</span>
-      <time dateTime={question.createdAt}>{formatDate(question.createdAt)}</time>
+      <time dateTime={question.createdAt}>
+        {formatDate(question.createdAt)}
+      </time>
     </>
   );
 
   return (
     <div className="rounded-2xl border bg-secondary/70 p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-primary">
           Question from
         </p>
+        {isEditingQuestion ? (
+          <Button
+            aria-label="Cancel editing"
+            onClick={onCancelQuestionEditing}
+            size="lg"
+            type="button"
+            variant="ghost"
+          >
+            <X aria-hidden="true" data-icon="inline-start" />
+            Cancel
+          </Button>
+        ) : (
+          <Button
+            aria-label="Edit public question wording"
+            className="size-11 p-0"
+            onClick={onEditQuestion}
+            size="lg"
+            title="Edit public question wording"
+            type="button"
+            variant="ghost"
+          >
+            <PencilLine aria-hidden="true" data-icon="inline-start" />
+          </Button>
+        )}
       </div>
       {question.sender === undefined ? (
         <div className="flex min-w-0 items-center gap-3">
@@ -465,12 +466,60 @@ function QuestionContext({
           trailing={<IdentityBadge label="Attributed" />}
         />
       )}
-      <p
-        className="mt-4 whitespace-pre-wrap break-words border-t border-dashed pt-4 font-serif text-lg font-bold italic leading-7 text-foreground"
-        dir={question.direction}
-      >
-        {question.text}
-      </p>
+      {isEditingQuestion ? (
+        <Field
+          className="mt-4 border-t border-dashed pt-4"
+          data-invalid={editedQuestionError === undefined ? undefined : true}
+        >
+          <FieldLabel className="sr-only" htmlFor="editedQuestionText">
+            Edited question
+          </FieldLabel>
+          <Textarea
+            aria-describedby="editedQuestionText-description editedQuestionText-message"
+            aria-invalid={editedQuestionError !== undefined}
+            autoFocus
+            className="font-serif text-lg font-bold italic leading-7"
+            dir={question.direction}
+            id="editedQuestionText"
+            maxLength={500}
+            name="editedQuestionText"
+            onChange={(event) => {
+              onEditedQuestionChange(event.target.value);
+            }}
+            rows={3}
+            value={editedQuestionText}
+          />
+          <div className="flex items-start justify-between gap-3">
+            <FieldDescription
+              className="text-xs leading-5"
+              id="editedQuestionText-description"
+            >
+              Published wording. The original stays private.
+            </FieldDescription>
+            <span className="shrink-0 font-mono text-xs text-muted-foreground">
+              {formatCharacterCount(editedQuestionText.length)}/500
+            </span>
+          </div>
+          <FieldError
+            id="editedQuestionText-message"
+            message={editedQuestionError}
+          />
+        </Field>
+      ) : (
+        <>
+          <input
+            name="editedQuestionText"
+            type="hidden"
+            value={editedQuestionText}
+          />
+          <p
+            className="mt-4 whitespace-pre-wrap break-words border-t border-dashed pt-4 font-serif text-lg font-bold italic leading-7 text-foreground"
+            dir={question.direction}
+          >
+            {question.text}
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -497,27 +546,25 @@ function getFormError(result: AnswerActionResult | undefined) {
   return undefined;
 }
 
-function normalizeFollowUpPermissionOverride(
-  value: AnswerFormValues["followUpPermissionOverride"],
-) {
-  return value === "unknown" || value === null ? "" : value;
-}
-
-function getFollowUpPermissionShortLabel(value: FollowUpPermission) {
-  switch (value) {
-    case "anyone":
-      return "Anyone";
-    case "logged_in":
-      return "Logged in";
-    case "original_asker":
-      return "Original asker";
-    case "off":
-      return "Off";
-  }
-}
-
 function formatCharacterCount(value: number) {
   return new Intl.NumberFormat("en").format(value);
+}
+
+function createDraftFormData(values: AnswerFormValues) {
+  const formData = new FormData();
+  formData.set("intent", "save_draft");
+  formData.set("answerText", values.answerText);
+  formData.set("questionTextMode", values.questionTextMode);
+  formData.set("editedQuestionText", values.editedQuestionText);
+  formData.set(
+    "followUpPermissionOverride",
+    values.followUpPermissionOverride === "unknown" ||
+      values.followUpPermissionOverride === null
+      ? ""
+      : values.followUpPermissionOverride,
+  );
+
+  return formData;
 }
 
 function formatDate(value: string) {

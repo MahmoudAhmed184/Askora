@@ -108,7 +108,9 @@ describe("public profile components", () => {
 
     fireEvent.click(firstPrompt);
 
-    expect(screen.getByRole("textbox", { name: /question/i })).toHaveValue(prompt);
+    expect(screen.getByRole("textbox", { name: /question/i })).toHaveValue(
+      prompt,
+    );
   });
 
   it("shows permission and unavailable states", () => {
@@ -216,10 +218,59 @@ describe("public profile components", () => {
     expect(
       screen.queryByText("What should I read next?"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Hidden question")).toBeInTheDocument();
+    const hiddenIndicator = screen.getByText("Hidden question");
+
+    expect(
+      container.querySelector("[data-slot='answer-header-actions']"),
+    ).toContainElement(hiddenIndicator);
     expect(
       container.querySelector("[data-slot='hidden-question-placeholder']"),
     ).toBeInTheDocument();
+  });
+
+  it("lets the owner reveal hidden wording locally while keeping it blurred by default", () => {
+    const { container } = renderWithRouter(
+      <PublicAnswerList
+        answers={[
+          createPublishedAnswer({
+            questionText: "Question visible only to its owner",
+            questionTextMode: "hidden",
+          }),
+        ]}
+        controls={{ canManage: true, disabled: false }}
+        profile={answerListProfile}
+      />,
+    );
+
+    const question = screen.getByText("Question visible only to its owner");
+
+    expect(question).toHaveClass("blur-sm");
+    expect(question).toHaveAttribute("aria-hidden", "true");
+    expect(screen.queryByText("Hidden from others")).not.toBeInTheDocument();
+    const visibilityButton = screen.getByRole("button", {
+      name: "Show hidden question",
+    });
+    const actionButton = screen.getByRole("button", {
+      name: "Answer actions",
+    });
+    const headerActions = container.querySelector(
+      "[data-slot='answer-header-actions']",
+    );
+
+    const headerButtons = headerActions?.querySelectorAll("button");
+
+    expect(headerButtons?.item(0)).toBe(visibilityButton);
+    expect(headerButtons?.item(1)).toBe(actionButton);
+    fireEvent.click(visibilityButton);
+
+    expect(question).not.toHaveClass("blur-sm");
+    expect(question).not.toHaveAttribute("aria-hidden");
+    expect(
+      screen.getByRole("button", { name: "Hide question again" }),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelector("[data-slot='hidden-question-placeholder']"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders owner controls only when management is allowed", () => {

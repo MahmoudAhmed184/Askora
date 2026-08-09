@@ -1,11 +1,17 @@
 import { LockKeyhole, Pin, Send } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 
 import type { AppShellData } from "~/types/app-shell-data";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
-import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
+import {
+  HiddenQuestionPlaceholder,
+  HiddenQuestionIndicator,
+  HiddenQuestionVisibilityButton,
+  OwnerHiddenQuestion,
+} from "~/components/shared/hidden-question-placeholder";
 import {
   AnonymousAvatar,
   ProfileAvatar,
@@ -342,16 +348,24 @@ function AnswerThreadItem({
   item: PublicThreadAnswerItem;
   profile: PublicThreadProfileView;
 }) {
+  const [isHiddenQuestionRevealed, setIsHiddenQuestionRevealed] =
+    useState(false);
+  const hasOwnerHiddenQuestion =
+    item.questionTextMode === "hidden" && item.questionText !== undefined;
+
   return (
     <article className="scroll-mt-24" id={`item-${item.publicId}`}>
       <div className="flex flex-col gap-5">
-        {item.questionTextMode === "hidden" ? (
-          <div className="flex flex-col items-start gap-2">
-            <HiddenQuestionPlaceholder />
+        {item.questionTextMode === "hidden" &&
+        item.questionText === undefined ? (
+          <div className="flex items-start justify-between gap-3">
+            <HiddenQuestionPlaceholder className="min-w-0 flex-1 pt-1" />
+            <HiddenQuestionIndicator />
           </div>
         ) : item.questionText === undefined ? undefined : (
           <ThreadQuestionEntry
             index={index}
+            isHiddenQuestionRevealed={isHiddenQuestionRevealed}
             item={item}
             time={formatDate(item.publishedAt)}
           />
@@ -375,11 +389,19 @@ function AnswerThreadItem({
           )}
         </div>
 
-        <PublishedAnswerActions
-          answer={item}
-          canReport={canReport}
-          controls={controls}
-        />
+        <div className="flex shrink-0 items-center gap-1">
+          {hasOwnerHiddenQuestion ? (
+            <HiddenQuestionVisibilityButton
+              isRevealed={isHiddenQuestionRevealed}
+              onChange={setIsHiddenQuestionRevealed}
+            />
+          ) : null}
+          <PublishedAnswerActions
+            answer={item}
+            canReport={canReport}
+            controls={controls}
+          />
+        </div>
       </footer>
     </article>
   );
@@ -387,10 +409,12 @@ function AnswerThreadItem({
 
 function ThreadQuestionEntry({
   index,
+  isHiddenQuestionRevealed,
   item,
   time,
 }: {
   index: number;
+  isHiddenQuestionRevealed: boolean;
   item: PublicThreadAnswerItem;
   time: string;
 }) {
@@ -409,22 +433,37 @@ function ThreadQuestionEntry({
             {time}
           </span>
         </div>
-        <div className="flex flex-wrap items-baseline gap-2">
-          <p
-            className={cn(
-              "min-w-0 flex-1 whitespace-pre-wrap break-words font-serif font-bold italic",
+        {item.questionTextMode === "hidden" &&
+        item.questionText !== undefined ? (
+          <OwnerHiddenQuestion
+            direction={item.direction}
+            isRevealed={isHiddenQuestionRevealed}
+            text={item.questionText}
+            textClassName={cn(
+              "font-serif font-bold italic",
               index === 0
                 ? "text-2xl leading-tight text-primary"
                 : "text-lg leading-7 text-foreground",
             )}
-            dir={item.direction}
-          >
-            {item.questionText}
-          </p>
-          {item.questionTextMode === "edited" ? (
-            <EditedQuestionBadge />
-          ) : undefined}
-        </div>
+          />
+        ) : (
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p
+              className={cn(
+                "min-w-0 flex-1 whitespace-pre-wrap break-words font-serif font-bold italic",
+                index === 0
+                  ? "text-2xl leading-tight text-primary"
+                  : "text-lg leading-7 text-foreground",
+              )}
+              dir={item.direction}
+            >
+              {item.questionText}
+            </p>
+            {item.questionTextMode === "edited" ? (
+              <EditedQuestionBadge />
+            ) : undefined}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -223,7 +223,7 @@ export default function PublicProfileRoute({
       return <AppShell>{content}</AppShell>;
     }
 
-    return <PublicShell>{content}</PublicShell>;
+    return <PublicShell headerVisibility="hidden">{content}</PublicShell>;
   }
 
   const { page } = loaderData;
@@ -280,7 +280,7 @@ export default function PublicProfileRoute({
     return <AppShell>{content}</AppShell>;
   }
 
-  return <PublicShell>{content}</PublicShell>;
+  return <PublicShell headerVisibility="hidden">{content}</PublicShell>;
 }
 
 function renderAskSurface({

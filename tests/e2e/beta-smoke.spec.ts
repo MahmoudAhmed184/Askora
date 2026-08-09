@@ -164,9 +164,7 @@ test.describe("beta seeded smoke", () => {
     await expect(page.getByLabel("Replace Gemini API key")).toHaveValue("");
 
     await page.getByLabel("Active model").click();
-    await page
-      .getByRole("option", { name: "Gemini 3.5 Flash-Lite" })
-      .click();
+    await page.getByRole("option", { name: "Gemini 3.5 Flash-Lite" }).click();
     await page.getByLabel("Question interests").fill("Software craft");
     await page.getByLabel("Question interests").press("Enter");
     await page.getByRole("button", { name: "Save preferences" }).click();
@@ -178,9 +176,7 @@ test.describe("beta seeded smoke", () => {
     await expect(page.getByText("Software craft")).toBeVisible();
 
     await page.getByRole("checkbox").check();
-    await page
-      .getByRole("button", { name: "Acknowledge disclosure" })
-      .click();
+    await page.getByRole("button", { name: "Acknowledge disclosure" }).click();
     await expect(
       page.getByText("You acknowledged the current disclosure."),
     ).toBeVisible();
@@ -224,7 +220,9 @@ test.describe("beta seeded smoke", () => {
         .getByRole("article")
         .filter({ hasText: questionText });
 
-      await expect(question.getByText("Anonymous", { exact: true })).toBeVisible();
+      await expect(
+        question.getByText("Anonymous", { exact: true }),
+      ).toBeVisible();
     }
 
     const draftQuestion = page
@@ -233,10 +231,14 @@ test.describe("beta seeded smoke", () => {
     await draftQuestion.getByRole("link", { name: "Answer question" }).click();
     const draftEditor = page.getByRole("form", { name: "Answer editor" });
 
-    await expect(draftEditor.getByText("Sender hidden", { exact: true })).toBeVisible();
-    await draftEditor.getByLabel("Answer", { exact: true }).fill("A private draft answer.");
-    await page.getByRole("button", { name: "Save draft" }).click();
-    await expectToast(page, "Draft saved.");
+    await expect(
+      draftEditor.getByText("Sender hidden", { exact: true }),
+    ).toBeVisible();
+    await draftEditor
+      .getByLabel("Answer", { exact: true })
+      .fill("A private draft answer.");
+    await page.keyboard.press("Escape");
+    await expect(draftEditor).not.toBeVisible();
     await page.goto("/drafts");
     await expect(
       page
@@ -249,29 +251,27 @@ test.describe("beta seeded smoke", () => {
     const publishQuestion = page
       .getByRole("article")
       .filter({ hasText: generatedQuestionTexts[1] });
-    await publishQuestion.getByRole("link", { name: "Answer question" }).click();
+    await publishQuestion
+      .getByRole("link", { name: "Answer question" })
+      .click();
     const publishEditor = page.getByRole("form", { name: "Answer editor" });
 
-    await publishEditor.getByLabel("Answer", { exact: true }).fill(
-      "I am strengthening deliberate practice this month.",
-    );
+    await publishEditor
+      .getByLabel("Answer", { exact: true })
+      .fill("I am strengthening deliberate practice this month.");
     await page.getByRole("button", { name: "Publish answer" }).click();
     await expect(page).toHaveURL(
       new RegExp(`/${betaFixture.profiles.owner.username}#published-answers$`),
     );
     await expect(
-      page
-        .getByRole("article")
-        .filter({ hasText: generatedQuestionTexts[1] }),
+      page.getByRole("article").filter({ hasText: generatedQuestionTexts[1] }),
     ).toBeVisible();
 
     await context.clearCookies();
     await page.goto(`/${betaFixture.profiles.owner.username}`);
     const publicHtml = await page.content();
 
-    expect(publicHtml).not.toMatch(
-      /generationBatchId|gemini-3|tokenCount/i,
-    );
+    expect(publicHtml).not.toMatch(/generationBatchId|gemini-3|tokenCount/i);
 
     await signInAs(context, betaFixture.users.owner);
     await page.goto("/inbox");
@@ -290,7 +290,9 @@ test.describe("beta seeded smoke", () => {
 
     await page.goto("/settings/question-generation");
     await page.getByRole("button", { name: "Disconnect Gemini" }).click();
-    await expect(page.getByText("Not connected", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Not connected", { exact: true }),
+    ).toBeVisible();
   });
 
   test("owner can ask themselves with and without attribution", async ({
@@ -534,6 +536,18 @@ test.describe("beta seeded smoke", () => {
     await expect(
       page.getByRole("heading", { name: /Ask me anything/ }),
     ).toBeVisible();
+  });
+
+  test("guest profile omits the public navigation bar", async ({
+    context,
+    page,
+  }) => {
+    await context.clearCookies();
+    await page.goto(`/${betaFixture.profiles.owner.username}`);
+
+    await expect(
+      page.getByRole("navigation", { name: "Public navigation" }),
+    ).toHaveCount(0);
   });
 
   test("mobile inbox smoke", async ({ context, page }, testInfo) => {

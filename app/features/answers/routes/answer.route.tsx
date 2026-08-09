@@ -1,22 +1,13 @@
 import { ArrowLeft } from "lucide-react";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
-import {
-  data,
-  Link,
-  redirect,
-  useActionData,
-  useNavigate,
-} from "react-router";
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { data, Link, redirect, useActionData, useNavigate } from "react-router";
 
 import { Button } from "~/components/ui/button/button";
 import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
-import { AnswerEditor } from "~/features/answers/components/answer-editor";
+import {
+  AnswerEditor,
+  type AnswerEditorHandle,
+} from "~/features/answers/components/answer-editor";
 import {
   handleAnswerSubmission,
   loadAnswerEditor,
@@ -92,7 +83,7 @@ export function meta() {
 export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
   const navigate = useNavigate();
-  const [isDirty, setIsDirty] = useState(false);
+  const editorRef = useRef<AnswerEditorHandle>(null);
 
   if (loaderData.status === "not_found") {
     return (
@@ -113,17 +104,16 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
 
   const { closeHref, editor: editorData, isSuspended } = loaderData;
 
-  function canClose() {
-    return (
-      !isDirty ||
-      window.confirm("Discard this answer? Unsaved changes will be lost.")
-    );
+  function finishClose() {
+    void navigate(closeHref);
   }
 
   function requestClose() {
-    if (canClose()) {
-      void navigate(closeHref);
+    if (editorRef.current?.saveDraftBeforeClose()) {
+      return;
     }
+
+    finishClose();
   }
 
   const editor = (
@@ -133,7 +123,8 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
         disabled={isSuspended}
         editor={editorData}
         key={editorData.question.publicId}
-        onDirtyChange={setIsDirty}
+        onDraftSavedBeforeClose={finishClose}
+        ref={editorRef}
       />
     </div>
   );
@@ -144,9 +135,8 @@ export default function AnswerRoute({ loaderData }: Route.ComponentProps) {
         aria-label="Close answer editor"
         className="absolute inset-0 bg-background/92"
         onClick={(event) => {
-          if (!canClose()) {
-            event.preventDefault();
-          }
+          event.preventDefault();
+          requestClose();
         }}
         to={closeHref}
       />

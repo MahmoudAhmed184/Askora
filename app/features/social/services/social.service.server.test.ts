@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  CompletedProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   handleFollowAction,
   type FollowActionStore,
   type FollowMutationParams,
-  type FollowTargetProfile
-} from "~/features/social/services/follow.service.server";;
+  type FollowTargetProfile,
+} from "~/features/social/services/follow.service.server";
 import {
   isVisibleSocialFeedRow,
   loadSocialFeed,
@@ -19,9 +17,12 @@ import {
   handleLikeAction,
   type LikeActionStore,
   type LikeMutationParams,
-  type LikeableAnswer
-} from "~/features/social/services/like.service.server";;
-import { decodeFeedCursor, type FeedCursor } from "~/features/social/validations/social.validations";
+  type LikeableAnswer,
+} from "~/features/social/services/like.service.server";
+import {
+  decodeFeedCursor,
+  type FeedCursor,
+} from "~/features/social/validations/social.validations";
 import type {
   RateLimitDecision,
   RateLimitOptions,
@@ -84,7 +85,9 @@ describe("like actions", () => {
       }),
     ).resolves.toMatchObject({ status: "denied", reason: "suspended" });
 
-    const blocked = createLikeStore({ blockedOwnerProfileIds: ["profile_owner"] });
+    const blocked = createLikeStore({
+      blockedOwnerProfileIds: ["profile_owner"],
+    });
     await expect(submitLike({ store: blocked.store })).resolves.toMatchObject({
       status: "denied",
       reason: "blocked",
@@ -128,12 +131,16 @@ describe("follow actions", () => {
   it("follows and unfollows idempotently with one durable follow notification", async () => {
     const follows = createFollowStore();
 
-    await expect(submitFollow({ store: follows.store })).resolves.toMatchObject({
-      status: "followed",
-    });
-    await expect(submitFollow({ store: follows.store })).resolves.toMatchObject({
-      status: "followed",
-    });
+    await expect(submitFollow({ store: follows.store })).resolves.toMatchObject(
+      {
+        status: "followed",
+      },
+    );
+    await expect(submitFollow({ store: follows.store })).resolves.toMatchObject(
+      {
+        status: "followed",
+      },
+    );
     expect(follows.followKeys()).toEqual(["profile_actor:profile_target"]);
 
     await expect(
@@ -143,9 +150,11 @@ describe("follow actions", () => {
       submitFollow({ intent: "unfollow", store: follows.store }),
     ).resolves.toMatchObject({ status: "unfollowed" });
     expect(follows.followKeys()).toEqual([]);
-    await expect(submitFollow({ store: follows.store })).resolves.toMatchObject({
-      status: "followed",
-    });
+    await expect(submitFollow({ store: follows.store })).resolves.toMatchObject(
+      {
+        status: "followed",
+      },
+    );
     expect(follows.followKeys()).toEqual(["profile_actor:profile_target"]);
     expect(follows.notifications).toEqual([
       {
@@ -178,11 +187,15 @@ describe("follow actions", () => {
       }),
     ).resolves.toMatchObject({ status: "denied", reason: "suspended" });
 
-    const blocked = createFollowStore({ blockedTargetProfileIds: ["profile_target"] });
-    await expect(submitFollow({ store: blocked.store })).resolves.toMatchObject({
-      status: "denied",
-      reason: "blocked",
+    const blocked = createFollowStore({
+      blockedTargetProfileIds: ["profile_target"],
     });
+    await expect(submitFollow({ store: blocked.store })).resolves.toMatchObject(
+      {
+        status: "denied",
+        reason: "blocked",
+      },
+    );
 
     for (const profile of [
       createFollowTarget({ isActive: false }),
@@ -219,7 +232,10 @@ describe("social feed", () => {
           threadItemPublicId: "unfollowed",
         }),
         createFeedRow({ blockedByOwner: true, threadItemPublicId: "blocked" }),
-        createFeedRow({ itemStatus: "unpublished", threadItemPublicId: "draft" }),
+        createFeedRow({
+          itemStatus: "unpublished",
+          threadItemPublicId: "draft",
+        }),
         createFeedRow({
           initialItemStatus: "unpublished",
           threadItemPublicId: "hidden_initial_follow_up",
@@ -243,11 +259,34 @@ describe("social feed", () => {
     expect(JSON.stringify(feed.items)).not.toContain("Secret prompt");
   });
 
+  it("includes a hidden question only for its profile owner", async () => {
+    const store = createFeedStore({
+      followedProfileIds: [completedSession.profile.id],
+      rows: [
+        createFeedRow({
+          displayQuestionText: null,
+          originalQuestionText: "Owner-only feed question",
+          ownerProfileId: completedSession.profile.id,
+          ownerUserId: completedSession.user.id,
+          questionTextMode: "hidden",
+        }),
+      ],
+    });
+
+    const feed = await loadSocialFeed({ session: completedSession, store });
+
+    expect(feed.items[0]?.questionText).toBe("Owner-only feed question");
+  });
+
   it("paginates with a stable newest-first cursor", async () => {
     const rows = Array.from({ length: 25 }, (_, index) =>
       createFeedRow({
-        createdAt: new Date(`2026-05-31T10:${String(index).padStart(2, "0")}:00.000Z`),
-        publishedAt: new Date(`2026-05-31T11:${String(index).padStart(2, "0")}:00.000Z`),
+        createdAt: new Date(
+          `2026-05-31T10:${String(index).padStart(2, "0")}:00.000Z`,
+        ),
+        publishedAt: new Date(
+          `2026-05-31T11:${String(index).padStart(2, "0")}:00.000Z`,
+        ),
         threadItemPublicId: `titem_${String(index).padStart(2, "0")}`,
       }),
     );
@@ -255,7 +294,10 @@ describe("social feed", () => {
       followedProfileIds: ["profile_owner"],
       rows,
     });
-    const firstPage = await loadSocialFeed({ session: completedSession, store });
+    const firstPage = await loadSocialFeed({
+      session: completedSession,
+      store,
+    });
     const secondPage = await loadSocialFeed({
       cursor: decodeRequiredCursor(firstPage.nextCursor),
       session: completedSession,
@@ -550,6 +592,7 @@ function createFeedRow(overrides: Partial<SocialFeedRow> = {}): SocialFeedRow {
     questionDeletedAt: null,
     questionTextMode: "original",
     displayQuestionText: "What should I read next?",
+    originalQuestionText: "What should I read next?",
     identityMode: "guest_anonymous",
     askerDisplayName: null,
     askerUsername: null,

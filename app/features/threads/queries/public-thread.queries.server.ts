@@ -76,6 +76,7 @@ export interface PublicThreadItemRow {
   questionDeletedAt: Date | null;
   questionTextMode: QuestionTextMode;
   displayQuestionText: string | null;
+  originalQuestionText: string;
   identityMode: AnswerQuestionIdentity;
   askerDisplayName: string | null;
   askerUsername: string | null;
@@ -368,6 +369,7 @@ export function createDrizzlePublicThreadStore(
           questionDeletedAt: questions.deletedAt,
           questionTextMode: threadItems.questionTextMode,
           displayQuestionText: threadItems.displayQuestionText,
+          originalQuestionText: questions.originalText,
           identityMode: questions.identityMode,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
@@ -493,7 +495,7 @@ function toPublicThreadAnswerItem({
   row: PublicThreadItemRow;
   session: CurrentSessionSummary;
 }): PublicThreadAnswerItem {
-  const questionText = getPublicQuestionText(row);
+  const questionText = getThreadQuestionText({ owner, row, session });
 
   return {
     type: "answer",
@@ -513,7 +515,7 @@ function toPublicThreadAnswerItem({
       },
     }),
     ...(questionText === undefined ? {} : { questionText }),
-    direction: getQuestionDirection(row.displayQuestionText ?? ""),
+    direction: getQuestionDirection(questionText ?? ""),
     ...getPublicAsker(row, questionText),
   };
 }
@@ -568,16 +570,38 @@ function getViewerProfileId(session: CurrentSessionSummary) {
     : undefined;
 }
 
-function getPublicQuestionText(row: PublicThreadItemRow) {
-  if (
-    row.questionTextMode === "hidden" ||
-    row.questionDeletedAt !== null ||
-    row.questionStatus !== "answered"
-  ) {
+function getThreadQuestionText({
+  owner,
+  row,
+  session,
+}: {
+  owner: PublicThreadItemOwner;
+  row: PublicThreadItemRow;
+  session: CurrentSessionSummary;
+}) {
+  if (row.questionDeletedAt !== null || row.questionStatus !== "answered") {
     return undefined;
   }
 
+  if (row.questionTextMode === "hidden") {
+    return isThreadOwnerSession(owner, session)
+      ? row.originalQuestionText
+      : undefined;
+  }
+
   return row.displayQuestionText ?? undefined;
+}
+
+function isThreadOwnerSession(
+  owner: PublicThreadItemOwner,
+  session: CurrentSessionSummary,
+) {
+  return (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.profile.id === owner.profileId &&
+    session.user.id === owner.userId
+  );
 }
 
 function shouldShowRemovedMarker({

@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  CompletedProfileSessionSummary
-} from "~/features/auth/services/auth.service.server";;
+import type { CompletedProfileSessionSummary } from "~/features/auth/services/auth.service.server";
 import {
   loadPublicThreadPage,
   type PublicThreadItemRow,
   type PublicThreadRecord,
-  type PublicThreadStore
-} from "~/features/threads/queries/public-thread.queries.server";;
+  type PublicThreadStore,
+} from "~/features/threads/queries/public-thread.queries.server";
 
 const now = new Date("2026-05-31T12:00:00.000Z");
 
@@ -54,7 +52,11 @@ describe("loadPublicThreadPage", () => {
     const result = await loadAvailableThread({
       rows: [
         createItem({ publicId: "titem_3", position: 2 }),
-        createItem({ publicId: "titem_draft", itemStatus: "draft", position: 1 }),
+        createItem({
+          publicId: "titem_draft",
+          itemStatus: "draft",
+          position: 1,
+        }),
         createItem({ publicId: "titem_1", position: 0 }),
       ],
     });
@@ -180,6 +182,29 @@ describe("loadPublicThreadPage", () => {
       throw new Error("expected first thread item");
     }
     expect("questionText" in firstItem).toBe(false);
+  });
+
+  it("includes hidden question text only for the thread owner", async () => {
+    const hiddenItem = createItem({
+      displayQuestionText: null,
+      originalQuestionText: "Owner-only hidden question",
+      questionTextMode: "hidden",
+    });
+    const ownerResult = await loadAvailableThread({
+      rows: [hiddenItem],
+      session: ownerSession,
+    });
+    const publicResult = await loadAvailableThread({
+      rows: [hiddenItem],
+      session: anonymousSession,
+    });
+
+    expect(JSON.stringify(getPage(ownerResult))).toContain(
+      "Owner-only hidden question",
+    );
+    expect(JSON.stringify(getPage(publicResult))).not.toContain(
+      "Owner-only hidden question",
+    );
   });
 
   it("sets owner controls for owner, anonymous, and non-owner sessions", async () => {
@@ -311,7 +336,9 @@ function createThreadStore({
       return Promise.resolve(thread === undefined ? [] : rows);
     },
     isViewerFollowingProfile({ targetProfileId }) {
-      return Promise.resolve(viewerFollowingProfileIds.includes(targetProfileId));
+      return Promise.resolve(
+        viewerFollowingProfileIds.includes(targetProfileId),
+      );
     },
   };
 }
@@ -359,6 +386,7 @@ function createItem(
     questionDeletedAt: null,
     questionTextMode: "original",
     displayQuestionText: "What should I read next?",
+    originalQuestionText: "What should I read next?",
     identityMode: "guest_anonymous",
     askerDisplayName: null,
     askerUsername: null,

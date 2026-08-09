@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import AnswerRoute from "~/features/answers/routes/answer.route";
 import type { AnswerEditorViewData } from "~/features/answers/types/answers.types";
@@ -52,6 +52,54 @@ describe("AnswerRoute", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/inbox");
     });
+  });
+
+  it("saves a changed answer before closing without a discard confirmation", async () => {
+    let submittedFormData: FormData | undefined;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/answer/qst_1",
+          action: async ({ request }) => {
+            submittedFormData = await request.formData();
+
+            return {
+              answer: {
+                status: "draft_saved" as const,
+                questionPublicId: "qst_1",
+              },
+            };
+          },
+          element: (
+            <AnswerRouteForTest
+              loaderData={{
+                closeHref: "/inbox",
+                status: "found",
+                editor: createEditor(),
+                isSuspended: false,
+              }}
+            />
+          ),
+        },
+        { path: "/inbox", element: <p>Inbox</p> },
+      ],
+      { initialEntries: ["/answer/qst_1"] },
+    );
+
+    render(<RouterProvider router={router} />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Answer" }), {
+      target: { value: "Keep this answer" },
+    });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/inbox");
+    });
+    expect(submittedFormData?.get("intent")).toBe("save_draft");
+    expect(submittedFormData?.get("answerText")).toBe("Keep this answer");
+    expect(confirm).not.toHaveBeenCalled();
   });
 });
 

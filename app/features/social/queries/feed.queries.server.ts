@@ -24,6 +24,10 @@ import {
   type FeedCursor,
 } from "~/features/social/validations/social.validations";
 import { isPublicThreadItemVisible } from "~/features/threads/thread-visibility";
+import {
+  getQuestionDirection,
+  type QuestionDisplayDirection,
+} from "~/lib/question-direction";
 
 export const SOCIAL_FEED_PAGE_SIZE = 20;
 
@@ -56,6 +60,7 @@ export interface SocialFeedRow {
   questionDeletedAt: Date | null;
   questionTextMode: QuestionTextMode;
   displayQuestionText: string | null;
+  originalQuestionText: string;
   identityMode: AnswerQuestionIdentity;
   askerDisplayName: string | null;
   askerUsername: string | null;
@@ -74,7 +79,8 @@ export interface SocialFeedItem {
   answerText: string;
   publishedAt: string;
   questionText: string | null;
-  /** Disclosure mode; hidden mode never includes the private question text. */
+  direction: QuestionDisplayDirection;
+  /** Hidden text is included only for the authenticated profile owner. */
   questionTextMode: QuestionTextMode;
   asker:
     | {
@@ -182,6 +188,7 @@ export function createDrizzleSocialFeedStore(
           questionDeletedAt: questions.deletedAt,
           questionTextMode: threadItems.questionTextMode,
           displayQuestionText: threadItems.displayQuestionText,
+          originalQuestionText: questions.originalText,
           identityMode: questions.identityMode,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
@@ -245,7 +252,7 @@ function toSocialFeedItem(
   row: SocialFeedRow,
   session: CompletedProfileSessionSummary,
 ): SocialFeedItem {
-  const questionText = getPublicQuestionText(row);
+  const questionText = getFeedQuestionText(row, session);
 
   return {
     owner: {
@@ -258,6 +265,7 @@ function toSocialFeedItem(
     answerText: row.answerText,
     publishedAt: getFeedSortDate(row).toISOString(),
     questionText,
+    direction: getQuestionDirection(questionText ?? ""),
     questionTextMode: row.questionTextMode,
     asker: getPublicAsker(row, questionText),
     like: getLikeControlState({
@@ -294,13 +302,19 @@ function createCursorFromRow(row: SocialFeedRow | undefined): FeedCursor {
   };
 }
 
-function getPublicQuestionText(row: SocialFeedRow) {
-  if (
-    row.questionTextMode === "hidden" ||
-    row.questionDeletedAt !== null ||
-    row.questionStatus !== "answered"
-  ) {
+function getFeedQuestionText(
+  row: SocialFeedRow,
+  session: CompletedProfileSessionSummary,
+) {
+  if (row.questionDeletedAt !== null || row.questionStatus !== "answered") {
     return null;
+  }
+
+  if (row.questionTextMode === "hidden") {
+    return row.ownerProfileId === session.profile.id &&
+      row.ownerUserId === session.user.id
+      ? row.originalQuestionText
+      : null;
   }
 
   return row.displayQuestionText;

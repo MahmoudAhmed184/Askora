@@ -1,4 +1,5 @@
 import { MessageCircle } from "lucide-react";
+import { useState } from "react";
 import {
   Link,
   type ShouldRevalidateFunctionArgs,
@@ -7,7 +8,12 @@ import {
 
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
-import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
+import {
+  HiddenQuestionPlaceholder,
+  HiddenQuestionIndicator,
+  HiddenQuestionVisibilityButton,
+  OwnerHiddenQuestion,
+} from "~/components/shared/hidden-question-placeholder";
 import { ProfileIdentityLink } from "~/components/shared/profile-identity/profile-identity";
 import { PageHeader } from "~/components/shared/page-header/page-header";
 import { Badge } from "~/components/ui/badge/badge";
@@ -100,6 +106,12 @@ function FeedItemArticle({
   item: Route.ComponentProps["loaderData"]["feed"]["items"][number];
 }) {
   const location = useLocation();
+  const [isHiddenQuestionRevealed, setIsHiddenQuestionRevealed] =
+    useState(false);
+  const hasOwnerHiddenQuestion =
+    item.questionTextMode === "hidden" && item.questionText !== null;
+  const hasPublicHiddenQuestion =
+    item.questionTextMode === "hidden" && item.questionText === null;
   const threadHref = createThreadHref({
     location,
     ownerUsername: item.owner.username,
@@ -108,7 +120,7 @@ function FeedItemArticle({
 
   return (
     <article className="flex flex-col gap-5 rounded-3xl border bg-card p-6 text-card-foreground shadow-[var(--shadow-card)] transition-[border-color] duration-[250ms] ease-[ease] hover:border-border-strong">
-      <header>
+      <header className="flex items-start justify-between gap-3">
         <ProfileIdentityLink
           meta={
             <>
@@ -120,20 +132,37 @@ function FeedItemArticle({
           }
           profile={item.owner}
         />
+        {hasOwnerHiddenQuestion ? (
+          <HiddenQuestionVisibilityButton
+            isRevealed={isHiddenQuestionRevealed}
+            onChange={setIsHiddenQuestionRevealed}
+          />
+        ) : hasPublicHiddenQuestion ? (
+          <HiddenQuestionIndicator />
+        ) : null}
       </header>
 
-      {item.questionTextMode === "hidden" || item.questionText === null ? (
+      {item.questionText === null ? (
         <HiddenQuestionPlaceholder className="border-b border-dashed pb-5" />
       ) : (
         <div className="flex flex-col gap-2 border-b border-dashed pb-5">
-          <div className="flex flex-wrap items-baseline gap-2">
-            <p className="min-w-0 flex-1 whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
-              {item.questionText}
-            </p>
-            {item.questionTextMode === "edited" ? (
-              <EditedQuestionBadge />
-            ) : null}
-          </div>
+          {item.questionTextMode === "hidden" ? (
+            <OwnerHiddenQuestion
+              direction={item.direction}
+              isRevealed={isHiddenQuestionRevealed}
+              text={item.questionText}
+              textClassName="font-serif text-xl font-bold italic leading-8 text-foreground"
+            />
+          ) : (
+            <div className="flex flex-wrap items-baseline gap-2">
+              <p className="min-w-0 flex-1 whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground">
+                {item.questionText}
+              </p>
+              {item.questionTextMode === "edited" ? (
+                <EditedQuestionBadge />
+              ) : null}
+            </div>
+          )}
           {item.asker === undefined ? null : (
             <p className="text-sm leading-6 text-muted-foreground">
               Asked by{" "}

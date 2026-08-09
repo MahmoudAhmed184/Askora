@@ -434,14 +434,15 @@ Publishing:
 
 - The owner can publish an answer.
 - The original question text appears publicly by default.
-- The owner can edit or hide the question text before publishing.
+- The owner can edit the question inline from the question card or hide it before publishing.
 - If the question text is edited, the UI should not imply the modified text is the asker's exact untouched wording.
 - Public surfaces must show a visible "Edited question" badge beside the question text whenever `questionTextMode` is `edited`. This applies to profile answer cards, feed items, and thread entries.
 - The badge discloses modified question wording only. It says nothing about edits to the answer.
-- The edited-question input is only offered while Edited mode is selected, and its draft value is preserved when the owner switches modes within the same editor session.
+- Edited wording is entered through the question card's edit action rather than offered as a public-wording menu option. The inline editor provides Cancel and preserves its draft value when the owner switches modes within the same editor session.
 - Editing question text should keep an internal copy of the original.
-- Hidden question text remains stored internally while the related thread/item exists for context, reports, and audit, but is not exposed publicly.
-- Public hidden-question treatments use a generic blurred placeholder and a visible "Hidden question" badge. Neither the original text nor fabricated question wording is rendered to the client.
+- Hidden question text remains stored internally while the related thread/item exists for context, reports, and audit. It is never serialized to public or non-owner viewers.
+- Public and non-owner hidden-question treatments use a generic blurred placeholder with a "Hidden question" badge in the card's top-right action area. The authenticated profile owner instead receives the original text blurred by default, with an icon-only local Show/Hide control placed before the answer actions menu; it does not change public visibility.
+- A non-empty changed answer is saved as a private draft when its answer field loses focus or the answer editor closes. Closing does not show a discard confirmation.
 
 Answer management:
 
@@ -454,7 +455,7 @@ Answer management:
 Private answers:
 
 - No private answers in MVP.
-- Choices are publish, draft, delete, report/block, or unpublish after publishing.
+- Answer-editor drafts save automatically. Publishing is the only explicit editor action; delete and unpublish remain post-publication management actions.
 
 Soft deletion:
 

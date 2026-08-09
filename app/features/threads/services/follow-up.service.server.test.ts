@@ -421,6 +421,7 @@ function createItem(
     questionDeletedAt: null,
     questionTextMode: "original",
     displayQuestionText: "What should I read next?",
+    originalQuestionText: "What should I read next?",
     identityMode: "guest_anonymous",
     askerDisplayName: null,
     askerUsername: null,

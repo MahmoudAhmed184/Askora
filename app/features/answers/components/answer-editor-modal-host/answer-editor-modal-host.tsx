@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 
 import { UnavailableState } from "~/components/shared/unavailable-state/unavailable-state";
@@ -10,7 +10,10 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog/dialog";
 import { Button } from "~/components/ui/button/button";
-import { AnswerEditor } from "~/features/answers/components/answer-editor";
+import {
+  AnswerEditor,
+  type AnswerEditorHandle,
+} from "~/features/answers/components/answer-editor";
 import type { AnswerModalData } from "~/features/answers/services/answer-modal.service.server";
 import {
   getAnswerModalFocusReturnId,
@@ -25,7 +28,7 @@ interface AnswerEditorModalHostProps {
 export function AnswerEditorModalHost({ modal }: AnswerEditorModalHostProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isDirty, setIsDirty] = useState(false);
+  const editorRef = useRef<AnswerEditorHandle>(null);
   const previousModalRef = useRef<AnswerModalData | undefined>(undefined);
   const scrollPositionRef = useRef(0);
   const closeTo = removeAnswerModalSearchParams(location);
@@ -44,25 +47,25 @@ export function AnswerEditorModalHost({ modal }: AnswerEditorModalHostProps) {
         restoreScrollPosition(scrollPositionRef.current);
         document.getElementById(focusReturnId)?.focus();
       });
-      setIsDirty(false);
     }
 
     previousModalRef.current = modal;
   }, [location.search, modal]);
 
-  function requestClose() {
-    if (
-      isDirty &&
-      !window.confirm("Discard this answer? Unsaved changes will be lost.")
-    ) {
-      return;
-    }
-
+  const finishClose = useCallback(() => {
     void navigate(closeTo, {
       defaultShouldRevalidate: false,
       preventScrollReset: true,
       replace: true,
     });
+  }, [closeTo, navigate]);
+
+  function requestClose() {
+    if (editorRef.current?.saveDraftBeforeClose()) {
+      return;
+    }
+
+    finishClose();
   }
 
   return (
@@ -103,7 +106,8 @@ export function AnswerEditorModalHost({ modal }: AnswerEditorModalHostProps) {
               action={modal.canonicalPath}
               disabled={modal.isSuspended}
               editor={modal.editor}
-              onDirtyChange={setIsDirty}
+              onDraftSavedBeforeClose={finishClose}
+              ref={editorRef}
             />
           )}
         </DialogContent>

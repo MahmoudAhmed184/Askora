@@ -138,9 +138,9 @@ describe("answer workflows", () => {
         publishAttempts += 1;
 
         if (publishAttempts === 2) {
-          return Promise.reject(createUniqueConstraintError(
-            "thread_items_question_id_unique",
-          ));
+          return Promise.reject(
+            createUniqueConstraintError("thread_items_question_id_unique"),
+          );
         }
 
         return Promise.resolve({
@@ -186,7 +186,9 @@ describe("answer workflows", () => {
     expect(
       isConcurrentAnswerPublishConflict(
         new Error("transaction failed", {
-          cause: createUniqueConstraintError("threads_initial_question_id_unique"),
+          cause: createUniqueConstraintError(
+            "threads_initial_question_id_unique",
+          ),
         }),
       ),
     ).toBe(true);
@@ -631,7 +633,6 @@ describe("loadDraftAnswers", () => {
       ],
     });
   });
-
 });
 
 describe("createPublicPublishedAnswers", () => {
@@ -707,26 +708,28 @@ describe("createPublicPublishedAnswers", () => {
     const serializedAnswers = JSON.stringify(answers);
 
     expect(answers).toHaveLength(4);
-    expect(answers).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        publicId: "visible",
-        threadPublicId: "thr_1",
-        answerText: "Visible answer",
-        questionText: "Visible question",
-      }),
-      expect.objectContaining({
-        publicId: "hidden_question",
-        questionText: null,
-      }),
-      expect.objectContaining({
-        publicId: "deleted_question",
-        questionText: null,
-      }),
-      expect.objectContaining({
-        publicId: "draft_question",
-        questionText: null,
-      }),
-    ]));
+    expect(answers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          publicId: "visible",
+          threadPublicId: "thr_1",
+          answerText: "Visible answer",
+          questionText: "Visible question",
+        }),
+        expect.objectContaining({
+          publicId: "hidden_question",
+          questionText: null,
+        }),
+        expect.objectContaining({
+          publicId: "deleted_question",
+          questionText: null,
+        }),
+        expect.objectContaining({
+          publicId: "draft_question",
+          questionText: null,
+        }),
+      ]),
+    );
     expect(serializedAnswers).not.toContain("Secret question");
     expect(serializedAnswers).not.toContain("Deleted question");
     expect(serializedAnswers).not.toContain("Draft question");
@@ -735,6 +738,25 @@ describe("createPublicPublishedAnswers", () => {
     expect(serializedAnswers).not.toContain("Thread hidden answer");
   });
 
+  it("reveals a hidden question only to the profile owner", () => {
+    const hiddenAnswer = createPublicAnswerRow({
+      displayQuestionText: null,
+      originalQuestionText: "Question visible only to its owner",
+      questionTextMode: "hidden",
+    });
+    const publicAnswers = createPublicPublishedAnswers([hiddenAnswer]);
+    const ownerAnswers = createPublicPublishedAnswers([hiddenAnswer], {
+      session: completedSession,
+    });
+
+    expect(publicAnswers[0]?.questionText).toBeNull();
+    expect(JSON.stringify(publicAnswers)).not.toContain(
+      "Question visible only to its owner",
+    );
+    expect(ownerAnswers[0]?.questionText).toBe(
+      "Question visible only to its owner",
+    );
+  });
 });
 
 describe("createPublicPublishedAnswerPage", () => {
@@ -863,6 +885,7 @@ function createPublicAnswerRow(
     questionDeletedAt: null,
     questionTextMode: "original",
     displayQuestionText: "What should I read next?",
+    originalQuestionText: "What should I read next?",
     identityMode: "guest_anonymous",
     askerDisplayName: null,
     askerUsername: null,
@@ -940,7 +963,9 @@ function createAnswerStore({
 
   const store: AnswerStore = {
     findQuestionForAnswer(publicId) {
-      return Promise.resolve(question.publicId === publicId ? question : undefined);
+      return Promise.resolve(
+        question.publicId === publicId ? question : undefined,
+      );
     },
     findDraftItemByQuestionId(questionId) {
       const item = findQuestionItem(items, questionId);
@@ -1204,12 +1229,14 @@ function findQuestionItem(items: TestThreadItem[], questionId: string) {
 }
 
 function getNextItemPosition(items: TestThreadItem[], threadId: string) {
-  return Math.max(
-    -1,
-    ...items
-      .filter((item) => item.threadId === threadId)
-      .map((item) => item.position),
-  ) + 1;
+  return (
+    Math.max(
+      -1,
+      ...items
+        .filter((item) => item.threadId === threadId)
+        .map((item) => item.position),
+    ) + 1
+  );
 }
 
 function countVisiblePublishedItems(

@@ -1377,6 +1377,7 @@ export interface PublicPublishedAnswerRow {
   questionDeletedAt: Date | null;
   questionTextMode: PublicAnswerQuestionTextMode;
   displayQuestionText: string | null;
+  originalQuestionText: string;
   identityMode: AnswerQuestionIdentity;
   askerDisplayName: string | null;
   askerUsername: string | null;
@@ -1433,6 +1434,7 @@ export async function findPublishedAnswerPageForProfile({
     questionDeletedAt: questions.deletedAt,
     questionTextMode: threadItems.questionTextMode,
     displayQuestionText: threadItems.displayQuestionText,
+    originalQuestionText: questions.originalText,
     identityMode: questions.identityMode,
     askerDisplayName: askerProfiles.displayName,
     askerUsername: askerProfiles.username,
@@ -1560,7 +1562,7 @@ function toPublicPublishedAnswer(
   row: PublicPublishedAnswerRow,
   session: CurrentSessionSummary,
 ): PublicPublishedAnswer {
-  const questionText = getPublicQuestionText(row);
+  const questionText = getProfileQuestionText(row, session);
 
   return {
     publicId: row.publicId,
@@ -1570,7 +1572,7 @@ function toPublicPublishedAnswer(
     pinPosition: row.pinPosition,
     questionTextMode: row.questionTextMode,
     questionText,
-    direction: getQuestionDirection(row.displayQuestionText ?? ""),
+    direction: getQuestionDirection(questionText ?? ""),
     like: getLikeControlState({
       count: row.ownerShowLikeCounts ? row.likeCount : undefined,
       isLiked: row.viewerLiked,
@@ -1665,16 +1667,33 @@ function comparePinPositions(left: number | null, right: number | null) {
   return 0;
 }
 
-function getPublicQuestionText(row: PublicPublishedAnswerRow) {
-  if (
-    row.questionTextMode === "hidden" ||
-    row.questionDeletedAt !== null ||
-    row.questionStatus !== "answered"
-  ) {
+function getProfileQuestionText(
+  row: PublicPublishedAnswerRow,
+  session: CurrentSessionSummary,
+) {
+  if (row.questionDeletedAt !== null || row.questionStatus !== "answered") {
     return null;
   }
 
+  if (row.questionTextMode === "hidden") {
+    return isProfileOwnerSession(row, session)
+      ? row.originalQuestionText
+      : null;
+  }
+
   return row.displayQuestionText;
+}
+
+function isProfileOwnerSession(
+  row: Pick<PublicPublishedAnswerRow, "ownerProfileId" | "ownerUserId">,
+  session: CurrentSessionSummary,
+) {
+  return (
+    session.status === "authenticated" &&
+    session.profileStatus === "complete" &&
+    session.profile.id === row.ownerProfileId &&
+    session.user.id === row.ownerUserId
+  );
 }
 
 function getViewerProfileId(session: CurrentSessionSummary) {
