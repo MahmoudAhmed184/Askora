@@ -96,19 +96,22 @@ describe("parseServerEnv", () => {
     }
   });
 
-  it("requires question-generation encryption configuration in production", () => {
-    expect(() =>
-      parseServerEnv({
-        NODE_ENV: "production",
-        DATABASE_URL: "postgres://user:password@example.com:5432/app",
-        BETTER_AUTH_SECRET: "x".repeat(32),
-        GOOGLE_CLIENT_ID: "client",
-        GOOGLE_CLIENT_SECRET: "secret",
-        RESEND_API_KEY: "resend",
-        AUTH_EMAIL_FROM: "Askora <auth@example.com>",
-        CRON_SECRET: "x".repeat(32),
-      }),
-    ).toThrow(/QUESTION_GENERATION_ENCRYPTION_KEYS/);
+  it("keeps production available when question-generation encryption is unconfigured", () => {
+    const environment = parseServerEnv({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://user:password@example.com:5432/app",
+      BETTER_AUTH_SECRET: "x".repeat(32),
+      GOOGLE_CLIENT_ID: "client",
+      GOOGLE_CLIENT_SECRET: "secret",
+      RESEND_API_KEY: "resend",
+      AUTH_EMAIL_FROM: "Askora <auth@example.com>",
+      CRON_SECRET: "x".repeat(32),
+    });
+
+    expect(environment.QUESTION_GENERATION_ENCRYPTION_KEYS).toBeUndefined();
+    expect(
+      environment.QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION,
+    ).toBeUndefined();
   });
 
   it("skips production-only requirements on Vercel preview", () => {
