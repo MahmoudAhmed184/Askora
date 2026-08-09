@@ -149,6 +149,11 @@ function PublicAnswerArticle({
           className="flex shrink-0 items-center gap-1"
           data-slot="answer-header-actions"
         >
+          {answer.questionTextMode === "edited" ? (
+            <EditedQuestionBadge
+              variant={controls.canManage ? "icon" : "badge"}
+            />
+          ) : null}
           {hasOwnerHiddenQuestion ? (
             <HiddenQuestionVisibilityButton
               isRevealed={isHiddenQuestionRevealed}
@@ -178,12 +183,7 @@ function PublicAnswerArticle({
               text={answer.questionText}
               textClassName="font-serif text-xl font-bold italic leading-8 text-foreground"
             />
-          ) : answer.questionTextMode === "edited" ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <EditedQuestionBadge />
-            </div>
-          ) : undefined}
-          {answer.questionTextMode === "hidden" ? null : (
+          ) : (
             <p
               className="whitespace-pre-wrap break-words font-serif text-xl font-bold italic leading-8 text-foreground"
               dir={answer.direction}

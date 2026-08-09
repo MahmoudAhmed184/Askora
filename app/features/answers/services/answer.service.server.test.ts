@@ -595,6 +595,25 @@ describe("answer workflows", () => {
       questionTextMode: "hidden",
     });
   });
+
+  it("normalizes unchanged edited wording back to original", async () => {
+    const answers = createAnswerStore();
+
+    await submitAnswer({
+      formData: createAnswerFormData({
+        intent: "publish",
+        answerText: "An answer without a question edit",
+        questionTextMode: "edited",
+        editedQuestionText: "What should I read next?",
+      }),
+      store: answers.store,
+    });
+
+    expect(answers.item).toMatchObject({
+      displayQuestionText: "What should I read next?",
+      questionTextMode: "original",
+    });
+  });
 });
 
 describe("loadDraftAnswers", () => {

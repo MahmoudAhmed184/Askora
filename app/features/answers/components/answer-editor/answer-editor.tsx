@@ -192,7 +192,6 @@ export const AnswerEditor = forwardRef<AnswerEditorHandle, AnswerEditorProps>(
       });
       setValues((current) => ({
         ...current,
-        questionTextMode: "edited",
         editedQuestionText:
           current.editedQuestionText.length === 0
             ? editor.question.text
@@ -250,6 +249,10 @@ export const AnswerEditor = forwardRef<AnswerEditorHandle, AnswerEditorProps>(
                   setValues((current) => ({
                     ...current,
                     editedQuestionText,
+                    questionTextMode:
+                      editedQuestionText === editor.question.text
+                        ? "original"
+                        : "edited",
                   }));
                 }}
                 question={editor.question}

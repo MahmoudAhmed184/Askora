@@ -436,9 +436,10 @@ Publishing:
 - The original question text appears publicly by default.
 - The owner can edit the question inline from the question card or hide it before publishing.
 - If the question text is edited, the UI should not imply the modified text is the asker's exact untouched wording.
-- Public surfaces must show a visible "Edited question" badge beside the question text whenever `questionTextMode` is `edited`. This applies to profile answer cards, feed items, and thread entries.
+- Public surfaces must show a visible "Edited question" indicator whenever `questionTextMode` is `edited`. Profile answer cards place the full badge in the top-right action area for guests and an icon-only indicator immediately before the answer actions menu for the profile owner. Feed items and thread entries keep the full badge beside the question text.
 - The badge discloses modified question wording only. It says nothing about edits to the answer.
 - Edited wording is entered through the question card's edit action rather than offered as a public-wording menu option. The inline editor provides Cancel and preserves its draft value when the owner switches modes within the same editor session.
+- Edited mode applies only when the public wording differs from the original question. Unchanged wording is persisted as original even if an older client submits it as edited.
 - Editing question text should keep an internal copy of the original.
 - Hidden question text remains stored internally while the related thread/item exists for context, reports, and audit. It is never serialized to public or non-owner viewers.
 - Public and non-owner hidden-question treatments use a generic blurred placeholder with a "Hidden question" badge in the card's top-right action area. The authenticated profile owner instead receives the original text blurred by default, with an icon-only local Show/Hide control placed before the answer actions menu; it does not change public visibility.

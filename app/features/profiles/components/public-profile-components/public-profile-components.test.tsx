@@ -479,6 +479,41 @@ describe("public profile components", () => {
     expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
   });
 
+  it("places the edited-question label in the guest card header", () => {
+    const { container } = renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer({ questionTextMode: "edited" })]}
+        profile={answerListProfile}
+      />,
+    );
+    const editedIndicator = screen.getByText("Edited question");
+
+    expect(
+      container.querySelector("[data-slot='answer-header-actions']"),
+    ).toContainElement(editedIndicator);
+  });
+
+  it("places the edited-question label before the owner actions menu", () => {
+    const { container } = renderWithRouter(
+      <PublicAnswerList
+        answers={[createPublishedAnswer({ questionTextMode: "edited" })]}
+        controls={{ canManage: true, disabled: false }}
+        profile={answerListProfile}
+      />,
+    );
+    const editedIndicator = screen.getByLabelText("Edited question");
+    const actionButton = screen.getByRole("button", {
+      name: "Answer actions",
+    });
+    const headerActions = container.querySelector(
+      "[data-slot='answer-header-actions']",
+    );
+
+    expect(headerActions?.children.item(0)).toBe(editedIndicator);
+    expect(headerActions?.children.item(1)).toContainElement(actionButton);
+    expect(editedIndicator).toHaveTextContent("");
+  });
+
   it("renders edited wording independently", () => {
     const { container } = renderWithRouter(
       <PublicAnswerList

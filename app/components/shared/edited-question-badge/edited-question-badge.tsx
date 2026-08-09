@@ -1,14 +1,33 @@
 import { PencilLine } from "lucide-react";
 
-export function EditedQuestionBadge() {
+import { cn } from "~/lib/utils";
+
+interface EditedQuestionBadgeProps {
+  variant?: "badge" | "icon";
+}
+
+export function EditedQuestionBadge({
+  variant = "badge",
+}: EditedQuestionBadgeProps) {
+  const isIconOnly = variant === "icon";
+
   return (
     <span
-      className="inline-flex w-fit shrink-0 items-center gap-1 self-start rounded-full border bg-secondary px-2.5 py-1 font-mono text-[0.68rem] font-semibold text-muted-foreground"
+      aria-label={isIconOnly ? "Edited question" : undefined}
+      className={cn(
+        "inline-flex shrink-0 items-center text-muted-foreground",
+        isIconOnly
+          ? "size-10 justify-center"
+          : "w-fit gap-1 rounded-full border bg-secondary px-2.5 py-1 font-mono text-[0.68rem] font-semibold",
+      )}
       data-slot="edited-question-badge"
       title="The profile owner edited the wording of this question."
     >
-      <PencilLine aria-hidden="true" className="size-3" />
-      Edited question
+      <PencilLine
+        aria-hidden="true"
+        className={isIconOnly ? "size-4" : "size-3"}
+      />
+      {isIconOnly ? null : "Edited question"}
     </span>
   );
 }

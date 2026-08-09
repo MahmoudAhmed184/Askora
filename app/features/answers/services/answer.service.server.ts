@@ -388,9 +388,13 @@ export async function handleAnswerSubmission({
     return deniedResult(values, question.reason);
   }
 
-  const mutationParams = {
+  const submission = normalizeQuestionWording({
     question: question.question,
     submission: parsed.value,
+  });
+  const mutationParams = {
+    question: question.question,
+    submission,
     now,
     actorUserId: session.user.id,
     createDatabaseId: createId,
@@ -814,10 +818,12 @@ async function upsertThreadItem({
   const publishedAt = published
     ? (currentItem?.publishedAt ?? params.now)
     : currentItem?.publishedAt;
-  const displayQuestionText = getDisplayQuestionText({
-    question: params.question,
-    submission: params.submission,
-  });
+  const { displayQuestionText, questionTextMode } = getPersistedQuestionWording(
+    {
+      question: params.question,
+      submission: params.submission,
+    },
+  );
 
   if (currentItem === undefined) {
     const item = {
@@ -834,7 +840,7 @@ async function upsertThreadItem({
       questionId: params.question.id,
       answerText: params.submission.answerText,
       displayQuestionText,
-      questionTextMode: params.submission.questionTextMode,
+      questionTextMode,
       status,
       position: await getNewThreadItemPosition({
         params,
@@ -858,7 +864,7 @@ async function upsertThreadItem({
     .set({
       answerText: params.submission.answerText,
       displayQuestionText,
-      questionTextMode: params.submission.questionTextMode,
+      questionTextMode,
       status,
       publishedAt: publishedAt ?? null,
       updatedAt: params.now,
@@ -1191,22 +1197,55 @@ function getAnswerFieldErrors(error: ZodError): AnswerFieldErrors {
   return fieldErrors;
 }
 
-function getDisplayQuestionText({
+function getPersistedQuestionWording({
   question,
   submission,
 }: {
   question: AnswerWorkflowQuestion;
   submission: AnswerSubmission;
-}) {
+}): {
+  displayQuestionText: string | null;
+  questionTextMode: QuestionTextMode;
+} {
   if (submission.questionTextMode === "hidden") {
-    return null;
+    return {
+      displayQuestionText: null,
+      questionTextMode: "hidden",
+    };
   }
 
   if (submission.questionTextMode === "edited") {
-    return submission.editedQuestionText ?? "";
+    return {
+      displayQuestionText: submission.editedQuestionText ?? "",
+      questionTextMode: "edited",
+    };
   }
 
-  return question.originalText;
+  return {
+    displayQuestionText: question.originalText,
+    questionTextMode: "original",
+  };
+}
+
+function normalizeQuestionWording({
+  question,
+  submission,
+}: {
+  question: AnswerWorkflowQuestion;
+  submission: AnswerSubmission;
+}): AnswerSubmission {
+  if (
+    submission.questionTextMode !== "edited" ||
+    submission.editedQuestionText !== question.originalText
+  ) {
+    return submission;
+  }
+
+  return {
+    ...submission,
+    questionTextMode: "original",
+    editedQuestionText: undefined,
+  };
 }
 
 function deniedResult(

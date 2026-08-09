@@ -124,9 +124,46 @@ describe("AnswerEditor", () => {
     ).toHaveValue("What should I read next?");
     expect(
       screen.getByRole("button", {
-        name: "Public question wording: Custom wording",
+        name: "Public question wording: Original",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("publishes original wording when inline editing makes no question change", async () => {
+    const submissions: FormData[] = [];
+    const action = vi.fn<ActionFunction>(async ({ request }) => {
+      const formData = await request.formData();
+      submissions.push(formData);
+
+      return formData.get("intent") === "publish"
+        ? {
+            answer: {
+              status: "published" as const,
+              questionPublicId: "qst_1",
+              threadPublicId: "thr_1",
+              redirectTo: "/person#published-answers",
+            },
+          }
+        : createDraftSavedActionData();
+    });
+    renderAnswerEditor({}, { action });
+
+    openQuestionEditor();
+    fireEvent.change(screen.getByRole("textbox", { name: "Answer" }), {
+      target: { value: "An answer without a question edit" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Publish answer" }));
+
+    await waitFor(() => {
+      expect(
+        submissions.some((formData) => formData.get("intent") === "publish"),
+      ).toBe(true);
+    });
+    const publishSubmission = submissions.find(
+      (formData) => formData.get("intent") === "publish",
+    );
+
+    expect(publishSubmission?.get("questionTextMode")).toBe("original");
   });
 
   it("cancels inline editing and restores the previous wording state", () => {
