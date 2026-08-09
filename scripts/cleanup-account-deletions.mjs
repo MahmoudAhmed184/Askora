@@ -262,19 +262,6 @@ async function executeCleanupStatements({ client, email, now, profileId, userId 
       values: [userId],
     },
     {
-      sql: `
-        /* cleanup: delete_generated_questions */
-        delete from questions
-        where source = 'ai_generated'
-          and generation_batch_id in (
-            select id
-            from question_generation_batches
-            where owner_user_id = $1
-          )
-      `,
-      values: [userId],
-    },
-    {
       sql: "/* cleanup: delete_question_generation_batches */ delete from question_generation_batches where owner_user_id = $1",
       values: [userId],
     },
@@ -350,7 +337,10 @@ async function executeCleanupStatements({ client, email, now, profileId, userId 
           end,
           ip_hash = null,
           user_agent_hash = null,
-          safety_fingerprint_hash = '[redacted]',
+          safety_fingerprint_hash = case
+            when safety_metadata_retain_until is null then null
+            else '[redacted]'
+          end,
           original_text = $3,
           anonymized_at = coalesce(anonymized_at, $4),
           updated_at = $4

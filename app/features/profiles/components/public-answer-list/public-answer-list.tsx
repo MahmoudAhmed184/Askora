@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router";
 
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
-import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
 import {
   ProfileIdentityLink,
@@ -144,21 +143,12 @@ function PublicAnswerArticle({
       {answer.questionTextMode === "hidden" || answer.questionText === null ? (
         <div className="flex flex-col items-start gap-2 border-b border-dashed pb-5">
           <HiddenQuestionPlaceholder />
-          {answer.ownerProvenance === "generated" ? (
-            <GeneratedQuestionBadge />
-          ) : undefined}
         </div>
       ) : (
         <div className="flex flex-col gap-2 border-b border-dashed pb-5">
-          {answer.questionTextMode === "edited" ||
-          answer.ownerProvenance === "generated" ? (
+          {answer.questionTextMode === "edited" ? (
             <div className="flex flex-wrap items-center gap-2">
-              {answer.questionTextMode === "edited" ? (
-                <EditedQuestionBadge />
-              ) : undefined}
-              {answer.ownerProvenance === "generated" ? (
-                <GeneratedQuestionBadge />
-              ) : undefined}
+              <EditedQuestionBadge />
             </div>
           ) : undefined}
           <div>

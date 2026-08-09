@@ -19,7 +19,6 @@ describe("DraftsList", () => {
                   answerPreview: "A private draft",
                   updatedAt: "2026-05-31T12:00:00.000Z",
                   questionCreatedAt: "2026-05-30T12:00:00.000Z",
-                  ownerProvenance: null,
                   direction: "ltr",
                   sender: {
                     username: "asker",
@@ -52,7 +51,7 @@ describe("DraftsList", () => {
     );
   });
 
-  it("shows generated provenance separately on generated drafts", () => {
+  it("renders anonymous right-to-left drafts normally", () => {
     const router = createMemoryRouter(
       [
         {
@@ -66,7 +65,6 @@ describe("DraftsList", () => {
                   answerPreview: "A private draft",
                   updatedAt: "2026-05-31T12:00:00.000Z",
                   questionCreatedAt: "2026-05-30T12:00:00.000Z",
-                  ownerProvenance: "generated",
                   direction: "rtl",
                   sender: undefined,
                 },
@@ -80,8 +78,7 @@ describe("DraftsList", () => {
 
     const { container } = render(<RouterProvider router={router} />);
 
-    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
-    expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
+    expect(screen.getByText("Anonymous")).toBeInTheDocument();
     expect(container.querySelector("[dir='rtl']")).toHaveTextContent(
       "ما الذي أتعلمه بعد ذلك؟",
     );

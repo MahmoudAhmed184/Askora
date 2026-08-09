@@ -2,7 +2,6 @@ import { FileText, PencilLine, Trash2 } from "lucide-react";
 import { Form, Link, useLocation } from "react-router";
 
 import { EmptyState } from "~/components/shared/empty-state/empty-state";
-import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import {
   AnonymousAvatar,
   ProfileIdentityLink,
@@ -78,9 +77,6 @@ function DraftCard({
           >
             {draft.questionText}
           </p>
-          {draft.ownerProvenance === "generated" ? (
-            <GeneratedQuestionBadge />
-          ) : undefined}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button asChild size="sm" variant="outline">

@@ -342,7 +342,6 @@ describe("public profile components", () => {
               disabled: false,
             },
             pinPosition: 1,
-            ownerProvenance: "generated",
             questionText: "What changed your mind recently?",
           }),
         ]}
@@ -352,13 +351,12 @@ describe("public profile components", () => {
 
     expect(screen.queryByText("Ask State")).not.toBeInTheDocument();
     expect(screen.getByText("Pinned Threads")).toBeInTheDocument();
-    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /what changed your mind recently/i }),
     ).toHaveAttribute("href", "/person/a/thr_1");
   });
 
-  it("renders no provenance marker or inference attributes for public answers", () => {
+  it("renders no provenance or inference attributes for public answers", () => {
     const { container } = renderWithRouter(
       <PublicAnswerList
         answers={[createPublishedAnswer()]}
@@ -367,10 +365,7 @@ describe("public profile components", () => {
     );
     const html = container.innerHTML;
 
-    expect(screen.queryByLabelText("AI-generated question")).not.toBeInTheDocument();
-    expect(html).not.toMatch(
-      /ai_generated|ownerProvenance|source=|generationBatch|gemini|modelId|tokenCount/i,
-    );
+    expect(html).not.toMatch(/generationBatch|gemini|modelId|tokenCount/i);
   });
 
   it("serializes the anonymity switch and falls back to a hidden input when only one identity is allowed", () => {
@@ -433,12 +428,11 @@ describe("public profile components", () => {
     expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
   });
 
-  it("renders the owner-only generated badge independently from edited wording", () => {
+  it("renders edited wording independently", () => {
     const { container } = renderWithRouter(
       <PublicAnswerList
         answers={[
           createPublishedAnswer({
-            ownerProvenance: "generated",
             questionTextMode: "edited",
           }),
         ]}
@@ -446,7 +440,6 @@ describe("public profile components", () => {
       />,
     );
 
-    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
     expect(screen.getByText("Edited question")).toBeInTheDocument();
     expect(container.querySelector("[dir='ltr']")).toHaveTextContent(
       "What should I read next?",

@@ -63,8 +63,6 @@ export interface StoredQuestionAdminTarget {
   status: "inbox" | "filtered" | "draft" | "answered";
   originalText: string;
   identityMode: "guest_anonymous" | "account_anonymous" | "account_attributed";
-  /** Server-only provenance used to normalize moderation metadata. */
-  source?: "public_profile" | "ai_generated";
   askerUserId: string | null;
   askerProfileId: string | null;
   askerProfile: StoredPublicProfileSummary | null;
@@ -738,7 +736,6 @@ async function findQuestionTarget(
       status: questions.status,
       originalText: questions.originalText,
       identityMode: questions.identityMode,
-      source: questions.source,
       askerUserId: questions.askerUserId,
       askerProfileId: questions.askerProfileId,
       askerProfileUserId: askerProfiles.userId,
@@ -773,7 +770,6 @@ async function findQuestionTarget(
     status: question.status,
     originalText: question.originalText,
     identityMode: question.identityMode,
-    source: question.source,
     askerUserId: question.askerUserId,
     askerProfileId: question.askerProfileId,
     askerProfile:

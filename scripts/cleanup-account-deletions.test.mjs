@@ -48,9 +48,8 @@ describe("cleanupExpiredAccountDeletions", () => {
     expect(state.answer_like_notifications).toEqual([]);
     expect(state.question_generation_settings).toEqual([]);
     expect(state.question_generation_batches).toEqual([]);
-    expect(
-      state.questions.some((question) => question.source === "ai_generated"),
-    ).toBe(false);
+    expect(state.questions.find((question) => question.id === "owner_answered"))
+      .toMatchObject({ deleted_at: null });
     expect(state.questions.find((question) => question.id === "recipient_unanswered"))
       .toMatchObject({
         deleted_at: now,
@@ -216,17 +215,15 @@ function createState(overrides = {}) {
     ],
     questions: [
       {
-        id: "generated_answered",
+        id: "owner_answered",
         recipient_user_id: "user_1",
         recipient_profile_id: "profile_1",
         asker_user_id: "user_1",
         asker_profile_id: "profile_1",
-        source: "ai_generated",
-        generation_batch_id: "batch_1",
         status: "answered",
         deleted_at: null,
         deleted_by: null,
-        original_text: "Generated question",
+        original_text: "Owner question",
         safety_fingerprint_hash: null,
         ip_hash: null,
         user_agent_hash: null,
@@ -409,7 +406,10 @@ function handleQuery(state, sql, values) {
       if (question.safety_metadata_retain_until <= values[0] && !hasRecentReport) {
         question.ip_hash = null;
         question.user_agent_hash = null;
-        question.safety_fingerprint_hash = "[redacted]";
+        question.safety_fingerprint_hash =
+          question.safety_metadata_retain_until === null
+            ? null
+            : "[redacted]";
         question.original_text = values[1];
         question.updated_at = values[0];
         count += 1;
@@ -486,18 +486,6 @@ function applyCleanupMutation(state, text, values) {
     (row) => row.owner_user_id === values[0],
     text,
   );
-
-  if (text.includes("cleanup: delete_generated_questions")) {
-    const ownedBatchIds = new Set(
-      state.question_generation_batches
-        .filter((batch) => batch.owner_user_id === values[0])
-        .map((batch) => batch.id),
-    );
-
-    state.questions = state.questions.filter(
-      (question) => !ownedBatchIds.has(question.generation_batch_id),
-    );
-  }
 
   deleteMatching(
     state,

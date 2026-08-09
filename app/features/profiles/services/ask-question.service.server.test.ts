@@ -294,7 +294,6 @@ describe("submitPublicQuestion", () => {
       publicId: "question_public_1",
       recipientProfileId: "profile_1",
       recipientUserId: "user_1",
-      source: "public_profile",
       status: "inbox",
       originalText: "What should I read next?",
       ...caseData.expected,

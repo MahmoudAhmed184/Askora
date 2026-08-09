@@ -357,7 +357,6 @@ async function insertQuestions({ client, now, secret }) {
     now,
     question: betaFixture.questions.inbox,
     secret,
-    source: "public_profile",
     status: "inbox",
     threadId: null,
   });
@@ -369,7 +368,6 @@ async function insertQuestions({ client, now, secret }) {
     now,
     question: betaFixture.questions.filtered,
     secret,
-    source: "public_profile",
     status: "filtered",
     threadId: null,
   });
@@ -381,7 +379,6 @@ async function insertQuestions({ client, now, secret }) {
     now,
     question: betaFixture.questions.answered,
     secret,
-    source: "public_profile",
     status: "answered",
     threadId: betaFixture.threads.published.id,
   });
@@ -395,7 +392,6 @@ async function insertQuestion({
   now,
   question,
   secret,
-  source,
   status,
   threadId,
 }) {
@@ -409,7 +405,6 @@ async function insertQuestion({
         asker_user_id,
         asker_profile_id,
         identity_mode,
-        source,
         status,
         thread_id,
         original_text,
@@ -422,8 +417,8 @@ async function insertQuestion({
         updated_at
       )
       values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        $11, $12, $13, $14, $15, $16, $17, $17
+        $1, $2, $3, $4, $5, $6, $7, $8, $9,
+        $10, $11, $12, $13, $14, $15, $16, $16
       )
     `,
     [
@@ -434,7 +429,6 @@ async function insertQuestion({
       askerUserId,
       askerProfileId,
       identityMode,
-      source,
       status,
       threadId,
       question.text,

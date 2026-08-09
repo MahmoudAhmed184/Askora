@@ -379,8 +379,8 @@ Owner question generation:
 - Before first use, the owner must acknowledge the data disclosure. The provider context is limited to public profile fields, private interests, the current generation controls, and a bounded set of the owner's published question/answer pairs. Inbox, draft, deleted, reported, blocked, safety, and moderation data are excluded.
 - One validated provider response is accepted or rejected as a complete batch. Strict schema, length, language, safety, muted-phrase, exact-normalized-duplicate, and existing-question checks run before one atomic database transaction inserts the batch and all questions.
 - Successful items enter the normal inbox immediately as self-questions. They follow the same draft, publish, edit, hide, unpublish, and delete lifecycle as other questions.
-- AI provenance is permanent but owner-private. The owner sees a `Generated` badge in private workflow surfaces and on their own published views. Guest, non-owner, crawler, public loader, metadata, and analytics payloads omit provenance, batch IDs, model IDs, and token counts.
-- The stored API key is encrypted per owner with versioned AES-256-GCM key material. Disconnect immediately clears encrypted credential fields; account deletion removes generation settings, generated questions, and batch records through the account cleanup workflow.
+- Generated items are ordinary anonymous questions once created. Question records, workflow views, public payloads, metadata, and analytics do not retain or expose generation provenance or batch links.
+- The stored API key is encrypted per owner with versioned AES-256-GCM key material. Disconnect immediately clears encrypted credential fields; account deletion removes generation settings and batch records through the account cleanup workflow. Generated items follow the same account-deletion rules as other anonymous questions.
 - Askora stores validated final questions and minimal batch metadata. It does not store raw Gemini output, prompts, serialized personalization context, or raw provider errors.
 
 Followers-only behavior:

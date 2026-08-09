@@ -42,42 +42,32 @@ try {
   await seedPrePr2Question(client);
   await applyMigrationsInOneTransaction(client, migrationFiles.slice(18));
 
-  const preserved = await client.query(
+  const latest = await client.query(
     `
-      select source::text as source,
-             pg_get_expr(defaults.adbin, defaults.adrelid) as source_default
+      select original_text
       from questions
-      cross join lateral (
-        select pg_attrdef.adbin, pg_attrdef.adrelid
-        from pg_attrdef
-        where pg_attrdef.adrelid = 'public.questions'::regclass
-          and pg_attrdef.adnum = (
-            select attnum from pg_attribute
-            where attrelid = 'public.questions'::regclass
-              and attname = 'source'
-          )
-      ) defaults
       where id = 'migration_rehearsal_question'
     `,
   );
-  const preservedRow = preserved.rows[0];
-
-  if (
-    preservedRow?.source !== "public_profile" ||
-    !String(preservedRow.source_default).includes("public_profile")
-  ) {
-    throw new Error("0017 public_profile data/default was not preserved by 0018.");
-  }
-
-  const latest = await client.query(
-    `select source::text as source from questions where id = 'migration_rehearsal_question'`,
+  const removedColumns = await client.query(
+    `
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'questions'
+        and column_name in ('source', 'generation_batch_id')
+    `,
   );
 
-  if (latest.rows[0]?.source !== "public_profile") {
-    throw new Error("The preserved public_profile row changed after latest migration.");
+  if (latest.rows[0]?.original_text !== "A preserved question?") {
+    throw new Error("The existing question changed after the latest migration.");
   }
 
-  console.log("0017 -> latest migration rehearsal passed in one pending Drizzle migration transaction.");
+  if (removedColumns.rowCount !== 0) {
+    throw new Error("Question provenance columns still exist after the latest migration.");
+  }
+
+  console.log("0017 -> latest migration rehearsal preserved questions and removed provenance.");
 } finally {
   // Leave the disposable database ready for the normal Drizzle migration and
   // subsequent integration/E2E jobs.

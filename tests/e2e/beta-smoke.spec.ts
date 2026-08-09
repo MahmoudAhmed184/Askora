@@ -149,7 +149,7 @@ test.describe("beta seeded smoke", () => {
     ).toBeVisible();
   });
 
-  test("owner can configure, generate, draft, publish, and privately disclose provenance", async ({
+  test("owner can configure, generate, draft, and publish anonymous questions", async ({
     context,
     page,
   }, testInfo) => {
@@ -224,9 +224,7 @@ test.describe("beta seeded smoke", () => {
         .getByRole("article")
         .filter({ hasText: questionText });
 
-      await expect(
-        question.getByLabel("AI-generated question"),
-      ).toBeVisible();
+      await expect(question.getByText("Anonymous", { exact: true })).toBeVisible();
     }
 
     const draftQuestion = page
@@ -235,9 +233,7 @@ test.describe("beta seeded smoke", () => {
     await draftQuestion.getByRole("link", { name: "Answer question" }).click();
     const draftEditor = page.getByRole("form", { name: "Answer editor" });
 
-    await expect(
-      draftEditor.getByLabel("AI-generated question"),
-    ).toBeVisible();
+    await expect(draftEditor.getByText("Sender hidden", { exact: true })).toBeVisible();
     await draftEditor.getByLabel("Answer", { exact: true }).fill("A private draft answer.");
     await page.getByRole("button", { name: "Save draft" }).click();
     await expectToast(page, "Draft saved.");
@@ -246,7 +242,7 @@ test.describe("beta seeded smoke", () => {
       page
         .getByRole("article")
         .filter({ hasText: generatedQuestionTexts[0] })
-        .getByLabel("AI-generated question"),
+        .getByText("Anonymous", { exact: true }),
     ).toBeVisible();
 
     await page.goto("/inbox");
@@ -266,17 +262,15 @@ test.describe("beta seeded smoke", () => {
     await expect(
       page
         .getByRole("article")
-        .filter({ hasText: generatedQuestionTexts[1] })
-        .getByLabel("AI-generated question"),
+        .filter({ hasText: generatedQuestionTexts[1] }),
     ).toBeVisible();
 
     await context.clearCookies();
     await page.goto(`/${betaFixture.profiles.owner.username}`);
     const publicHtml = await page.content();
 
-    await expect(page.getByLabel("AI-generated question")).toHaveCount(0);
     expect(publicHtml).not.toMatch(
-      /ai_generated|ownerProvenance|generationBatchId|gemini-3|tokenCount/i,
+      /generationBatchId|gemini-3|tokenCount/i,
     );
 
     await signInAs(context, betaFixture.users.owner);

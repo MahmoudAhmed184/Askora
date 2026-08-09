@@ -12,7 +12,6 @@ describe("AnswerEditor", () => {
         publicId: "qst_1",
         text: "What should I read next?",
         createdAt: "2026-05-31T12:00:00.000Z",
-        ownerProvenance: null,
         direction: "ltr",
         sender: {
           username: "asker",
@@ -78,22 +77,6 @@ describe("AnswerEditor", () => {
     ).toHaveValue("Cleaned up wording");
   });
 
-  it("shows generated provenance only for generated owner questions", () => {
-    const generated = renderAnswerEditor({
-      question: {
-        ...createEditor().question,
-        ownerProvenance: "generated",
-      },
-    });
-
-    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
-    expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
-
-    generated.unmount();
-    renderAnswerEditor();
-
-    expect(screen.queryByLabelText("AI-generated question")).not.toBeInTheDocument();
-  });
 });
 
 function renderAnswerEditor(overrides: Partial<AnswerEditorViewData> = {}) {
@@ -126,7 +109,6 @@ function createEditor(): AnswerEditorViewData {
       publicId: "qst_1",
       text: "What should I read next?",
       createdAt: "2026-05-31T12:00:00.000Z",
-      ownerProvenance: null,
       direction: "ltr",
       sender: undefined,
     },

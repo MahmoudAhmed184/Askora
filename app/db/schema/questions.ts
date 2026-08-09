@@ -11,7 +11,6 @@ import {
 
 import { authUsers } from "~/db/schema/auth";
 import { profiles } from "~/db/schema/profiles";
-import { questionGenerationBatches } from "~/db/schema/question-generation";
 
 export const questionStatusEnum = pgEnum("question_status", [
   "inbox",
@@ -24,11 +23,6 @@ export const questionIdentityModeEnum = pgEnum("question_identity_mode", [
   "guest_anonymous",
   "account_anonymous",
   "account_attributed",
-]);
-
-export const questionSourceEnum = pgEnum("question_source", [
-  "public_profile",
-  "ai_generated",
 ]);
 
 export const questionDeletedByEnum = pgEnum("question_deleted_by", [
@@ -55,11 +49,6 @@ export const questions = pgTable(
       onDelete: "set null",
     }),
     identityMode: questionIdentityModeEnum("identity_mode").notNull(),
-    source: questionSourceEnum("source").notNull().default("public_profile"),
-    generationBatchId: text("generation_batch_id").references(
-      () => questionGenerationBatches.id,
-      { onDelete: "restrict" },
-    ),
     status: questionStatusEnum("status").notNull().default("inbox"),
     threadId: text("thread_id"),
     originalText: text("original_text").notNull(),
@@ -107,21 +96,13 @@ export const questions = pgTable(
       table.normalizedTextHash,
     ),
     check(
-      "questions_source_generation_batch_check",
-      sql`
-        (${table.source} = 'ai_generated' and ${table.generationBatchId} is not null)
-        or (${table.source} = 'public_profile' and ${table.generationBatchId} is null)`,
-    ),
-    check(
-      "questions_source_safety_metadata_check",
+      "questions_safety_metadata_pair_check",
       sql`
         (
-          ${table.source} = 'public_profile'
-          and ${table.safetyFingerprintHash} is not null
+          ${table.safetyFingerprintHash} is not null
           and ${table.safetyMetadataRetainUntil} is not null
         ) or (
-          ${table.source} = 'ai_generated'
-          and ${table.safetyFingerprintHash} is null
+          ${table.safetyFingerprintHash} is null
           and ${table.safetyMetadataRetainUntil} is null
         )`,
     ),
@@ -144,9 +125,5 @@ export const questionsRelations = relations(questions, ({ one }) => ({
   askerProfile: one(profiles, {
     fields: [questions.askerProfileId],
     references: [profiles.id],
-  }),
-  generationBatch: one(questionGenerationBatches, {
-    fields: [questions.generationBatchId],
-    references: [questionGenerationBatches.id],
   }),
 }));

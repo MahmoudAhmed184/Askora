@@ -3,7 +3,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Form, useFetcher } from "react-router";
 
 import { ActionToast } from "~/components/shared/action-toast/action-toast";
-import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import { PendingButton } from "~/components/shared/pending-button/pending-button";
 import {
   AnonymousAvatar,
@@ -353,7 +352,6 @@ export function AnswerEditor({
           <div className="flex flex-wrap gap-2">
             <QuestionModerationControls
               action="/inbox"
-              allowSafetyActions={editor.question.ownerProvenance !== "generated"}
               disabled={disabled || isSubmitting}
               questionPublicId={editor.question.publicId}
               variant="inline"
@@ -445,9 +443,6 @@ function QuestionContext({
         <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-primary">
           Question from
         </p>
-        {question.ownerProvenance === "generated" ? (
-          <GeneratedQuestionBadge />
-        ) : undefined}
       </div>
       {question.sender === undefined ? (
         <div className="flex min-w-0 items-center gap-3">

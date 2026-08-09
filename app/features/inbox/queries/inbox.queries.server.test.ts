@@ -134,12 +134,12 @@ describe("loadInboxFolder", () => {
     }
   });
 
-  it("derives a generated marker without exposing raw provenance", async () => {
+  it("derives direction without exposing internal provenance", async () => {
     const inbox = createInboxLoaderStore({
       questions: [
         createQuestion({
-          publicId: "qst_generated",
-          source: "ai_generated",
+          originalText: "ما الذي يهمك اليوم؟",
+          publicId: "qst_rtl",
         }),
       ],
     });
@@ -150,9 +150,7 @@ describe("loadInboxFolder", () => {
       store: inbox.store,
     });
 
-    expect(folder.questions[0]).toMatchObject({ generated: true });
-    expect(folder.questions[0]?.direction).toBe("ltr");
-    expect(JSON.stringify(folder.questions[0])).not.toContain("ai_generated");
+    expect(folder.questions[0]?.direction).toBe("rtl");
     expect(JSON.stringify(folder.questions[0])).not.toMatch(/source|batch|model|token/iu);
   });
 });
@@ -189,7 +187,6 @@ function createQuestion(
     recipientProfileId: "profile_1",
     recipientUserId: "user_1",
     identityMode: "guest_anonymous",
-    source: "public_profile",
     status: "inbox",
     originalText: "What should I read next?",
     deletedAt: null,

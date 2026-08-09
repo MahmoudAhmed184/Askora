@@ -81,7 +81,6 @@ export interface NewPublicQuestion {
   askerUserId: string | null;
   askerProfileId: string | null;
   identityMode: QuestionIdentityMode;
-  source: "public_profile";
   status: "inbox" | "filtered";
   originalText: string;
   normalizedTextHash: string;
@@ -571,7 +570,6 @@ function createNewPublicQuestion({
     recipientUserId: profile.userId,
     ...getAskerIdentityFields({ identityMode, session }),
     identityMode,
-    source: "public_profile",
     status,
     originalText: text,
     normalizedTextHash: hashWithHmacSha256(

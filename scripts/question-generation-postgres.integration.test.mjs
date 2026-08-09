@@ -42,19 +42,14 @@ describe.sequential("question-generation PostgreSQL integration", () => {
 
         const persistedCounts = await pool.query(
           `
-            select b.requested_count, count(q.id)::int as question_count
-            from question_generation_batches b
-            join questions q on q.generation_batch_id = b.id
-            where b.owner_user_id = $1
-            group by b.requested_count
-            order by b.requested_count
+            select
+              (select sum(requested_count)::int from question_generation_batches where owner_user_id = $1) as requested_count,
+              (select count(*)::int from questions where recipient_profile_id = $2) as question_count
           `,
-          [ownerA.userId],
+          [ownerA.userId, ownerA.profileId],
         );
         expect(persistedCounts.rows).toEqual([
-          { requested_count: 3, question_count: 3 },
-          { requested_count: 5, question_count: 5 },
-          { requested_count: 10, question_count: 10 },
+          { requested_count: 18, question_count: 18 },
         ]);
 
         const rollbackBatchId = `${suffix}_rollback_batch`;
@@ -143,20 +138,25 @@ describe.sequential("question-generation PostgreSQL integration", () => {
             select
               (select count(*)::int from question_generation_settings where owner_user_id = $1) as settings,
               (select count(*)::int from question_generation_batches where owner_user_id = $1) as batches,
-              (select count(*)::int from questions where recipient_user_id = $1) as questions
+              (select count(*)::int from questions where recipient_user_id = $1 and deleted_at is null) as active_questions,
+              (select count(*)::int from questions where recipient_user_id = $1) as retained_questions
           `,
           [ownerA.userId],
         );
-        expect(cleanedOwner.rows[0]).toEqual({ settings: 0, batches: 0, questions: 0 });
+        expect(cleanedOwner.rows[0]).toEqual({
+          settings: 0,
+          batches: 0,
+          active_questions: 0,
+          retained_questions: 27,
+        });
 
         const unrelatedOwner = await pool.query(
           `
             select count(*)::int as count
-            from questions q
-            join question_generation_batches b on b.id = q.generation_batch_id
-            where b.owner_user_id = $1
+            from questions
+            where recipient_profile_id = $1
           `,
-          [ownerB.userId],
+          [ownerB.profileId],
         );
         expect(unrelatedOwner.rows[0]?.count).toBe(3);
 

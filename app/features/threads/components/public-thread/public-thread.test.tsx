@@ -55,10 +55,7 @@ describe("PublicThread", () => {
     const { container } = renderPublicThread(createAvailablePage());
     const html = container.innerHTML;
 
-    expect(screen.queryByLabelText("AI-generated question")).not.toBeInTheDocument();
-    expect(html).not.toMatch(
-      /ai_generated|ownerProvenance|source=|generationBatch|gemini|modelId|tokenCount/i,
-    );
+    expect(html).not.toMatch(/generationBatch|gemini|modelId|tokenCount/i);
   });
 
   it("renders stable anchors for answer items", () => {
@@ -262,19 +259,17 @@ describe("PublicThread", () => {
     expect(screen.queryByText("Edited question")).not.toBeInTheDocument();
   });
 
-  it("renders the owner-only generated badge independently from edited wording", () => {
+  it("renders edited wording independently", () => {
     const { container } = renderPublicThread(
       createAvailablePage({
         items: [
           createAnswerItem({
-            ownerProvenance: "generated",
             questionTextMode: "edited",
           }),
         ],
       }),
     );
 
-    expect(screen.getByLabelText("AI-generated question")).toBeInTheDocument();
     expect(screen.getByText("Edited question")).toBeInTheDocument();
     expect(container.querySelector("[dir='ltr']")).toHaveTextContent(
       "What should I read next?",

@@ -5,7 +5,6 @@ import type { ZodError } from "zod";
 import { getRuntimeDatabase, type RuntimeDatabase } from "~/db/client.server";
 import {
   notifications,
-  questionGenerationBatches,
   pinnedAnswers,
   profiles,
   questions,
@@ -35,9 +34,9 @@ import {
 } from "~/features/social/social-controls";
 import type { FollowUpPermission } from "~/features/settings/validations/settings.validations";
 import {
-  getQuestionGenerationDirection,
+  getQuestionDirection,
   type QuestionDisplayDirection,
-} from "~/features/question-generation/question-generation-direction";
+} from "~/lib/question-direction";
 import { MAX_PUBLISHED_THREAD_ITEMS } from "~/features/threads/services/thread-permissions.service.server";
 import { createDatabaseId, createPublicId } from "~/lib/ids.server";
 import { parseFormData } from "~/lib/zod-form";
@@ -66,8 +65,6 @@ export interface AnswerWorkflowQuestion {
   askerUsername: string | null;
   askerAvatarUrl: string | null;
   identityMode: AnswerQuestionIdentity;
-  source: "public_profile" | "ai_generated";
-  generationLanguage?: "egyptian_arabic" | "modern_standard_arabic" | "english" | null;
   status: AnswerQuestionStatus;
   originalText: string;
   deletedAt: Date | null;
@@ -99,8 +96,6 @@ export interface StoredDraftAnswerQuestion {
   itemUpdatedAt: Date;
   questionCreatedAt: Date;
   identityMode: AnswerQuestionIdentity;
-  source: "public_profile" | "ai_generated";
-  generationLanguage?: "egyptian_arabic" | "modern_standard_arabic" | "english" | null;
   askerDisplayName: string | null;
   askerUsername: string | null;
   askerAvatarUrl: string | null;
@@ -156,7 +151,6 @@ export interface AnswerEditorViewData {
     publicId: string;
     text: string;
     createdAt: string;
-    ownerProvenance: "generated" | null;
     direction: QuestionDisplayDirection;
     sender:
       | {
@@ -176,7 +170,6 @@ export interface DraftAnswerView {
   answerPreview: string;
   updatedAt: string;
   questionCreatedAt: string;
-  ownerProvenance: "generated" | null;
   direction: QuestionDisplayDirection;
   sender:
     | {
@@ -297,11 +290,7 @@ export async function loadAnswerEditor({
         publicId: question.question.publicId,
         text: question.question.originalText,
         createdAt: question.question.createdAt.toISOString(),
-        ownerProvenance: getOwnerQuestionProvenance(question.question.source),
-        direction: getQuestionGenerationDirection(
-          question.question.generationLanguage,
-          question.question.originalText,
-        ),
+        direction: getQuestionDirection(question.question.originalText),
         sender: getAnswerQuestionSender(question.question),
       },
       values: toAnswerFormValues(draft, question.question),
@@ -340,8 +329,7 @@ export async function loadDraftAnswers({
       answerPreview: createAnswerPreview(draft.answerText),
       updatedAt: draft.itemUpdatedAt.toISOString(),
       questionCreatedAt: draft.questionCreatedAt.toISOString(),
-      ownerProvenance: getOwnerQuestionProvenance(draft.source),
-      direction: getQuestionGenerationDirection(draft.generationLanguage, draft.questionText),
+      direction: getQuestionDirection(draft.questionText),
       sender: getAnswerQuestionSender(draft),
     }));
 
@@ -466,8 +454,6 @@ export function createDrizzleAnswerStore(
           askerUsername: askerProfiles.username,
           askerAvatarUrl: askerProfiles.avatarUrl,
           identityMode: questions.identityMode,
-          source: questions.source,
-          generationLanguage: questionGenerationBatches.language,
           status: questions.status,
           originalText: questions.originalText,
           deletedAt: questions.deletedAt,
@@ -482,10 +468,6 @@ export function createDrizzleAnswerStore(
         })
         .from(questions)
         .innerJoin(profiles, eq(profiles.id, questions.recipientProfileId))
-        .leftJoin(
-          questionGenerationBatches,
-          eq(questionGenerationBatches.id, questions.generationBatchId),
-        )
         .leftJoin(
           askerProfiles,
           and(
@@ -535,8 +517,6 @@ export function createDrizzleAnswerStore(
           itemUpdatedAt: threadItems.updatedAt,
           questionCreatedAt: questions.createdAt,
           identityMode: questions.identityMode,
-          source: questions.source,
-          generationLanguage: questionGenerationBatches.language,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
           askerAvatarUrl: askerProfiles.avatarUrl,
@@ -545,10 +525,6 @@ export function createDrizzleAnswerStore(
         })
         .from(questions)
         .innerJoin(threadItems, eq(threadItems.questionId, questions.id))
-        .leftJoin(
-          questionGenerationBatches,
-          eq(questionGenerationBatches.id, questions.generationBatchId),
-        )
         .leftJoin(
           askerProfiles,
           and(
@@ -1384,7 +1360,6 @@ export interface PublicPublishedAnswer {
         username: string;
       }
     | undefined;
-  ownerProvenance?: "generated";
 }
 
 export interface PublicPublishedAnswerRow {
@@ -1403,8 +1378,6 @@ export interface PublicPublishedAnswerRow {
   questionTextMode: PublicAnswerQuestionTextMode;
   displayQuestionText: string | null;
   identityMode: AnswerQuestionIdentity;
-  source: "public_profile" | "ai_generated";
-  generationLanguage?: "egyptian_arabic" | "modern_standard_arabic" | "english" | null;
   askerDisplayName: string | null;
   askerUsername: string | null;
   ownerProfileId: string;
@@ -1461,8 +1434,6 @@ export async function findPublishedAnswerPageForProfile({
     questionTextMode: threadItems.questionTextMode,
     displayQuestionText: threadItems.displayQuestionText,
     identityMode: questions.identityMode,
-    source: questions.source,
-    generationLanguage: questionGenerationBatches.language,
     askerDisplayName: askerProfiles.displayName,
     askerUsername: askerProfiles.username,
     ownerProfileId: profiles.id,
@@ -1482,10 +1453,6 @@ export async function findPublishedAnswerPageForProfile({
     .innerJoin(threads, eq(threads.id, threadItems.threadId))
     .innerJoin(profiles, eq(profiles.id, threads.ownerProfileId))
     .innerJoin(questions, eq(questions.id, threadItems.questionId))
-    .leftJoin(
-      questionGenerationBatches,
-      eq(questionGenerationBatches.id, questions.generationBatchId),
-    )
     .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
     .innerJoin(
       pinnedAnswers,
@@ -1505,10 +1472,6 @@ export async function findPublishedAnswerPageForProfile({
     .innerJoin(threads, eq(threads.id, threadItems.threadId))
     .innerJoin(profiles, eq(profiles.id, threads.ownerProfileId))
     .innerJoin(questions, eq(questions.id, threadItems.questionId))
-    .leftJoin(
-      questionGenerationBatches,
-      eq(questionGenerationBatches.id, questions.generationBatchId),
-    )
     .leftJoin(askerProfiles, eq(askerProfiles.id, questions.askerProfileId))
     .leftJoin(
       pinnedAnswers,
@@ -1607,10 +1570,7 @@ function toPublicPublishedAnswer(
     pinPosition: row.pinPosition,
     questionTextMode: row.questionTextMode,
     questionText,
-    direction: getQuestionGenerationDirection(
-      row.generationLanguage,
-      row.displayQuestionText ?? "",
-    ),
+    direction: getQuestionDirection(row.displayQuestionText ?? ""),
     like: getLikeControlState({
       count: row.ownerShowLikeCounts ? row.likeCount : undefined,
       isLiked: row.viewerLiked,
@@ -1631,23 +1591,7 @@ function toPublicPublishedAnswer(
             username: row.askerUsername,
           }
         : undefined,
-    ...(isPublishedAnswerOwnedBySession(row, session) &&
-    row.source === "ai_generated"
-      ? { ownerProvenance: "generated" as const }
-      : {}),
   };
-}
-
-function isPublishedAnswerOwnedBySession(
-  row: Pick<PublicPublishedAnswerRow, "ownerProfileId" | "ownerUserId">,
-  session: CurrentSessionSummary,
-) {
-  return (
-    session.status === "authenticated" &&
-    session.profileStatus === "complete" &&
-    session.profile.id === row.ownerProfileId &&
-    session.user.id === row.ownerUserId
-  );
 }
 
 function isVisiblePublishedAnswerRow(row: PublicPublishedAnswerRow) {
@@ -1738,12 +1682,6 @@ function getViewerProfileId(session: CurrentSessionSummary) {
     session.profileStatus === "complete"
     ? session.profile.id
     : undefined;
-}
-
-function getOwnerQuestionProvenance(
-  source: "public_profile" | "ai_generated",
-): "generated" | null {
-  return source === "ai_generated" ? "generated" : null;
 }
 
 const anonymousSession = {

@@ -83,10 +83,10 @@ export default function PrivacyRoute() {
                 error body.
               </p>
               <p className="text-muted-foreground">
-                Generated provenance is private to the profile owner. Public
-                visitors, other signed-in users, crawlers, public page data,
-                metadata, and client analytics do not receive the Generated
-                marker or internal batch, model, and token metadata.
+                Generated questions are stored and displayed as ordinary
+                anonymous questions. Questions do not retain generation
+                provenance or links to internal batch, model, and token
+                metadata.
               </p>
             </section>
             <section className="flex flex-col gap-3 p-6 sm:p-7">
@@ -99,9 +99,10 @@ export default function PrivacyRoute() {
                 remain until changed or deleted through their normal controls.
                 Generated questions follow the same inbox, draft, publication,
                 and deletion lifecycle as other questions. Account deletion
-                cleanup removes question-generation settings, credentials,
-                generated questions, and batch records. Historical backups
-                follow the platform's existing backup and retention policy.
+                cleanup removes question-generation settings, credentials, and
+                batch records. Questions follow the same account-deletion rules
+                as every other anonymous question. Historical backups follow
+                the platform's existing backup and retention policy.
               </p>
             </section>
             <section className="flex flex-col gap-3 p-6 sm:p-7">

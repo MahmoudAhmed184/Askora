@@ -65,11 +65,11 @@ Migration 0016 retires the standalone starter-prompt source. It removes any
 obsolete starter-prompt questions and narrows `question_source` to
 `public_profile`.
 
-Migration 0018 adds owner question-generation settings and batch tables,
-extends `question_source` with `ai_generated`, and adds the source-specific
-question privacy constraints. Apply it through `DIRECT_DATABASE_URL` before
-deploying application code that can generate questions. The migration is
-additive and preserves existing questions.
+Migration 0018 adds owner question-generation settings and batch tables.
+The latest migration removes question-level generation provenance so generated
+items use the ordinary anonymous-question schema. Apply migrations through
+`DIRECT_DATABASE_URL` before deploying application code that can generate
+questions.
 
 For a production rollout:
 
@@ -81,11 +81,10 @@ For a production rollout:
 5. connect a dedicated staging Gemini key and complete the smoke matrix below
    before enabling owner testing.
 
-Do not roll application code back to a pre-0018 build after generated rows have
-been created: older code does not understand the new enum value or privacy
-constraints. If a post-use rollback is required, restore application and
-database state together from the approved backup. Do not add a compatibility
-source alias or dual-write path.
+Do not roll application code back after removing question provenance: older
+code expects columns that no longer exist. If a rollback is required, restore
+application and database state together from the approved backup. Do not add a
+compatibility source alias or dual-write path.
 
 ## Question Generation Encryption Keys
 
@@ -190,8 +189,8 @@ After the smoke run:
 - confirm only safe event categories and numeric usage metadata were recorded;
 - disconnect Gemini and verify all encrypted credential columns are `NULL`;
 - run account deletion cleanup for a disposable owner and verify its settings,
-  generated questions, batches, and credentials are removed while unrelated
-  accounts remain intact; and
+  batches, and credentials are removed while its questions follow the ordinary
+  anonymous-question lifecycle and unrelated accounts remain intact; and
 - rotate or revoke the disposable staging key according to the Gemini project
   policy.
 

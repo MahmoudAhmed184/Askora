@@ -75,31 +75,19 @@ describe("InboxList", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows an icon-only AI marker for owner-generated inbox questions", () => {
+  it("renders anonymous right-to-left questions normally", () => {
     renderInboxList({
       questions: [
         {
           ...defaultQuestion,
-          generated: true,
           text: "ما الذي يهمك اليوم؟",
           direction: "rtl",
         },
       ],
     });
 
-    const generatedMarker = screen.getByLabelText("AI-generated question");
-
-    expect(generatedMarker).toHaveTextContent("");
-    expect(generatedMarker).toHaveAttribute("title", "AI-generated question");
-    expect(generatedMarker.querySelector("svg")).not.toBeNull();
-    expect(generatedMarker.closest("header")).not.toBeNull();
+    expect(screen.getByText("Anonymous")).toBeInTheDocument();
     expect(screen.getByText("ما الذي يهمك اليوم؟")).toHaveAttribute("dir", "rtl");
-  });
-
-  it("does not show an AI marker for manually submitted questions", () => {
-    renderInboxList();
-
-    expect(screen.queryByLabelText("AI-generated question")).not.toBeInTheDocument();
   });
 
   it("shows filtered restore and report-plus-block default", async () => {

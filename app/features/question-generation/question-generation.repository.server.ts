@@ -473,8 +473,6 @@ export function createDrizzleQuestionGenerationRepository(
             askerUserId: params.ownerUserId,
             askerProfileId: null,
             identityMode: "account_anonymous" as const,
-            source: "ai_generated" as const,
-            generationBatchId: params.batchId,
             status: "inbox" as const,
             originalText: question.text,
             normalizedTextHash: question.normalizedTextHash,

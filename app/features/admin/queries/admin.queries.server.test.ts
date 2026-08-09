@@ -111,7 +111,6 @@ describe("admin report loaders", () => {
     const report = createStoredReport({
       target: {
         ...baseTarget,
-        source: "ai_generated",
         safetyFingerprintHash: null,
         ipHash: null,
       },
@@ -124,7 +123,6 @@ describe("admin report loaders", () => {
     });
 
     const serialized = JSON.stringify(detail);
-    expect(serialized).not.toContain("ai_generated");
     expect(serialized).not.toContain("no safety fingerprint");
     expect(serialized).not.toContain("no IP signal");
   });

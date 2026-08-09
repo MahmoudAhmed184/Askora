@@ -190,7 +190,6 @@ export interface NewFollowUpQuestion {
   askerUserId: string | null;
   askerProfileId: string | null;
   identityMode: QuestionIdentityMode;
-  source: "public_profile";
   status: "inbox" | "filtered";
   threadId: string;
   originalText: string;
@@ -529,7 +528,6 @@ export function createDrizzleFollowUpStore(
           questionTextMode: threadItems.questionTextMode,
           displayQuestionText: threadItems.displayQuestionText,
           identityMode: questions.identityMode,
-          source: questions.source,
           askerDisplayName: askerProfiles.displayName,
           askerUsername: askerProfiles.username,
         })
@@ -895,7 +893,6 @@ function createNewFollowUpQuestion({
     recipientUserId: thread.ownerUserId,
     ...getAskerIdentityFields({ identityMode, session }),
     identityMode,
-    source: "public_profile",
     status,
     threadId: thread.id,
     originalText: text,

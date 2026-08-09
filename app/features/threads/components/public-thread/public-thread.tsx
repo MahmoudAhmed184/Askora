@@ -5,7 +5,6 @@ import type { AppShellData } from "~/types/app-shell-data";
 import { AppShell } from "~/components/layout/app-shell/app-shell";
 import { PublicShell } from "~/components/layout/public-shell/public-shell";
 import { EditedQuestionBadge } from "~/components/shared/edited-question-badge/edited-question-badge";
-import { GeneratedQuestionBadge } from "~/components/shared/generated-question-badge";
 import { HiddenQuestionPlaceholder } from "~/components/shared/hidden-question-placeholder";
 import {
   AnonymousAvatar,
@@ -349,9 +348,6 @@ function AnswerThreadItem({
         {item.questionTextMode === "hidden" ? (
           <div className="flex flex-col items-start gap-2">
             <HiddenQuestionPlaceholder />
-            {item.ownerProvenance === "generated" ? (
-              <GeneratedQuestionBadge />
-            ) : undefined}
           </div>
         ) : item.questionText === undefined ? undefined : (
           <ThreadQuestionEntry
@@ -412,9 +408,6 @@ function ThreadQuestionEntry({
             <span aria-hidden="true">· </span>
             {time}
           </span>
-          {item.ownerProvenance === "generated" ? (
-            <GeneratedQuestionBadge />
-          ) : undefined}
         </div>
         <div className="flex flex-wrap items-baseline gap-2">
           <p

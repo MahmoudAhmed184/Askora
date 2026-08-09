@@ -65,7 +65,6 @@ function createEditor(): AnswerEditorViewData {
       publicId: "qst_1",
       text: "What should I read next?",
       createdAt: "2026-05-31T12:00:00.000Z",
-      ownerProvenance: null,
       direction: "ltr",
       sender: undefined,
     },
