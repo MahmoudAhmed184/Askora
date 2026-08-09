@@ -146,10 +146,6 @@ export const serverEnvSchema = baseServerEnvSchema
     requireProductionValue(context, environment.RESEND_API_KEY, "RESEND_API_KEY");
     requireProductionValue(context, environment.AUTH_EMAIL_FROM, "AUTH_EMAIL_FROM");
     requireProductionValue(context, environment.CRON_SECRET, "CRON_SECRET");
-    requireProductionQuestionGenerationEncryptionConfiguration(
-      context,
-      environment,
-    );
   })
   .transform((environment) => {
     const betterAuthUrl = environment.BETTER_AUTH_URL ?? environment.APP_URL;
@@ -337,35 +333,6 @@ function validateQuestionGenerationEncryptionConfiguration(
       code: "custom",
       message:
         "QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION must exist in QUESTION_GENERATION_ENCRYPTION_KEYS",
-      path: ["QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION"],
-    });
-  }
-}
-
-function requireProductionQuestionGenerationEncryptionConfiguration(
-  context: z.RefinementCtx,
-  environment: {
-    QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION?: number | undefined;
-    QUESTION_GENERATION_ENCRYPTION_KEYS?:
-      | ReadonlyMap<number, Buffer>
-      | undefined;
-  },
-) {
-  if (environment.QUESTION_GENERATION_ENCRYPTION_KEYS === undefined) {
-    context.addIssue({
-      code: "custom",
-      message: "QUESTION_GENERATION_ENCRYPTION_KEYS is required in production",
-      path: ["QUESTION_GENERATION_ENCRYPTION_KEYS"],
-    });
-  }
-
-  if (
-    environment.QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION === undefined
-  ) {
-    context.addIssue({
-      code: "custom",
-      message:
-        "QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION is required in production",
       path: ["QUESTION_GENERATION_ACTIVE_ENCRYPTION_KEY_VERSION"],
     });
   }
