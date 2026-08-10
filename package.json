@@ -63,7 +63,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
-    "@react-router/dev": "^7.18.1",
+    "@react-router/dev": "^8.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "@testing-library/dom": "^10.0.0",
     "@testing-library/jest-dom": "^6.9.1",
